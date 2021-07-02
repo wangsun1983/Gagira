@@ -32,14 +32,17 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/external/sqlite3/ \
 		-I ./3rdparty/Obotcha/include/external/http_parser/ \
 		-I ./3rdparty/Obotcha/include/external/uuid/ \
+		-I ./3rdparty/Obotcha/include/external/glog/ \
 		-I ./include/ \
 		-g \
 		-std=c++14 \
 
 external = -lpthread \
 				-ldl \
-				./3rdparty/Obotcha/libobotcha.so \
+				-L ./3rdparty/Obotcha/libobotcha.so \
 
+sharelib = -Wl,-rpath=./3rdparty/Obotcha/ \
+           -L ./3rdparty/Obotcha/ \
 
 objs =
 link =
@@ -55,5 +58,5 @@ everything : $(libname)
 include controller/makefile
 
 $(libname): $(objs)
-	g++ -g -o0 -shared $(objs) $(cflags) $(sharelib) -o $(outlib)/lib${libname}.so $(staticlib) $(external)
+	g++ -g -o0 main.cpp $(cflags) $(sharelib) -o $(outlib)/gagira $(staticlib) $(external)
 

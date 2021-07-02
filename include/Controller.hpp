@@ -13,7 +13,7 @@ using namespace obotcha;
 
 namespace gagira  {
 
-using HttpControllerFunction = std::function<Object(HashMap<String,String>)>;
+using HttpControllerFunction = std::function<HttpResponseEntity(HashMap<String,String>)>;
 
 DECLARE_SIMPLE_CLASS(HttpController) {
     //nothing
@@ -23,7 +23,7 @@ DECLARE_SIMPLE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
 
 public:
     _ControllerRouter(HttpControllerFunction c,HttpController ctr);
-    Object onInvoke(HashMap<String,String> m);
+    HttpResponseEntity onInvoke(HashMap<String,String> m);
 
 private:
     HttpControllerFunction func;

@@ -1,7 +1,7 @@
 #ifndef __OBOTCHA_JSON_VALUE_H__
 #define __OBOTCHA_JSON_VALUE_H__
 
-#include "json/value.h"
+#include "jsoncpp/value.h"
 
 #include "Object.hpp"
 #include "StrongPointer.hpp"

@@ -2,6 +2,11 @@
 #include "HttpRouter.hpp"
 #include "Server.hpp"
 #include "Error.hpp"
+#include "HttpEntity.hpp"
+#include "HttpResponse.hpp"
+#include "HttpServer.hpp"
+
+using namespace obotcha;
 
 namespace gagira  {
 
@@ -36,8 +41,14 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
     HashMap<String,String> map = createHashMap<String,String>();
     HttpRouter router = mRouterManager->getRouter(method,msg->getHeader()->getUrl()->getRawUrl(),map);
     if(router != nullptr) {
-        Object obj = router->getListener()->onInvoke(map);
         //TODO
+        HttpResponseEntity obj = router->getListener()->onInvoke(map);
+        HttpEntity entity = createHttpEntity();
+        entity->setContent(createByteArray(obj->getContent()->get()));
+        HttpResponse response = createHttpResponse();
+        response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
+        response->setEntity(entity);
+        w->write(response);
     }
 }
 

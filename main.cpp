@@ -1,66 +1,32 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "HttpServer.hpp"
-#include "HttpServerBuilder.hpp"
+#include "Controller.hpp"
+#include "Server.hpp"
 #include "Inet4Address.hpp"
 
 using namespace obotcha;
+using namespace gagira;
 
-String htmlpath = "./static/homepage_qdrs/src/main/resources/templates/";
-String resourcepath = "./static/homepage_qdrs/src/main/resources/";
-String fontpath = "./static/homepage_qdrs/src/main/resources/static/fonts";
-String imgpath = "./static/homepage_qdrs/src/main/resources/static/fimgonts";
-String jspath = "./static/homepage_qdrs/src/main/resources/static/js";
-
-DECLARE_SIMPLE_CLASS(MyHttpListener) IMPLEMENTS(HttpListener) {
-
+DECLARE_SIMPLE_CLASS(MyController) IMPLEMENTS(HttpController) {
 public:
-    void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
-        switch(event) {
-            case Message:
-            printf("message coming \n");
-            HttpEntity entity = msg->getEntity();
-            HttpHeader header = msg->getHeader();
-            HttpUrl url = header->getUrl();
-            
-            String path = url->getPath();
-            String dir = nullptr;
+    HttpResponseEntity sayHello(HashMap<String,String> m) {
+        printf("sayhello function called \n");
 
-            if(path->indexOf(".html") > 0) {
-                dir = htmlpath;
-            } else {
-                dir = resourcepath;
-            }
-            HttpResponse response = createHttpResponse();
-            if(dir != nullptr) {
-                String filepath = dir->append(url->getPath());
-                printf("path is %s \n",filepath->toChars());
-
-                File f = createFile(filepath);
-                if(f->exists()) {
-                    printf("file exists \n");
-                } else {
-                    printf("file not exists \n");
-                }
-                response->setFile(f); 
-            }            
-            w->write(response);
-
-            break;
-        }
+        return createHttpResponseEntity(123);
     }
 };
 
 int main() {
-    MyHttpListener listener = createMyHttpListener();
-    HttpServer server = createHttpServerBuilder()
-                    ->setAddress(createInet4Address(1212))
-                    ->setListener(listener)
-                    ->build();
-    server->start();
+    Server server = createServer()
+                    ->setAddress(createInet4Address("192.168.1.10",1124));
+    MyController controller = createMyController();
+
+    Inject(st(HttpMethod)::Get,"abc/:id",MyController,controller,sayHello);
     while(1) {
         sleep(100);
     }
+
+    return 0;
 }
 

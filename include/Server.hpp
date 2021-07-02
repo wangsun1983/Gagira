@@ -11,6 +11,7 @@
 #include "HttpServer.hpp"
 #include "HttpServerBuilder.hpp"
 #include "HttpRouterManager.hpp"
+#include "HttpListener.hpp"
 
 using namespace obotcha;
 
