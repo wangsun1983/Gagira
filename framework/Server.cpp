@@ -5,6 +5,7 @@
 #include "HttpEntity.hpp"
 #include "HttpResponse.hpp"
 #include "HttpServer.hpp"
+#include "ServletRequestManager.hpp"
 
 using namespace obotcha;
 
@@ -41,10 +42,14 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
     HashMap<String,String> map = createHashMap<String,String>();
     HttpRouter router = mRouterManager->getRouter(method,msg->getHeader()->getUrl()->getRawUrl(),map);
     if(router != nullptr) {
-        //TODO
+        //TODO?
         HttpResponseEntity obj = router->getListener()->onInvoke(map);
         HttpEntity entity = createHttpEntity();
+        ServletRequest req = createServletRequest(msg,client);
+        st(ServletRequestManager)::getInstance()->addRequest(req);
         entity->setContent(createByteArray(obj->getContent()->get()));
+        st(ServletRequestManager)::getInstance()->getRequest();
+
         HttpResponse response = createHttpResponse();
         response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
         response->setEntity(entity);

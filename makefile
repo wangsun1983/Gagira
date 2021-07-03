@@ -33,7 +33,7 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/external/http_parser/ \
 		-I ./3rdparty/Obotcha/include/external/uuid/ \
 		-I ./3rdparty/Obotcha/include/external/glog/ \
-		-I ./include/ \
+		-I ./framework/include/ \
 		-g \
 		-std=c++14 \
 
@@ -41,8 +41,12 @@ external = -lpthread \
 				-ldl \
 				-L ./3rdparty/Obotcha/libobotcha.so \
 
+#-L./traderapi 是使用到的动态链接库的路径
+#-lthostmduserapi 是动态链接库，注意动态链接库本身必须是libXXXX.so这种写法，编译的时候省略"lib"和".so"
+
 sharelib = -Wl,-rpath=./3rdparty/Obotcha/ \
            -L ./3rdparty/Obotcha/ \
+		   -lobotcha \
 
 objs =
 link =
@@ -55,8 +59,8 @@ gagiracppflags = $(cppflags)
 
 everything : $(libname)
 
-include controller/makefile
+include framework/makefile
 
 $(libname): $(objs)
-	g++ -g -o0 main.cpp $(cflags) $(sharelib) -o $(outlib)/gagira $(staticlib) $(external)
+	$(cppcompiler) *.cpp $(cflags) $(objs) -o gagria_server $(external) $(sharelib)
 

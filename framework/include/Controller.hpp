@@ -8,26 +8,29 @@
 #include "String.hpp"
 #include "HashMap.hpp"
 #include "HttpRouter.hpp"
+#include "HttpLinker.hpp"
+#include "ServletRequest.hpp"
 
 using namespace obotcha;
 
-namespace gagira  {
+namespace gagira {
 
-using HttpControllerFunction = std::function<HttpResponseEntity(HashMap<String,String>)>;
+using ControllerFunction = std::function<HttpResponseEntity(HashMap<String,String>)>;
 
-DECLARE_SIMPLE_CLASS(HttpController) {
-    //nothing
+DECLARE_SIMPLE_CLASS(Controller) {
+public:
+    ServletRequest getRequest();
 };
 
 DECLARE_SIMPLE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
 
 public:
-    _ControllerRouter(HttpControllerFunction c,HttpController ctr);
+    _ControllerRouter(ControllerFunction c,Controller ctr);
     HttpResponseEntity onInvoke(HashMap<String,String> m);
 
 private:
-    HttpControllerFunction func;
-    HttpController controller;
+    ControllerFunction func;
+    Controller controller;
 };
 
 #define Inject(method,url,classname,instance,function) \

@@ -12,6 +12,9 @@
 #include "HttpServerBuilder.hpp"
 #include "HttpRouterManager.hpp"
 #include "HttpListener.hpp"
+#include "ThreadLocal.hpp"
+#include "HttpLinker.hpp"
+#include "Controller.hpp"
 
 using namespace obotcha;
 
@@ -19,13 +22,15 @@ namespace gagira  {
 
 DECLARE_SIMPLE_CLASS(Server) IMPLEMENTS(HttpListener){
 public:
+    friend class _Controller;
+
     _Server();
     _Server* setAddress(InetAddress);
     _Server* setOption(HttpOption);
 
     int start();
     void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
-
+    
 private:
     HttpServerBuilder mBuilder;
     HttpServer mServer;
