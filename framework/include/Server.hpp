@@ -15,6 +15,7 @@
 #include "ThreadLocal.hpp"
 #include "HttpLinker.hpp"
 #include "Controller.hpp"
+#include "HttpResourceManager.hpp"
 
 using namespace obotcha;
 
@@ -35,6 +36,7 @@ private:
     HttpServerBuilder mBuilder;
     HttpServer mServer;
     HttpRouterManager mRouterManager;
+    HttpResourceManager mResourceManager;
 };
 
 }

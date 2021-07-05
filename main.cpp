@@ -5,6 +5,7 @@
 #include "Server.hpp"
 #include "Inet4Address.hpp"
 #include "ServletRequest.hpp"
+#include "HttpResourceManager.hpp"
 
 using namespace obotcha;
 using namespace gagira;
@@ -22,10 +23,16 @@ public:
 
 int main() {
     Server server = createServer()
-                    ->setAddress(createInet4Address("192.168.1.10",1124));
+                    ->setAddress(createInet4Address("192.168.1.9",1126));
     MyController controller = createMyController();
+    
+    HttpResourceManager resourceManager = st(HttpResourceManager)::getInstance();
+    resourceManager->setResourceDir("./htm");
+    resourceManager->setViewRedirect("index","index.html");
 
     Inject(st(HttpMethod)::Get,"abc/:id",MyController,controller,sayHello);
+
+    server->start();
     while(1) {
         sleep(100);
     }
