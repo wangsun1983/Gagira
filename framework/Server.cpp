@@ -42,7 +42,9 @@ int _Server::start() {
 }
 
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
-    if(event != 0) {
+    
+
+    if(event == Message) {
         int method = msg->getHeader()->getMethod();
         String url = msg->getHeader()->getUrl()->getRawUrl();
         File file = mResourceManager->findResource(url);
@@ -60,13 +62,14 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         HttpRouter router = mRouterManager->getRouter(method,url,map);
         if(router != nullptr) {
             //TODO?
-            HttpResponseEntity obj = router->getListener()->onInvoke(map);
+            printf("http router is not nullptr \n");
             HttpEntity entity = createHttpEntity();
             ServletRequest req = createServletRequest(msg,client);
+            printf("client is %s \n",client->getClientIp()->toChars());
             st(ServletRequestManager)::getInstance()->addRequest(req);
+            HttpResponseEntity obj = router->getListener()->onInvoke(map);
             entity->setContent(createByteArray(obj->getContent()->get()));
-            st(ServletRequestManager)::getInstance()->getRequest();
-
+            
             HttpResponse response = createHttpResponse();
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
             response->setEntity(entity);
