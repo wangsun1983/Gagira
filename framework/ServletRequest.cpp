@@ -19,7 +19,7 @@ ArrayList<HttpCookie> _ServletRequest::getCookies() {
 }
 
 String _ServletRequest::getInetAddress() {
-    return mLinker->getClientIp();
+    return mLinker->getInetAddress()->getAddress();
 }
 
 HttpSession _ServletRequest::getSession() {

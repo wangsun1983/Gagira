@@ -7,6 +7,7 @@
 #include "HttpServer.hpp"
 #include "ServletRequestManager.hpp"
 #include "HttpResourceManager.hpp"
+#include "NetEvent.hpp"
 
 using namespace obotcha;
 
@@ -38,13 +39,12 @@ int _Server::start() {
         return 0;
     }
 
-    return -NotStart;
+    return -1;
 }
 
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
     
-
-    if(event == Message) {
+    if(event == st(NetEvent)::Message) {
         int method = msg->getHeader()->getMethod();
         String url = msg->getHeader()->getUrl()->getRawUrl();
         File file = mResourceManager->findResource(url);
@@ -52,7 +52,9 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         if(file != nullptr) {
             HttpResponse response = createHttpResponse();
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
-            response->setFile(file);
+            //response->setFile(file);
+            HttpChunk chunk = createHttpChunk(file);
+            response->getEntity()->setChunk(chunk);
             w->write(response);
             printf("url %s response \n",url->toChars());
             return;
@@ -65,15 +67,16 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             printf("http router is not nullptr \n");
             HttpEntity entity = createHttpEntity();
             ServletRequest req = createServletRequest(msg,client);
-            printf("client is %s \n",client->getClientIp()->toChars());
+            //printf("client is %s \n",client->getInetAddress()->toChars());
             st(ServletRequestManager)::getInstance()->addRequest(req);
             HttpResponseEntity obj = router->getListener()->onInvoke(map);
-            entity->setContent(createByteArray(obj->getContent()->get()));
+            entity->setContent(obj->getContent()->get()->toByteArray());
             
             HttpResponse response = createHttpResponse();
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
             response->setEntity(entity);
             w->write(response);
+            st(ServletRequestManager)::getInstance()->removeRequest();
         }
     }
 }

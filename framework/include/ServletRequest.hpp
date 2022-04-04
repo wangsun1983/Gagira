@@ -14,7 +14,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_SIMPLE_CLASS(ServletRequest) {
+DECLARE_CLASS(ServletRequest) {
 public:
    _ServletRequest(HttpPacket,HttpLinker);
 

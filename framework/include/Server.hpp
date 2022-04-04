@@ -21,7 +21,7 @@ using namespace obotcha;
 
 namespace gagira  {
 
-DECLARE_SIMPLE_CLASS(Server) IMPLEMENTS(HttpListener){
+DECLARE_CLASS(Server) IMPLEMENTS(HttpListener){
 public:
     friend class _Controller;
 

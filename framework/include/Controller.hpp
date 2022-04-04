@@ -10,6 +10,7 @@
 #include "HttpRouter.hpp"
 #include "HttpLinker.hpp"
 #include "ServletRequest.hpp"
+#include "MethodNotSupportException.hpp"
 
 using namespace obotcha;
 
@@ -17,12 +18,12 @@ namespace gagira {
 
 using ControllerFunction = std::function<HttpResponseEntity(HashMap<String,String>)>;
 
-DECLARE_SIMPLE_CLASS(Controller) {
+DECLARE_CLASS(Controller) {
 public:
     ServletRequest getRequest();
 };
 
-DECLARE_SIMPLE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
+DECLARE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
 
 public:
     _ControllerRouter(ControllerFunction c,Controller ctr);
@@ -33,9 +34,14 @@ private:
     Controller controller;
 };
 
-#define Inject(method,url,classname,instance,function) \
+template <typename T>
+T getClass(sp<T>) {
+    Trigger(MethodNotSupportException,"cannot use this function");    
+}
+
+#define Inject(method,url,instance,function) \
     {\
-    auto func = std::bind(&_##classname::function,instance.get_pointer(),std::placeholders::_1);\
+    auto func = std::bind(&decltype(getClass(instance))::function,instance.get_pointer(),std::placeholders::_1);\
     ControllerRouter r = createControllerRouter(func,instance); \
     HttpRouter router = createHttpRouter(url,r);\
     st(HttpRouterManager)::getInstance()->addRouter(method,router);\

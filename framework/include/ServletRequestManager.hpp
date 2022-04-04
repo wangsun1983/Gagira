@@ -21,7 +21,7 @@ using namespace obotcha;
 
 namespace gagira  {
 
-DECLARE_SIMPLE_CLASS(ServletRequestManager) {
+DECLARE_CLASS(ServletRequestManager) {
 public:
     static sp<_ServletRequestManager> getInstance();
 
