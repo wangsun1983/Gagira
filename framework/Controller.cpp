@@ -15,8 +15,8 @@ _ControllerRouter::_ControllerRouter(ControllerFunction c,Controller ctr) {
     controller = ctr;
 }
 
-HttpResponseEntity _ControllerRouter::onInvoke(HashMap<String,String> m) {
-    return func(m);
+HttpResponseEntity _ControllerRouter::onInvoke() {
+    return func();
 }
 
 }

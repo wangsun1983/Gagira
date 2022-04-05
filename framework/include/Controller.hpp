@@ -16,7 +16,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-using ControllerFunction = std::function<HttpResponseEntity(HashMap<String,String>)>;
+using ControllerFunction = std::function<HttpResponseEntity()>;
 
 DECLARE_CLASS(Controller) {
 public:
@@ -27,7 +27,7 @@ DECLARE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
 
 public:
     _ControllerRouter(ControllerFunction c,Controller ctr);
-    HttpResponseEntity onInvoke(HashMap<String,String> m);
+    HttpResponseEntity onInvoke();
 
 private:
     ControllerFunction func;
@@ -41,7 +41,7 @@ T getClass(sp<T>) {
 
 #define Inject(method,url,instance,function) \
     {\
-    auto func = std::bind(&decltype(getClass(instance))::function,instance.get_pointer(),std::placeholders::_1);\
+    auto func = std::bind(&decltype(getClass(instance))::function,instance.get_pointer());\
     ControllerRouter r = createControllerRouter(func,instance); \
     HttpRouter router = createHttpRouter(url,r);\
     st(HttpRouterManager)::getInstance()->addRouter(method,router);\

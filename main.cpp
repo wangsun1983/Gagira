@@ -11,16 +11,16 @@
 using namespace obotcha;
 using namespace gagira;
 
-DECLARE_SIMPLE_CLASS(Student) {
+DECLARE_CLASS(Student) {
 public:
     String name;
     int age;
     DECLARE_REFLECT_FIELD(Student,name,age)
 };
 
-DECLARE_SIMPLE_CLASS(MyController) IMPLEMENTS(Controller) {
+DECLARE_CLASS(MyController) IMPLEMENTS(Controller) {
 public:
-    HttpResponseEntity sayHello(HashMap<String,String> m) {
+    HttpResponseEntity sayHello() {
         printf("sayhello function called \n");
         ServletRequest req = getRequest();
         printf("net ip is %s \n",req->getInetAddress()->toChars());
@@ -41,7 +41,7 @@ int main() {
     resourceManager->setResourceDir("./htm");
     resourceManager->setViewRedirect("index","index.html");
 
-    Inject(st(HttpMethod)::Get,"abc/:id",MyController,controller,sayHello);
+    Inject(st(HttpMethod)::Get,"abc/:id",controller,sayHello);
 
     server->start();
     while(1) {

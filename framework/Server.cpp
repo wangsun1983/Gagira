@@ -69,7 +69,7 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             ServletRequest req = createServletRequest(msg,client);
             //printf("client is %s \n",client->getInetAddress()->toChars());
             st(ServletRequestManager)::getInstance()->addRequest(req);
-            HttpResponseEntity obj = router->getListener()->onInvoke(map);
+            HttpResponseEntity obj = router->getListener()->onInvoke();
             entity->setContent(obj->getContent()->get()->toByteArray());
             
             HttpResponse response = createHttpResponse();
