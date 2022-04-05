@@ -16,25 +16,34 @@
 #include "HttpLinker.hpp"
 #include "Controller.hpp"
 #include "ThreadLocal.hpp"
+#include "ControllerParam.hpp"
+#include "ServletRequest.hpp"
 
 using namespace obotcha;
 
-namespace gagira  {
+namespace gagira {
+
+DECLARE_CLASS(ServletRequestCache) {
+public:
+    _ServletRequestCache(ServletRequest,sp<_ControllerParam>);
+    ServletRequest r;
+    sp<_ControllerParam> p;
+};
 
 DECLARE_CLASS(ServletRequestManager) {
 public:
     static sp<_ServletRequestManager> getInstance();
 
-    void addRequest(ServletRequest r);
+    void add(ServletRequestCache);
     ServletRequest getRequest();
-    void removeRequest();
+    ControllerParam getParam();
+    void remove();
 
 private:
     _ServletRequestManager();
-    static std::once_flag s_flag;
     static sp<_ServletRequestManager> mInstance;
-    
-    ThreadLocal<ServletRequest> mRequests;
+
+    ThreadLocal<ServletRequestCache> mCaches;
 };
 
 }

@@ -68,7 +68,10 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             HttpEntity entity = createHttpEntity();
             ServletRequest req = createServletRequest(msg,client);
             //printf("client is %s \n",client->getInetAddress()->toChars());
-            st(ServletRequestManager)::getInstance()->addRequest(req);
+            ServletRequestCache cache = createServletRequestCache(req,map);
+            st(ServletRequestManager)::getInstance()->add(cache);
+
+            //st(ServletRequestManager)::getInstance()->addRequest(req);
             HttpResponseEntity obj = router->getListener()->onInvoke();
             entity->setContent(obj->getContent()->get()->toByteArray());
             
@@ -76,7 +79,7 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
             response->setEntity(entity);
             w->write(response);
-            st(ServletRequestManager)::getInstance()->removeRequest();
+            //st(ServletRequestManager)::getInstance()->removeRequest();
         }
     }
 }

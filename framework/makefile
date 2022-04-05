@@ -4,6 +4,7 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/server.o \
 		$(outtmp)/servletrequest.o \
 		$(outtmp)/servletrequestmgr.o \
+		$(outtmp)/controllerparam.o \
 		$(outtmp)/httproutermanager.o \
 		$(outtmp)/httproutermap.o \
 		$(outtmp)/httpresourcemanager.o \
@@ -27,6 +28,9 @@ $(outtmp)/httprouter.o :$(frameworkDir)/HttpRouter.cpp
 
 $(outtmp)/controller.o :$(frameworkDir)/Controller.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/Controller.cpp -o $(outtmp)/controller.o
+
+$(outtmp)/controllerparam.o :$(frameworkDir)/ControllerParam.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/ControllerParam.cpp -o $(outtmp)/controllerparam.o
 
 $(outtmp)/server.o :$(frameworkDir)/Server.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/Server.cpp -o $(outtmp)/server.o

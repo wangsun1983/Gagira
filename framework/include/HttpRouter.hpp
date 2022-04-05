@@ -1,5 +1,5 @@
-#ifndef __OBOTCHA_HTTP_ROUTER_HPP__
-#define __OBOTCHA_HTTP_ROUTER_HPP__
+#ifndef __GAGIRA_HTTP_ROUTER_HPP__
+#define __GAGIRA_HTTP_ROUTER_HPP__
 
 #include "Object.hpp"
 #include "StrongPointer.hpp"
@@ -9,7 +9,7 @@
 #include "TextContent.hpp"
 #include "HttpResponseEntity.hpp"
 
-namespace obotcha {
+namespace gagira {
 
 DECLARE_CLASS(RouterListener) {
   public:
@@ -28,6 +28,6 @@ DECLARE_CLASS(HttpRouter) {
     RouterListener mListener;
 };
 
-} // namespace obotcha
+} // namespace gagira
 
 #endif

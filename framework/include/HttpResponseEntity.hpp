@@ -1,5 +1,5 @@
-#ifndef __OBOTCHA_HTTP_RESPONSE_ENTITY_HPP__
-#define __OBOTCHA_HTTP_RESPONSE_ENTITY_HPP__
+#ifndef __GAGIRA_HTTP_RESPONSE_ENTITY_HPP__
+#define __GAGIRA_HTTP_RESPONSE_ENTITY_HPP__
 
 #include "Object.hpp"
 #include "StrongPointer.hpp"
@@ -8,7 +8,9 @@
 #include "HttpStatus.hpp"
 #include "HttpCookie.hpp"
 
-namespace obotcha {
+using namespace obotcha;
+
+namespace gagira {
 
 DECLARE_CLASS(HttpResponseEntity) {
 

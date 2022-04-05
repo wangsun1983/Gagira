@@ -1,5 +1,5 @@
-#ifndef __OBOTCHA_HTTP_ROUTER_MANAGER_HPP__
-#define __OBOTCHA_HTTP_ROUTER_MANAGER_HPP__
+#ifndef __GAGIRA_HTTP_ROUTER_MANAGER_HPP__
+#define __GAGIRA_HTTP_ROUTER_MANAGER_HPP__
 
 #include <mutex>
 #include <thread>
@@ -12,7 +12,9 @@
 #include "HttpRouterMap.hpp"
 #include "String.hpp"
 
-namespace obotcha {
+using namespace obotcha;
+
+namespace gagira {
 
 DECLARE_CLASS(HttpRouterManager) {
   public:
@@ -22,12 +24,11 @@ DECLARE_CLASS(HttpRouterManager) {
 
   private:
     _HttpRouterManager();
-    static std::once_flag s_flag;
     static sp<_HttpRouterManager> mInstance;
 
     HttpRouterMap mMaps[st(HttpMethod)::Max];
 };
 
-} // namespace obotcha
+} // namespace gagira
 
 #endif

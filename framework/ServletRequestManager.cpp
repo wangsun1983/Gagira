@@ -1,17 +1,23 @@
 #include "ServletRequestManager.hpp"
+#include "ControllerParam.hpp"
 
 using namespace obotcha;
 
 namespace gagira  {
 
-std::once_flag _ServletRequestManager::s_flag;
 sp<_ServletRequestManager> _ServletRequestManager::mInstance;
 
+_ServletRequestCache::_ServletRequestCache(ServletRequest request,sp<_ControllerParam> param) {
+    r = request;
+    p = param;
+}
+
 _ServletRequestManager::_ServletRequestManager() {
-    mRequests = createThreadLocal<ServletRequest>();
+    mCaches = createThreadLocal<ServletRequestCache>();
 }
 
 sp<_ServletRequestManager> _ServletRequestManager::getInstance() {
+    static std::once_flag s_flag;
     std::call_once(s_flag, [&]() {
         _ServletRequestManager *p = new _ServletRequestManager();
         p->mInstance.set_pointer(p);
@@ -20,16 +26,20 @@ sp<_ServletRequestManager> _ServletRequestManager::getInstance() {
     return mInstance;
 }
 
-void _ServletRequestManager::addRequest(ServletRequest r) {
-    mRequests->set(r);
-}
-
-void _ServletRequestManager::removeRequest() {
-    mRequests->remove();
+void _ServletRequestManager::add(ServletRequestCache c) {
+    mCaches->set(c);
 }
 
 ServletRequest _ServletRequestManager::getRequest() {
-    return mRequests->get();
+    return mCaches->get()->r;
+}
+
+ControllerParam _ServletRequestManager::getParam() {
+    return mCaches->get()->p;
+}
+
+void _ServletRequestManager::remove() {
+    mCaches->remove();
 }
 
 }

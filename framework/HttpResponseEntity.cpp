@@ -1,7 +1,7 @@
 
 #include "HttpResponseEntity.hpp"
 
-namespace obotcha {
+namespace gagira {
 
 int _HttpResponseEntity::getStatus() { 
     return mStatus; 
@@ -15,4 +15,4 @@ TextContent _HttpResponseEntity::getContent() {
     return mContent; 
 }
 
-} // namespace obotcha
+} // namespace gagira

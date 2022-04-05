@@ -3,7 +3,7 @@
 
 #include "HttpRouter.hpp"
 
-namespace obotcha {
+namespace gagira {
 
 _HttpRouter::_HttpRouter(String p, RouterListener l) {
     mPath = p;

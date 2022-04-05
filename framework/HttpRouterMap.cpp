@@ -2,6 +2,7 @@
 
 using namespace obotcha;
 
+namespace gagira {
 _HttpRouterNode::_HttpRouterNode(String segment, HttpRouter router) {
     mSegment = segment;
     mRouter = router;
@@ -144,4 +145,6 @@ HashMap<String, String> _HttpRouterMap::_parseQuery(String content) {
     value = createString(&p[start], 0, index - start);
     result->put(name, value);
     return result;
+}
+
 }

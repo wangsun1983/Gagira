@@ -1,5 +1,5 @@
-#ifndef __OBOTCHA_HTTP_ROUTER_MAP_HPP__
-#define __OBOTCHA_HTTP_ROUTER_MAP_HPP__
+#ifndef __GAGIRA_HTTP_ROUTER_MAP_HPP__
+#define __GAGIRA_HTTP_ROUTER_MAP_HPP__
 
 #include "Object.hpp"
 #include "StrongPointer.hpp"
@@ -7,7 +7,7 @@
 #include "String.hpp"
 #include "HttpRouter.hpp"
 
-namespace obotcha {
+namespace gagira {
 
 DECLARE_CLASS(HttpRouterNode) {
 public:

@@ -1,5 +1,5 @@
-#ifndef __OBOTCHA_HTTP_RESOURCE_MANAGER_HPP__
-#define __OBOTCHA_HTTP_RESOURCE_MANAGER_HPP__
+#ifndef __GAGIRA_HTTP_RESOURCE_MANAGER_HPP__
+#define __GAGIRA_HTTP_RESOURCE_MANAGER_HPP__
 
 #include <mutex>
 #include <thread>
@@ -12,7 +12,9 @@
 #include "ReadWriteLock.hpp"
 #include "String.hpp"
 
-namespace obotcha {
+using namespace obotcha;
+
+namespace gagira {
 
 DECLARE_CLASS(HttpResourceManager) {
   public:
@@ -24,7 +26,6 @@ DECLARE_CLASS(HttpResourceManager) {
 
   private:
     _HttpResourceManager();
-    static std::once_flag s_flag;
     static sp<_HttpResourceManager> mInstance;
 
     HashMap<String, String> mRedirectMaps;
@@ -37,6 +38,6 @@ DECLARE_CLASS(HttpResourceManager) {
     ReadWriteLock mReadWriteLock;
 };
 
-} // namespace obotcha
+} // namespace gagira
 
 #endif

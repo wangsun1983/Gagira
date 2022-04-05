@@ -3,12 +3,12 @@
 #include "HttpPacket.hpp"
 #include "HttpServer.hpp"
 
-namespace obotcha {
+namespace gagira {
 
-std::once_flag _HttpResourceManager::s_flag;
 sp<_HttpResourceManager> _HttpResourceManager::mInstance;
 
 HttpResourceManager _HttpResourceManager::getInstance() {
+    static std::once_flag s_flag;
     std::call_once(s_flag, [&]() {
         _HttpResourceManager *p = new _HttpResourceManager();
         p->mInstance.set_pointer(p);
@@ -78,4 +78,4 @@ File _HttpResourceManager::findResource(String path) {
     return nullptr;
 }
 
-} // namespace obotcha
+} // namespace gagira

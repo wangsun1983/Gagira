@@ -39,13 +39,13 @@ T getClass(sp<T>) {
     Trigger(MethodNotSupportException,"cannot use this function");    
 }
 
-#define Inject(method,url,instance,function) \
-    {\
-    auto func = std::bind(&decltype(getClass(instance))::function,instance.get_pointer());\
-    ControllerRouter r = createControllerRouter(func,instance); \
-    HttpRouter router = createHttpRouter(url,r);\
-    st(HttpRouterManager)::getInstance()->addRouter(method,router);\
-    }\
+//#define Inject(method,url,instance,function) \
+//    {\
+//    auto func = std::bind(&decltype(getClass(instance))::function,instance.get_pointer());\
+//    ControllerRouter r = createControllerRouter(func,instance); \
+//    HttpRouter router = createHttpRouter(url,r);\
+//    st(HttpRouterManager)::getInstance()->addRouter(method,router);\
+//    }\
 
 }
 
