@@ -38,12 +38,7 @@ public:
     }
 
     String get() {
-        String value = maps->get(key);
-        if(value == nullptr) {
-            Trigger(NullPointerException,"not found");
-        }
-
-        return value;
+        return maps->get(key);
     }
 
 private:
@@ -52,20 +47,16 @@ private:
 };
 
 template<>
-class _ControllerParamHelper<int> {
+class _ControllerParamHelper<Integer> {
 public:
     _ControllerParamHelper(String p,HashMap<String,String> &maps) {
         key = p;
         this->maps = maps;
     }
 
-    int get() {
+    Integer get() {
         String value = maps->get(key);
-        if(value == nullptr) {
-            Trigger(NullPointerException,"not found");
-        }
-
-        return value->toBasicInt();
+        return (value == nullptr)?nullptr:value->toInteger();
     }
 
 private:
@@ -74,20 +65,16 @@ private:
 };
 
 template<>
-class _ControllerParamHelper<bool> {
+class _ControllerParamHelper<Boolean> {
 public:
     _ControllerParamHelper(String p,HashMap<String,String> &maps) {
         key = p;
         this->maps = maps;
     }
 
-    bool get() {
+    Boolean get() {
         String value = maps->get(key);
-        if(value == nullptr) {
-            Trigger(NullPointerException,"not found");
-        }
-
-        return value->toBasicBool();
+        return (value == nullptr)?nullptr:value->toBoolean();
     }
 
 private:

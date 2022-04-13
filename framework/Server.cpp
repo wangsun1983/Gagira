@@ -35,11 +35,18 @@ int _Server::start() {
     mServer = mBuilder->build();
     
     if(mServer != nullptr) {
-        mServer->start();
-        return 0;
+        return mServer->start();
     }
 
     return -1;
+}
+
+void _Server::close() {
+    mServer->close();
+}
+
+void _Server::waitForExit(long interval) {
+    mServer->join(interval);
 }
 
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {

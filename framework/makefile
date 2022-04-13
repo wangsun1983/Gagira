@@ -10,6 +10,13 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/httpresourcemanager.o \
 		$(outtmp)/httpresponseentity.o \
 		$(outtmp)/httprouter.o \
+		$(outtmp)/htmltemplate.o \
+		$(outtmp)/htmltemplatetextitem.o \
+		$(outtmp)/htmltemplateobjectitem.o \
+		$(outtmp)/htmltemplateconditionitem.o \
+		$(outtmp)/templatedotcmdparser.o \
+		$(outtmp)/templateconditioncmdparser.o 
+		
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/HttpRouterManager.cpp -o $(outtmp)/httproutermanager.o
@@ -40,3 +47,21 @@ $(outtmp)/servletrequest.o :$(frameworkDir)/ServletRequest.cpp
 
 $(outtmp)/servletrequestmgr.o :$(frameworkDir)/ServletRequestManager.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/ServletRequestManager.cpp -o $(outtmp)/servletrequestmgr.o
+
+$(outtmp)/htmltemplate.o :$(frameworkDir)/template/HtmlTemplate.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplate.cpp -o $(outtmp)/htmltemplate.o
+
+$(outtmp)/htmltemplatetextitem.o :$(frameworkDir)/template/HtmlTemplateTextItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateTextItem.cpp -o $(outtmp)/htmltemplatetextitem.o
+
+$(outtmp)/htmltemplateconditionitem.o :$(frameworkDir)/template/HtmlTemplateConditionItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateConditionItem.cpp -o $(outtmp)/htmltemplateconditionitem.o
+
+$(outtmp)/htmltemplateobjectitem.o :$(frameworkDir)/template/HtmlTemplateObjectItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateObjectItem.cpp -o $(outtmp)/htmltemplateobjectitem.o
+
+$(outtmp)/templatedotcmdparser.o :$(frameworkDir)/template/TemplateDotCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateDotCmdParser.cpp -o $(outtmp)/templatedotcmdparser.o
+
+$(outtmp)/templateconditioncmdparser.o :$(frameworkDir)/template/TemplateConditionCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateConditionCmdParser.cpp -o $(outtmp)/templateconditioncmdparser.o

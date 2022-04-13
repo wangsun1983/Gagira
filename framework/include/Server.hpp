@@ -30,6 +30,11 @@ public:
     _Server* setOption(HttpOption);
 
     int start();
+
+    void close();
+
+    void waitForExit(long interval = 0);
+
     void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
     
 private:

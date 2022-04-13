@@ -7,6 +7,7 @@
 #include "ServletRequest.hpp"
 #include "HttpResourceManager.hpp"
 #include "Reflect.hpp"
+#include "Utils.hpp"
 
 using namespace obotcha;
 using namespace gagira;
@@ -24,6 +25,20 @@ public:
         printf("sayhello function called \n");
         ServletRequest req = getRequest();
         printf("net ip is %s \n",req->getInetAddress()->toChars());
+        printf("id is %d \n",GetIntParam(id)->toValue());
+        Student s = createStudent();
+        s->name = "abc";
+        s->age = 123;
+        //s->name = createString("aaaa");
+        return createHttpResponseEntity(s);
+    }
+
+    HttpResponseEntity sayHi() {
+        printf("sayhello function called \n");
+        ServletRequest req = getRequest();
+        printf("net ip is %s \n",req->getInetAddress()->toChars());
+        printf("id is %d \n",GetIntParam(id)->toValue());
+        printf("name is %s \n",GetStringParam(name)->toChars());
         Student s = createStudent();
         s->name = "abc";
         s->age = 123;
@@ -34,7 +49,7 @@ public:
 
 int main() {
     Server server = createServer()
-                    ->setAddress(createInet4Address("192.168.1.9",1128));
+                    ->setAddress(createInet4Address("192.168.1.10",1128));
     MyController controller = createMyController();
     
     HttpResourceManager resourceManager = st(HttpResourceManager)::getInstance();
@@ -42,11 +57,10 @@ int main() {
     resourceManager->setViewRedirect("index","index.html");
 
     Inject(st(HttpMethod)::Get,"abc/:id",controller,sayHello);
+    Inject(st(HttpMethod)::Get,"abc/:id/:name",controller,sayHi);
 
     server->start();
-    while(1) {
-        sleep(100);
-    }
+    server->waitForExit();
 
     return 0;
 }

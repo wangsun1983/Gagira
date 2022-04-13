@@ -17,13 +17,22 @@
 namespace gagira {
 
 #define GetIntParam(key) \
-    st(ServletRequestManager)::getInstance()->getParam()->get<int>(#key)
+    ({\
+        auto param = st(ServletRequestManager)::getInstance()->getParam(); \
+        param->get<Integer>(#key);\
+    })
 
 #define GetBoolParam(key) \
-    st(ServletRequestManager)::getInstance()->getParam()->get<bool>(#key)
+    ({\
+        auto param = st(ServletRequestManager)::getInstance()->getParam(); \
+        param->get<Boolean>(#key);\
+    })
 
 #define GetStringParam(key) \
-    st(ServletRequestManager)::getInstance()->getParam()->get<String>(#key)
+    ({\
+        auto param = st(ServletRequestManager)::getInstance()->getParam(); \
+        param->get<String>(#key);\
+    })
 
 
 #define Inject(method,url,instance,function) \

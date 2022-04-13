@@ -9,7 +9,6 @@ clangcompiler = clang++
 gcc = g++
 
 cflags = -fpic \
-		-lrt \
 		-I ./3rdparty/Obotcha/include/util/concurrent/ \
 		-I ./3rdparty/Obotcha/include/util/coroutine/ \
 		-I ./3rdparty/Obotcha/include/util/text/ \
@@ -34,6 +33,7 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/external/uuid/ \
 		-I ./3rdparty/Obotcha/include/external/glog/ \
 		-I ./framework/include/ \
+		-I ./framework/template/include/ \
 		-g \
 		-std=c++14 \
 		-fsanitize=address \
