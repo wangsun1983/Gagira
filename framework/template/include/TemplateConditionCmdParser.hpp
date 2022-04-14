@@ -15,7 +15,7 @@ DECLARE_CLASS(TemplateConditionCmdParser) IMPLEMENTS(TemplateCmdParser) {
 public:
     _TemplateConditionCmdParser();
 
-    void addPrevContent(String);
+//    void addPrevContent(String);
     void doParse(String);
     void addFinalItem();
     HtmlTemplateItem getTemplateItem();

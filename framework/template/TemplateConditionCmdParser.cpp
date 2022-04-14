@@ -1,4 +1,5 @@
 #include "TemplateConditionCmdParser.hpp"
+#include "HtmlTemplateObjectItem.hpp"
 
 using namespace obotcha;
 
@@ -17,10 +18,10 @@ _TemplateConditionCmdParser::_TemplateConditionCmdParser() {
     item = createHtmlTemplateConditionItem();
 }
 
-void _TemplateConditionCmdParser::addPrevContent(String content) {
-    auto condition =  item->conditions->get(item->conditions->size() - 1);
-    condition->content = content;
-}
+//void _TemplateConditionCmdParser::addPrevContent(String content) {
+//    auto condition =  item->conditions->get(item->conditions->size() - 1);
+//    condition->content = content;
+//}
 
 HtmlTemplateItem _TemplateConditionCmdParser::getTemplateItem() {
     return item;

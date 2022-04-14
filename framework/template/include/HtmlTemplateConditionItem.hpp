@@ -3,32 +3,36 @@
 
 #include "String.hpp"
 #include "HtmlTemplateItem.hpp"
-#include "HtmlTemplateObjectItem.hpp"
+#include "ArrayList.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
+class _HtmlTemplateObjectItem;
 class _TemplateConditionCmdParser;
+class _HtmlTemplate;
 
 DECLARE_CLASS(HtmlTemplateCondition) {
 public:
     _HtmlTemplateCondition();
+    ~_HtmlTemplateCondition();
     String condition;
-    HtmlTemplateObjectItem uniqueItem; //{{if .value}}
-    HtmlTemplateObjectItem objItem1;
-    HtmlTemplateObjectItem objItem2;
+    sp<_HtmlTemplateObjectItem> uniqueItem; //{{if .value}}
+    sp<_HtmlTemplateObjectItem> objItem1;
+    sp<_HtmlTemplateObjectItem> objItem2;
     String stringItem1;
     String stringItem2;
 
     //TODO,this contents may also contains {{.}}
-    String content;
+    sp<_HtmlTemplate> content;
     bool isFinalCondition;
 };
 
 DECLARE_CLASS(HtmlTemplateConditionItem) IMPLEMENTS(HtmlTemplateItem) {
 public:
     friend class _TemplateConditionCmdParser;
+    friend class _HtmlTemplate;
     _HtmlTemplateConditionItem();
     String toString(Object o);
 

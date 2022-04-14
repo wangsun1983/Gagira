@@ -3,7 +3,9 @@
 
 #include "String.hpp"
 #include "HtmlTemplateItem.hpp"
+#include "HtmlTemplate.hpp"
 #include "ArrayList.hpp"
+#include "HtmlTemplateReferItem.hpp"
 
 using namespace obotcha;
 
@@ -11,12 +13,12 @@ namespace gagira {
 
 DECLARE_CLASS(HtmlTemplateRangeItem) IMPLEMENTS(HtmlTemplateItem) {
 public:
-    _HtmlTemplateRangeItem(String);
+    _HtmlTemplateRangeItem();
     String toString(Object o);
 
 private:
-    String text;
-    ArrayList<HtmlTemplateItem> items;
+    String mIndexName;
+    HtmlTemplate mTemplate;
 
 };
 

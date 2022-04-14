@@ -5,6 +5,8 @@
 #include "HtmlTemplateItem.hpp"
 #include "HtmlTemplateObjectItem.hpp"
 #include "ArrayList.hpp"
+#include "ThreadLocal.hpp"
+#include "HashMap.hpp"
 
 using namespace obotcha;
 
@@ -12,12 +14,15 @@ namespace gagira {
 
 DECLARE_CLASS(HtmlTemplateReferItem) IMPLEMENTS(HtmlTemplateItem) {
 public:
-    _HtmlTemplateReferItem();
+    _HtmlTemplateReferItem(String);
     String toString(Object o);
+    static void setValue(String,String);
+    String getName();
 
 private:
-    HtmlTemplateObjectItem objItem;
-    String stringItem;
+    static ThreadLocal<HashMap<String,String>> values;
+    
+    String paramName;
 };
 
 }

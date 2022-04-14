@@ -14,7 +14,8 @@ namespace gagira {
 
 DECLARE_CLASS(HtmlTemplate) {
 public:
-    _HtmlTemplate(String);
+    _HtmlTemplate();
+    int import(String,int start = 0,bool onesection = false);
     String execute(Object data);
 
 private:
@@ -39,6 +40,10 @@ private:
     ArrayList<HtmlTemplateItem> items;
     //TemplateConditionCmdParser conditionParser;
     TemplateCmdParser mCurrentParser;
+
+    int tagStartIndex;
+    int tagEndIndex;
+    int mStatus;
 
 };
 

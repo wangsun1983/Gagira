@@ -14,8 +14,11 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/htmltemplatetextitem.o \
 		$(outtmp)/htmltemplateobjectitem.o \
 		$(outtmp)/htmltemplateconditionitem.o \
+		$(outtmp)/htmltemplatereferitem.o \
 		$(outtmp)/templatedotcmdparser.o \
-		$(outtmp)/templateconditioncmdparser.o 
+		$(outtmp)/templateconditioncmdparser.o  \
+		$(outtmp)/templaterefercmdparser.o  
+		
 		
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
@@ -57,6 +60,9 @@ $(outtmp)/htmltemplatetextitem.o :$(frameworkDir)/template/HtmlTemplateTextItem.
 $(outtmp)/htmltemplateconditionitem.o :$(frameworkDir)/template/HtmlTemplateConditionItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateConditionItem.cpp -o $(outtmp)/htmltemplateconditionitem.o
 
+$(outtmp)/htmltemplatereferitem.o :$(frameworkDir)/template/HtmlTemplateReferItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateReferItem.cpp -o $(outtmp)/htmltemplatereferitem.o
+
 $(outtmp)/htmltemplateobjectitem.o :$(frameworkDir)/template/HtmlTemplateObjectItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateObjectItem.cpp -o $(outtmp)/htmltemplateobjectitem.o
 
@@ -65,3 +71,6 @@ $(outtmp)/templatedotcmdparser.o :$(frameworkDir)/template/TemplateDotCmdParser.
 
 $(outtmp)/templateconditioncmdparser.o :$(frameworkDir)/template/TemplateConditionCmdParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateConditionCmdParser.cpp -o $(outtmp)/templateconditioncmdparser.o
+
+$(outtmp)/templaterefercmdparser.o :$(frameworkDir)/template/TemplateReferCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateReferCmdParser.cpp -o $(outtmp)/templaterefercmdparser.o

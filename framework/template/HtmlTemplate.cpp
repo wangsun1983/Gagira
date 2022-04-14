@@ -3,6 +3,7 @@
 #include "TemplateDotCmdParser.hpp"
 #include "StringBuffer.hpp"
 #include "TemplateConditionCmdParser.hpp"
+#include "TemplateReferCmdParser.hpp"
 
 using namespace obotcha;
 
@@ -19,84 +20,126 @@ String _HtmlTemplate::ElseCommand = createString("else");
 
 //template like Go
 //{{.}}
-_HtmlTemplate::_HtmlTemplate(String html) {
-    int index = html->find("{{");
-    int start = 0;
-    int status = ParseTag;
+_HtmlTemplate::_HtmlTemplate() {
     items = createArrayList<HtmlTemplateItem>();
+    mStatus = ParseTag;
+}
 
-    while(index != -1) {
-        if(start != index) {
-            //all the value should be save to text item
-            String text = html->subString(start,index - start);
-            printf("text is %s,status is %d \n",text->toChars(),status);
-            if(status == ParseIfContent ||
-                status == ParseElseContent ||
-                status == ParseElseIfContent) {
-                mCurrentParser->addPrevContent(text);
+int _HtmlTemplate::import(String html,int start,bool onsection) {
+    tagStartIndex = start;
+    tagEndIndex = start;
+    while(tagStartIndex >= 0) {
+        tagStartIndex = html->find("{{",tagEndIndex);
+        printf("tagStartIndex is %d \n",tagStartIndex);
+        if(tagStartIndex == -1) {
+            //save remain text;
+            if(tagEndIndex < html->size() - 1) {
+                String text = nullptr;
+                if(tagEndIndex > 0) {
+                    text = html->subString(tagEndIndex + 2,html->size() - tagEndIndex - 2);
+                } else {
+                    text = html->subString(0,html->size());
+                }
+                
+                if(text != nullptr && text->size() > 0) {
+                    printf("add remain text,text is %s \n",text->toChars());
+                    HtmlTemplateItem item = createHtmlTemplateTextItem(text);
+                    items->add(item);
+                }
+            }
+            return -1;
+        }
+
+        if(tagStartIndex < html->size() - 1) {
+            String text = nullptr;
+            if(tagEndIndex == 0) {
+                text = html->subString(tagEndIndex,tagStartIndex - tagEndIndex); //first 
             } else {
+                text = html->subString(tagEndIndex + 2,tagStartIndex - tagEndIndex - 2); //first
+            }
+            
+            if(text != nullptr && text->size() != 0) {
                 HtmlTemplateItem item = createHtmlTemplateTextItem(text);
+                printf("add start text,text is %s \n",text->toChars());
                 items->add(item);
             }
         }
 
-        start = index + 2;
-        index = html->find("}}",start);
-    
-        String text = html->subString(start,index - start);
-        //parse the command;
-        HtmlTemplateItem item;
-        status = doParse(text);
+LoopFind:
+        tagEndIndex = html->find("}}",tagStartIndex);
+        String cmd = html->subString(tagStartIndex + 2,tagEndIndex - tagStartIndex - 2);
+        
+        cmd = cmd->trim();
+        if(cmd->startsWith("/*") && cmd->endsWith("*/")) {
+            //this is a comment,Do nothing;
+        } if(cmd->startsWith(".")) {
+            mCurrentParser = createTemplateDotCmdParser();
+            mCurrentParser->doParse(cmd->subString(1,cmd->size() - 1));
+            items->add(mCurrentParser->getTemplateItem());
+            mStatus = ParseTag;
+        } else if(cmd->startsWithIgnoreCase(IfCommand)) {
+            printf("_HtmlTemplate if command trace1 \n");
+            mStatus = ParseIfContent;
+            mCurrentParser = createTemplateConditionCmdParser();
+            mCurrentParser->doParse(
+                    cmd->subString(IfCommand->size(),cmd->size()- IfCommand->size()));
+            HtmlTemplateConditionItem item = Cast<HtmlTemplateConditionItem>(mCurrentParser->getTemplateItem());
+            HtmlTemplateCondition cond =item->conditions->get(item->conditions->size() - 1);
+            cond->content = createHtmlTemplate();
+            int ret = cond->content->import(html,tagEndIndex,true);
+            printf("import trace1 ret is %d \n",ret);
+            if(ret < 0) {
+                tagStartIndex = cond->content->tagStartIndex;
+                goto LoopFind;
+            } else {
+                tagStartIndex = ret;
+            }
+        } else if(cmd->startsWithIgnoreCase(ElseCommand)) {
+            if(mStatus == ParseTag) {
+                //wrong status,this may be form condition's else
+                return -1;
+            }
 
-        start = index + 2;
-        index = html->find("{{",start);
-    }
-    
-    //remain data should save to textItem
-    printf("remain start is %d \n",start);
-    if(start < html->size() - 1) {
-        String text = html->subString(start,html->size() - start);
-        printf("remain text is %s \n",text->toChars());
-        HtmlTemplateItem item = createHtmlTemplateTextItem(text);
-        items->add(item);
-    }
-    //String text = html->subString(start,html->size() - start);
-    //printf("remain text is %s \n",text->toChars());
-    //HtmlTemplateItem item = createHtmlTemplateTextItem(text);
-    //items->add(item);
-}
+            if(cmd->contains(IfCommand)) {
+                int index = cmd->indexOf(IfCommand);
+                mCurrentParser->doParse(cmd->subString(index + 2,cmd->size() - index - 2));
+            } else {
+                Cast<TemplateConditionCmdParser>(mCurrentParser)->addFinalItem();
+            }
+            mStatus = ParseIfContent;
 
-int _HtmlTemplate::doParse(String command) {
-    printf("command is %s \n",command->toChars());
-    String cmd = command->trim();
-    if(cmd->startsWith(".")) {
-        mCurrentParser = createTemplateDotCmdParser();
-        mCurrentParser->doParse(cmd->subString(1,cmd->size() - 1));
-        items->add(mCurrentParser->getTemplateItem());
-        return ParseTag;
-    } else if(cmd->startsWithIgnoreCase(IfCommand)) {
-        mCurrentParser = createTemplateConditionCmdParser();
-        //mCurrentParser->updateStatus(st(TemplateConditionCmdParser)::ParseIf);
-        mCurrentParser->doParse(
-            cmd->subString(IfCommand->size(),cmd->size()- IfCommand->size()));
-        return ParseIfContent;
-    } else if(cmd->startsWithIgnoreCase(ElseCommand)) {
-        //mCurrentParser->updateStatus(st(TemplateConditionCmdParser)::ParseElse);
-        printf("cmd is else\n");
-        if(cmd->contains(IfCommand)) {
-            int index = cmd->indexOf(IfCommand);
-            mCurrentParser->doParse(cmd->subString(index + 2,cmd->size() - index - 2));
-        } else {
-            Cast<TemplateConditionCmdParser>(mCurrentParser)->addFinalItem();
+            HtmlTemplateConditionItem item = Cast<HtmlTemplateConditionItem>(mCurrentParser->getTemplateItem());
+            HtmlTemplateCondition cond =item->conditions->get(item->conditions->size() - 1);
+            cond->content = createHtmlTemplate();
+            int ret = cond->content->import(html,tagEndIndex,true);
+            printf("import trace2 ret is %d \n",ret);
+            if(ret < 0) {
+                tagStartIndex = cond->content->tagStartIndex;
+                goto LoopFind;
+            } else {
+                tagStartIndex = ret;
+            }
+        } else if(cmd->startsWithIgnoreCase(EndCommand)) {
+            printf("cmd is %s ,mStatus is %d\n",cmd->toChars(),mStatus);
+            if(mStatus == ParseIfContent || mStatus == ParseElseContent ||mStatus == ParseElseIfContent) {
+                items->add(mCurrentParser->getTemplateItem());
+                printf("end!!!! tagEndIndex is %d \n",tagEndIndex);
+            }
+
+            if(onsection) {
+                return  -1;
+            }
+        } else if(cmd->startsWith("$")) {
+            mCurrentParser = createTemplateReferCmdParser();
+            mCurrentParser->doParse(cmd->subString(1,cmd->size()- 1));
+            items->add(mCurrentParser->getTemplateItem());
         }
-        return ParseElseContent;
-    } else if(cmd->startsWithIgnoreCase(EndCommand)) {
-        items->add(mCurrentParser->getTemplateItem());
-        mCurrentParser = nullptr;
-        return ParseTag;
     }
-    //TODO
-    return ParseTag;
+
+    printf("final tagEndIndex is %d,html size is %d \n",tagEndIndex,html->size());
+    
+
+    return 0;
 }
 
 String _HtmlTemplate::execute(Object data) {
@@ -105,7 +148,12 @@ String _HtmlTemplate::execute(Object data) {
     printf("execute items size is %d \n",items->size());
     while(iterator->hasValue()) {
         auto item = iterator->getValue();
-        templateString->append(item->toString(data));
+        
+        String tempStr = item->toString(data);
+        if(tempStr != nullptr) {
+            templateString->append(tempStr);
+            printf("item to string is : %s \n",item->toString(data)->toChars());
+        }
         iterator->next();
     }
 
