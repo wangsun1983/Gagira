@@ -7,6 +7,8 @@
 #include "OStdReturnValue.hpp"
 #include "TemplateConditionCmdParser.hpp"
 #include "TemplateCmdParser.hpp"
+#include "HashMap.hpp"
+#include "File.hpp"
 
 using namespace obotcha;
 
@@ -16,7 +18,9 @@ DECLARE_CLASS(HtmlTemplate) {
 public:
     _HtmlTemplate();
     int import(String,int start = 0,bool onesection = false);
+    int importFile(String);
     String execute(Object data);
+    String execute(String section,Object data);
 
 private:
     static String RangeCommand;
@@ -27,23 +31,34 @@ private:
     static String IfCommand;
     static String ElseIfCommand;
     static String ElseCommand;
+    static String IncludeCommand;
+    static String DefineCommand;
 
     enum ParseStatus {
         ParseTag = 0,
         ParseIfContent,
         ParseElseIfContent,
-        ParseElseContent
+        ParseElseContent,
+        ParseRangeContent,
+        ParseDefine,
     };
 
     int doParse(String);
     
     ArrayList<HtmlTemplateItem> items;
-    //TemplateConditionCmdParser conditionParser;
+
+    HashMap<String,HtmlTemplateItem> sections;
+
     TemplateCmdParser mCurrentParser;
 
     int tagStartIndex;
     int tagEndIndex;
-    int mStatus;
+    int mStatus[32];
+    int mStatusCount;
+
+    int currentStatus();
+    void addCurrentStatus(int);
+    void removeCurrentStatus();
 
 };
 

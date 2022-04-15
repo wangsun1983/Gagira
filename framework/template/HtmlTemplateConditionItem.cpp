@@ -27,26 +27,20 @@ _HtmlTemplateConditionItem::_HtmlTemplateConditionItem() {
 String _HtmlTemplateConditionItem::toString(Object o) {
     StringBuffer content = createStringBuffer();
     auto iterator = conditions->getIterator();
-    printf("HtmlTemplateConditionItem condition size is %d \n",conditions->size());
     while(iterator->hasValue()) {
         HtmlTemplateCondition condition = iterator->getValue();
         if(condition->isFinalCondition) {
             return condition->content->execute(o);
         } else if(condition->uniqueItem != nullptr) {
             String value = condition->uniqueItem->toString(o);
-            printf("unique item value is %s \n",value->toChars());
             try {
                 int val = value->toBasicInt();
-                printf("condition execute1!!! \n");
                 if(val != 0) {
-                    printf("condition execute1_1!!! \n");
                     return condition->content->execute(o);
                 }
             } catch(...) {
                 bool val = value->toBasicBool();
-                printf("condition execute2!!! \n");
                 if(val) {
-                    printf("condition execute2_1!!! \n");
                     return condition->content->execute(o);
                 }
             }
@@ -88,7 +82,6 @@ String _HtmlTemplateConditionItem::toString(Object o) {
             } else if(condition->condition->equalsIgnoreCase("gt")) {
                 uint64_t v1 = param1->toBasicUint64();
                 uint64_t v2 = param2->toBasicUint64();
-                printf("v1 is %s,v2 is %s \n",param1->toChars(),param2->toChars());
                 if(v1 > v2) {
                     return condition->content->execute(o);
                 }

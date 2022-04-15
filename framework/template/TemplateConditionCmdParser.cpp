@@ -34,10 +34,8 @@ void _TemplateConditionCmdParser::addFinalItem() {
 }
 
 void _TemplateConditionCmdParser::doParse(String command) {
-    printf("TemplateConditionCmdParser command is %s \n",command->toChars());
     ArrayList<String> strs = command->split(" ");
-    printf("TemplateConditionCmdParser strs size is %d \n",strs->size());
-
+    
     HtmlTemplateCondition cond = createHtmlTemplateCondition();
     
     auto iterator = strs->getIterator();
@@ -53,14 +51,12 @@ void _TemplateConditionCmdParser::doParse(String command) {
 
         switch(internalStatus) {
             case ParseAction:
-                printf("ParseAction is %s \n",v->toChars());
                 if (v->equalsIgnoreCase(Eq) || v->equalsIgnoreCase(Ne) ||
                     v->equalsIgnoreCase(Lt) || v->equalsIgnoreCase(Le) ||
                     v->equalsIgnoreCase(Gt) || v->equalsIgnoreCase(Ge)) {
                     cond->condition = v;
                     internalStatus = ParseValue1;
                 } else if (v->startsWith(".")) {
-                    printf("ParseAction,set uniqueItem \n");
                     mDotCmdParser->doParse(v->subString(1, v->size() - 1));
                     cond->uniqueItem = Cast<HtmlTemplateObjectItem>(
                         mDotCmdParser->getTemplateItem());

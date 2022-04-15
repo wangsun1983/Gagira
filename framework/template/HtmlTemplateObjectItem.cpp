@@ -13,15 +13,12 @@ _HtmlTemplateObjectItem::_HtmlTemplateObjectItem() {
 String _HtmlTemplateObjectItem::toString(Object o) {
     Field field = nullptr;
     //it is only a {{.}}
-    printf("HtmlTemplateObjectItem start \n");
     if(fieldNames->size() == 0) {
         return _objectToString(o);
     }
-    printf("HtmlTemplateObjectItem trace1,fieldNames size is %d \n",fieldNames->size());
     auto iterator = fieldNames->getIterator();
     while(iterator->hasValue()) {
         String name = iterator->getValue();
-        printf("HtmlTemplateObjectItem trace1,name is %s \n",name->toChars());
         field = o->getField(name);
         if(field == nullptr) {
             break;
@@ -32,10 +29,8 @@ String _HtmlTemplateObjectItem::toString(Object o) {
         }
         iterator->next();
     }
-    printf("HtmlTemplateObjectItem trace2 \n");
-    
+
     if(field != nullptr) {
-        printf("HtmlTemplateObjectItem trace3,field type is %d \n",field->getType());
         switch(field->getType()) {
             case st(Field)::FieldTypeLong: {
                 return createString(field->getLongValue());
@@ -62,7 +57,6 @@ String _HtmlTemplateObjectItem::toString(Object o) {
             } break;
 
             case st(Field)::FieldTypeString: {
-                printf("fild string value is %s \n",field->getStringValue()->toChars());
                 return createString(field->getStringValue());
             } break;
 

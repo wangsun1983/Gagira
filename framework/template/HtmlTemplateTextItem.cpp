@@ -9,7 +9,6 @@ _HtmlTemplateTextItem::_HtmlTemplateTextItem(String v) {
 }
 
 String _HtmlTemplateTextItem::toString(Object o) {
-    printf("HtmlTemplateTextItem to string \n");
     return text;
 }
 

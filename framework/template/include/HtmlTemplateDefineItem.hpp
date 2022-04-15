@@ -1,5 +1,5 @@
-#ifndef __GAGRIA_HTML_TEMPLATE_RANGE_ITEM_HPP__
-#define __GAGRIA_HTML_TEMPLATE_RANGE_ITEM_HPP__
+#ifndef __GAGRIA_HTML_TEMPLATE_DEFINE_ITEM_HPP__
+#define __GAGRIA_HTML_TEMPLATE_DEFINE_ITEM_HPP__
 
 #include "String.hpp"
 #include "HtmlTemplateItem.hpp"
@@ -9,23 +9,21 @@
 
 using namespace obotcha;
 
-class _TemplateRangeCmdParser;
+class _TemplateDefineCmdParser;
 class _HtmlTemplate;
 
 namespace gagira {
 
-DECLARE_CLASS(HtmlTemplateRangeItem) IMPLEMENTS(HtmlTemplateItem) {
+DECLARE_CLASS(HtmlTemplateDefineItem) IMPLEMENTS(HtmlTemplateItem) {
 public:
-    friend class _TemplateRangeCmdParser;
+    friend class _TemplateDefineCmdParser;
     friend class _HtmlTemplate;
-    _HtmlTemplateRangeItem();
+    _HtmlTemplateDefineItem();
     String toString(Object o);
 
 private:
-    String mIndexName;
+    String mName;
     HtmlTemplate mTemplate;
-    HtmlTemplate mNoValueTemplate;
-
 };
 
 }

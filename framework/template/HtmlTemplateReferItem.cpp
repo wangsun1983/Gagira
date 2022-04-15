@@ -26,7 +26,11 @@ void _HtmlTemplateReferItem::setValue(String param,String value) {
 
 String _HtmlTemplateReferItem::toString(Object o) {
     auto map = values->get();
-    return map->get(paramName);
+    if(map != nullptr) {
+        return map->get(paramName);
+    }
+
+    return nullptr;
 }
 
 }
