@@ -18,13 +18,18 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/htmltemplaterangeitem.o \
 		$(outtmp)/htmltemplateincludeitem.o \
 		$(outtmp)/htmltemplatedefineitem.o \
+		$(outtmp)/htmltemplatelenitem.o \
+		$(outtmp)/htmltemplateindexitem.o \
+		$(outtmp)/htmltemplatewithitem.o \
 		$(outtmp)/templatedotcmdparser.o \
 		$(outtmp)/templateconditioncmdparser.o  \
 		$(outtmp)/templaterefercmdparser.o  \
 		$(outtmp)/templaterangecmdparser.o  \
 		$(outtmp)/templateincludecmdparser.o  \
-		$(outtmp)/templatedefinecmdparser.o  
-		
+		$(outtmp)/templatedefinecmdparser.o  \
+		$(outtmp)/templatelencmdparser.o  \
+		$(outtmp)/templateindexcmdparser.o \
+		$(outtmp)/templatewithcmdparser.o 
 		
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
@@ -78,6 +83,15 @@ $(outtmp)/htmltemplateincludeitem.o :$(frameworkDir)/template/HtmlTemplateInclud
 $(outtmp)/htmltemplatedefineitem.o :$(frameworkDir)/template/HtmlTemplateDefineItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateDefineItem.cpp -o $(outtmp)/htmltemplatedefineitem.o
 
+$(outtmp)/htmltemplatelenitem.o :$(frameworkDir)/template/HtmlTemplateLenItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateLenItem.cpp -o $(outtmp)/htmltemplatelenitem.o
+
+$(outtmp)/htmltemplateindexitem.o :$(frameworkDir)/template/HtmlTemplateIndexItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateIndexItem.cpp -o $(outtmp)/htmltemplateindexitem.o
+
+$(outtmp)/htmltemplatewithitem.o :$(frameworkDir)/template/HtmlTemplateWithItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateWithItem.cpp -o $(outtmp)/htmltemplatewithitem.o
+
 $(outtmp)/htmltemplateobjectitem.o :$(frameworkDir)/template/HtmlTemplateObjectItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateObjectItem.cpp -o $(outtmp)/htmltemplateobjectitem.o
 
@@ -98,3 +112,12 @@ $(outtmp)/templateincludecmdparser.o :$(frameworkDir)/template/TemplateIncludeCm
 
 $(outtmp)/templatedefinecmdparser.o :$(frameworkDir)/template/TemplateDefineCmdParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateDefineCmdParser.cpp -o $(outtmp)/templatedefinecmdparser.o
+
+$(outtmp)/templatelencmdparser.o :$(frameworkDir)/template/TemplateLenCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateLenCmdParser.cpp -o $(outtmp)/templatelencmdparser.o
+
+$(outtmp)/templateindexcmdparser.o :$(frameworkDir)/template/TemplateIndexCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateIndexCmdParser.cpp -o $(outtmp)/templateindexcmdparser.o
+
+$(outtmp)/templatewithcmdparser.o :$(frameworkDir)/template/TemplateWithCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateWithCmdParser.cpp -o $(outtmp)/templatewithcmdparser.o

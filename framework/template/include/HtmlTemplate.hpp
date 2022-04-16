@@ -22,7 +22,7 @@ public:
     String execute(Object data);
     String execute(String section,Object data);
 
-private:
+
     static String RangeCommand;
     static String IndexCommand;
     static String WithCommand;
@@ -33,7 +33,9 @@ private:
     static String ElseCommand;
     static String IncludeCommand;
     static String DefineCommand;
+    static String LenCommand;
 
+private:
     enum ParseStatus {
         ParseTag = 0,
         ParseIfContent,
@@ -41,6 +43,7 @@ private:
         ParseElseContent,
         ParseRangeContent,
         ParseDefine,
+        ParseWith,
     };
 
     int doParse(String);

@@ -7,6 +7,8 @@
 #include "TemplateRangeCmdParser.hpp"
 #include "TemplateIncludeCmdParser.hpp"
 #include "TemplateDefineCmdParser.hpp"
+#include "TemplateLenCmdParser.hpp"
+#include "TemplateWithCmdParser.hpp"
 #include "FileInputStream.hpp"
 #include "Log.hpp"
 
@@ -24,6 +26,7 @@ String _HtmlTemplate::ElseIfCommand = createString("else if");
 String _HtmlTemplate::ElseCommand = createString("else");
 String _HtmlTemplate::IncludeCommand = createString("template");
 String _HtmlTemplate::DefineCommand = createString("define");
+String _HtmlTemplate::LenCommand = createString("len");
 
 //template like Go
 //{{.}}
@@ -142,7 +145,8 @@ LoopFind:
         } else if(cmd->startsWithIgnoreCase(EndCommand)) {
             int status = currentStatus();
             if (status == ParseIfContent || status == ParseElseContent ||
-                status == ParseElseIfContent || status == ParseRangeContent) {
+                status == ParseElseIfContent || status == ParseRangeContent||
+                status == ParseWith) {
                 if (mCurrentParser != nullptr) {
                     items->add(mCurrentParser->getTemplateItem());
                 }
@@ -161,6 +165,10 @@ LoopFind:
         } else if(cmd->startsWith("$")) {
             mCurrentParser = createTemplateReferCmdParser();
             mCurrentParser->doParse(cmd->subString(1,cmd->size()- 1));
+            items->add(mCurrentParser->getTemplateItem());
+        } else if(cmd->startsWith(LenCommand)) {
+            mCurrentParser = createTemplateLenCmdParser();
+            mCurrentParser->doParse(cmd->subString(LenCommand->size(),cmd->size()- LenCommand->size()));
             items->add(mCurrentParser->getTemplateItem());
         } else if(cmd->startsWithIgnoreCase(RangeCommand)) {
             addCurrentStatus(ParseRangeContent);
@@ -194,6 +202,20 @@ LoopFind:
             //removeCurrentStatus();
             if(ret < 0) {
                 tagStartIndex = item->mTemplate->tagStartIndex;
+                goto LoopFind;
+            } else {
+                tagStartIndex = ret;
+            }
+        } else if(cmd->startsWithIgnoreCase(WithCommand)) {
+            addCurrentStatus(ParseWith);
+            mCurrentParser = createTemplateWithCmdParser();
+            mCurrentParser->doParse(cmd->subString(WithCommand->size(),cmd->size()- WithCommand->size()));
+            HtmlTemplateWithItem item = Cast<HtmlTemplateWithItem>(mCurrentParser->getTemplateItem());
+            item->content = createHtmlTemplate();
+            int ret = item->content->import(html,tagEndIndex,true);
+            //removeCurrentStatus();
+            if(ret < 0) {
+                tagStartIndex = item->content->tagStartIndex;
                 goto LoopFind;
             } else {
                 tagStartIndex = ret;
