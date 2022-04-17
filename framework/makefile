@@ -21,6 +21,7 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/htmltemplatelenitem.o \
 		$(outtmp)/htmltemplateindexitem.o \
 		$(outtmp)/htmltemplatewithitem.o \
+		$(outtmp)/htmltemplatefunctionitem.o \
 		$(outtmp)/templatedotcmdparser.o \
 		$(outtmp)/templateconditioncmdparser.o  \
 		$(outtmp)/templaterefercmdparser.o  \
@@ -29,7 +30,8 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/templatedefinecmdparser.o  \
 		$(outtmp)/templatelencmdparser.o  \
 		$(outtmp)/templateindexcmdparser.o \
-		$(outtmp)/templatewithcmdparser.o 
+		$(outtmp)/templatewithcmdparser.o \
+		$(outtmp)/templatefunctioncmdparser.o 
 		
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
@@ -92,6 +94,9 @@ $(outtmp)/htmltemplateindexitem.o :$(frameworkDir)/template/HtmlTemplateIndexIte
 $(outtmp)/htmltemplatewithitem.o :$(frameworkDir)/template/HtmlTemplateWithItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateWithItem.cpp -o $(outtmp)/htmltemplatewithitem.o
 
+$(outtmp)/htmltemplatefunctionitem.o :$(frameworkDir)/template/HtmlTemplateFunctionItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateFunctionItem.cpp -o $(outtmp)/htmltemplatefunctionitem.o
+
 $(outtmp)/htmltemplateobjectitem.o :$(frameworkDir)/template/HtmlTemplateObjectItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplateObjectItem.cpp -o $(outtmp)/htmltemplateobjectitem.o
 
@@ -121,3 +126,6 @@ $(outtmp)/templateindexcmdparser.o :$(frameworkDir)/template/TemplateIndexCmdPar
 
 $(outtmp)/templatewithcmdparser.o :$(frameworkDir)/template/TemplateWithCmdParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateWithCmdParser.cpp -o $(outtmp)/templatewithcmdparser.o
+
+$(outtmp)/templatefunctioncmdparser.o :$(frameworkDir)/template/TemplateFunctionCmdParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/TemplateFunctionCmdParser.cpp -o $(outtmp)/templatefunctioncmdparser.o

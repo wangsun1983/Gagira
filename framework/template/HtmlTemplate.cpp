@@ -9,6 +9,7 @@
 #include "TemplateDefineCmdParser.hpp"
 #include "TemplateLenCmdParser.hpp"
 #include "TemplateWithCmdParser.hpp"
+#include "TemplateFunctionCmdParser.hpp"
 #include "FileInputStream.hpp"
 #include "Log.hpp"
 
@@ -33,6 +34,9 @@ String _HtmlTemplate::LenCommand = createString("len");
 _HtmlTemplate::_HtmlTemplate() {
     items = createArrayList<HtmlTemplateItem>();
     sections = createHashMap<String,HtmlTemplateItem>();
+    //mFunctions = createHashMap<String,HtmlTemplateItem>();
+    //functionsCache = createArrayList<Object>();
+
     memset(mStatus,0,32*sizeof(int));
     mStatusCount = 0;
     mStatus[0] = ParseTag;
@@ -220,6 +224,15 @@ LoopFind:
             } else {
                 tagStartIndex = ret;
             }
+        } else {
+            //this may be a function item
+            int index = cmd->indexOf(" ");
+            String name = cmd->subString(0,index);
+            if(mFunctions.find(name->getStdString()) != mFunctions.end()) {
+                mCurrentParser = createTemplateFunctionCmdParser(name,mFunctions[name->getStdString()]);
+                mCurrentParser->doParse(cmd->subString(name->size(),cmd->size()- name->size()));
+                items->add(mCurrentParser->getTemplateItem());
+            }
         }
     }
 
@@ -258,6 +271,19 @@ String _HtmlTemplate::execute(String section,Object data) {
     }
 
     return item->toString(data);
+}
+
+ArrayList<HtmlTemplateItem> _HtmlTemplate::getItems() {
+    return items;
+}
+
+void _HtmlTemplate::setTemplateFunc(String name,HtmlTemplateFunction func) {
+    //mFunctions->put(name,func);
+    mFunctions[name->getStdString()] = func;
+}
+
+void _HtmlTemplate::saveFuncObjCache(Object o) {
+    //functionsCache->add(o);
 }
 
 int _HtmlTemplate::currentStatus() {

@@ -9,7 +9,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-using HtmlTemplateFunction = std::function<String(String)>;
+using HtmlTemplateFunction = std::function<String(ArrayList<String>)>;
 
 }
 

@@ -9,6 +9,8 @@
 #include "TemplateCmdParser.hpp"
 #include "HashMap.hpp"
 #include "File.hpp"
+#include "Utils.hpp"
+#include "HtmlTemplateFunction.hpp"
 
 using namespace obotcha;
 
@@ -21,7 +23,10 @@ public:
     int importFile(String);
     String execute(Object data);
     String execute(String section,Object data);
+    void setTemplateFunc(String,HtmlTemplateFunction);
+    void saveFuncObjCache(Object);
 
+    ArrayList<HtmlTemplateItem> getItems();
 
     static String RangeCommand;
     static String IndexCommand;
@@ -47,9 +52,12 @@ private:
     };
 
     int doParse(String);
+
+    ArrayList<Object> functionsCache;
+    std::map<std::string,HtmlTemplateFunction> mFunctions;
     
     ArrayList<HtmlTemplateItem> items;
-
+    
     HashMap<String,HtmlTemplateItem> sections;
 
     TemplateCmdParser mCurrentParser;
@@ -64,6 +72,13 @@ private:
     void removeCurrentStatus();
 
 };
+
+#define InjectTemplateFunction(templateObj,name,instance,method) \
+    {\
+        auto func = std::bind(&decltype(getClass(instance))::method,instance.get_pointer(),std::placeholders::_1);\
+        templateObj->setTemplateFunc(name,func);\
+        templateObj->saveFuncObjCache(instance);\
+    }\
 
 }
 

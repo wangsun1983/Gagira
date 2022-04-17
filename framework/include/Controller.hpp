@@ -34,11 +34,6 @@ private:
     Controller controller;
 };
 
-template <typename T>
-T getClass(sp<T>) {
-    Trigger(MethodNotSupportException,"cannot use this function");    
-}
-
 //#define Inject(method,url,instance,function) \
 //    {\
 //    auto func = std::bind(&decltype(getClass(instance))::function,instance.get_pointer());\
