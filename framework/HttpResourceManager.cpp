@@ -24,15 +24,32 @@ _HttpResourceManager::_HttpResourceManager() {
     mReadWriteLock = createReadWriteLock();
     mWriteLock = mReadWriteLock->getWriteLock();
     mReadLock = mReadWriteLock->getReadLock();
+
+    mInterceptors = createHashMap<String,ArrayList<Interceptor>>();
 }
 
-void _HttpResourceManager::setResourceDir(String dir) { mResourceDir = dir; }
+void _HttpResourceManager::setResourceDir(String dir) { 
+    mResourceDir = dir; 
+}
 
 void _HttpResourceManager::setViewRedirect(String segment, String filename) {
     mRedirectMaps->put(segment, filename);
 }
 
 File _HttpResourceManager::findResource(String path) {
+    //add Interceptor
+    printf("resource manager path is %s \n",path->toChars());
+    ArrayList<Interceptor> list = mInterceptors->get(path);
+    if(list != nullptr) {
+        auto iterator = list->getIterator();
+        while(iterator->hasValue()) {
+            Interceptor c = iterator->getValue();
+            if(!c->onIntercept()) {
+                return nullptr;
+            }
+        }
+    }
+
     {
         AutoLock l(mReadLock);
         File file = resourceCaches->get(path);
@@ -76,6 +93,16 @@ File _HttpResourceManager::findResource(String path) {
     }
 
     return nullptr;
+}
+
+void _HttpResourceManager::addResourceInterceptor(String path,Interceptor c) {
+    ArrayList<Interceptor> list = mInterceptors->get(path);
+    if(list == nullptr) {
+        list = createArrayList<Interceptor>();
+        mInterceptors->put(path,list);
+    }
+
+    list->add(c);
 }
 
 } // namespace gagira

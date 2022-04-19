@@ -25,4 +25,9 @@ String _ServletRequest::getInetAddress() {
 HttpSession _ServletRequest::getSession() {
     return mLinker->getSession();
 }
+
+String _ServletRequest::getUrl() {
+    return mPacket->getHeader()->getUrl();
+}
+
 }

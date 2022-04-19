@@ -8,6 +8,7 @@
 #include "HttpResourceManager.hpp"
 #include "Reflect.hpp"
 #include "Utils.hpp"
+#include "Interceptor.hpp"
 
 using namespace obotcha;
 using namespace gagira;
@@ -45,19 +46,44 @@ public:
         //s->name = createString("aaaa");
         return createHttpResponseEntity(s);
     }
+
+    HttpResponseEntity getStudent() {
+        printf("sayhello function called \n");
+        ServletRequest req = getRequest();
+        //String s = req->getContent<String>();
+        //printf("s is %s \n",s->toChars());
+        Student s = req->getContent<Student>();
+        printf("student is %s,age is %d \n",s->name->toChars(),s->age);
+        //s->name = createString("aaaa");
+        return createHttpResponseEntity(s);
+    }
+};
+
+DECLARE_CLASS(MyInterceptor) IMPLEMENTS(Interceptor) {
+public:
+    bool onIntercept() {
+        printf("onIntercept!!!!!!!!!!!!!! \n");
+        return false;
+    }
 };
 
 int main() {
     Server server = createServer()
-                    ->setAddress(createInet4Address("192.168.1.10",1128));
+                    ->setAddress(createInet4Address("192.168.1.10",1140));
     MyController controller = createMyController();
     
     HttpResourceManager resourceManager = st(HttpResourceManager)::getInstance();
     resourceManager->setResourceDir("./htm");
     resourceManager->setViewRedirect("index","index.html");
 
-    Inject(st(HttpMethod)::Get,"abc/:id",controller,sayHello);
-    Inject(st(HttpMethod)::Get,"abc/:id/:name",controller,sayHi);
+    InjectController(st(HttpMethod)::Get,"abc/:id",controller,sayHello);
+    InjectController(st(HttpMethod)::Get,"student/:id",controller,getStudent);
+
+    //InjectInterceptor(st(HttpMethod)::Get,"abc/:id",st(Interceptor)::BeforeExec,createMyInterceptor());
+    //InjectGlobalInterceptor(st(HttpMethod)::Get,createMyInterceptor());
+    //InjectResInterceptor("/index.html",createMyInterceptor());
+
+    InjectController(st(HttpMethod)::Get,"abc/:id/:name",controller,sayHi);
 
     server->start();
     server->waitForExit();

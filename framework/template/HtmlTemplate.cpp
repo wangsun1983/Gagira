@@ -35,8 +35,17 @@ _HtmlTemplate::_HtmlTemplate() {
     items = createArrayList<HtmlTemplateItem>();
     sections = createHashMap<String,HtmlTemplateItem>();
     //mFunctions = createHashMap<String,HtmlTemplateItem>();
-    //functionsCache = createArrayList<Object>();
+    functionsCache = createArrayList<Object>();
 
+    memset(mStatus,0,32*sizeof(int));
+    mStatusCount = 0;
+    mStatus[0] = ParseTag;
+}
+
+void _HtmlTemplate::clear() {
+    items->clear();
+    sections->clear();
+    functionsCache->clear();
     memset(mStatus,0,32*sizeof(int));
     mStatusCount = 0;
     mStatus[0] = ParseTag;
@@ -283,7 +292,7 @@ void _HtmlTemplate::setTemplateFunc(String name,HtmlTemplateFunction func) {
 }
 
 void _HtmlTemplate::saveFuncObjCache(Object o) {
-    //functionsCache->add(o);
+    functionsCache->add(o);
 }
 
 int _HtmlTemplate::currentStatus() {

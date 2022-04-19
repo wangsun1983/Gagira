@@ -32,12 +32,18 @@ void _HttpRouterMap::addRouter(HttpRouter r) {
         iterator->next();
     }
 
-    node->mRouter = r;
+    if(node->mRouter != nullptr) {
+        node->mRouter->update(r);
+    } else {
+        node->mRouter = r;
+    }
+    
 }
 
 HttpRouter _HttpRouterMap::findRouter(String path,
                                       HashMap<String, String> params) {
     ArrayList<String> segments = path->split("/");
+    printf("path is %s,segments size is %d \n",path->toChars(),segments->size());
     return _findRouter(segments, 0, this->mRoots, params);
 }
 

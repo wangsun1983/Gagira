@@ -11,6 +11,7 @@
 #include "HashMap.hpp"
 #include "ReadWriteLock.hpp"
 #include "String.hpp"
+#include "Interceptor.hpp"
 
 using namespace obotcha;
 
@@ -24,6 +25,8 @@ DECLARE_CLASS(HttpResourceManager) {
     File findResource(String url);
     void setViewRedirect(String segment, String filename);
 
+    void addResourceInterceptor(String,Interceptor);
+
   private:
     _HttpResourceManager();
     static sp<_HttpResourceManager> mInstance;
@@ -36,6 +39,8 @@ DECLARE_CLASS(HttpResourceManager) {
     ReadLock mReadLock;
     WriteLock mWriteLock;
     ReadWriteLock mReadWriteLock;
+
+    HashMap<String,ArrayList<Interceptor>> mInterceptors;
 };
 
 } // namespace gagira

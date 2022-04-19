@@ -23,6 +23,8 @@ public:
     int importFile(String);
     String execute(Object data);
     String execute(String section,Object data);
+    void clear();
+    
     void setTemplateFunc(String,HtmlTemplateFunction);
     void saveFuncObjCache(Object);
 

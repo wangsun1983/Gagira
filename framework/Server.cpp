@@ -13,6 +13,9 @@ using namespace obotcha;
 
 namespace gagira  {
 
+HashMap<Integer,ArrayList<Interceptor>> _Server::interceptors 
+            = createHashMap<Integer,ArrayList<Interceptor>>();
+
 _Server::_Server() {
     mBuilder = createHttpServerBuilder();
     mServer = nullptr;
@@ -49,15 +52,47 @@ void _Server::waitForExit(long interval) {
     mServer->join(interval);
 }
 
+void _Server::addinterceptors(int method,Interceptor c) {
+    ArrayList<Interceptor> list = interceptors->get(createInteger(method));
+    if(list == nullptr) {
+        list = createArrayList<Interceptor>();
+        interceptors->put(createInteger(method),list);
+    }
+    list->add(c);
+    interceptors->put(createInteger(method),list);
+}
+
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
     
     if(event == st(NetEvent)::Message) {
+        HashMap<String,String> map = createHashMap<String,String>();
+        ServletRequest req = createServletRequest(msg,client);
+        //printf("client is %s \n",client->getInetAddress()->toChars());
+        ServletRequestCache cache = createServletRequestCache(req,map);
+        st(ServletRequestManager)::getInstance()->add(cache);
+
         int method = msg->getHeader()->getMethod();
+        HttpResponse response = createHttpResponse();
+        //add interceptor
+        ArrayList<Interceptor> list = interceptors->get(createInteger(method));
+        if(list != nullptr) {
+            auto iterator = list->getIterator();
+            while(iterator->hasValue()) {
+                auto c = iterator->getValue();
+                if(!c->onIntercept()) {
+                    response->getHeader()->setResponseStatus(st(HttpStatus)::BadRequest);
+                    w->write(response);
+                    return;
+                }
+                iterator->next();
+            }
+        }
+        //add interceptor
+
         String url = msg->getHeader()->getUrl()->getRawUrl();
         File file = mResourceManager->findResource(url);
         printf("url is %s \n",url->toChars());
         if(file != nullptr) {
-            HttpResponse response = createHttpResponse();
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
             //response->setFile(file);
             HttpChunk chunk = createHttpChunk(file);
@@ -66,28 +101,29 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             printf("url %s response \n",url->toChars());
             return;
         }
-
-        HashMap<String,String> map = createHashMap<String,String>();
         HttpRouter router = mRouterManager->getRouter(method,url,map);
         if(router != nullptr) {
             //TODO?
             printf("http router is not nullptr \n");
             HttpEntity entity = createHttpEntity();
-            ServletRequest req = createServletRequest(msg,client);
-            //printf("client is %s \n",client->getInetAddress()->toChars());
-            ServletRequestCache cache = createServletRequestCache(req,map);
-            st(ServletRequestManager)::getInstance()->add(cache);
+            
 
             //st(ServletRequestManager)::getInstance()->addRequest(req);
-            HttpResponseEntity obj = router->getListener()->onInvoke();
-            entity->setContent(obj->getContent()->get()->toByteArray());
+            HttpResponseEntity obj = router->invoke();
             
-            HttpResponse response = createHttpResponse();
-            response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
-            response->setEntity(entity);
-            w->write(response);
+            
+            if(obj != nullptr) {
+                entity->setContent(obj->getContent()->get()->toByteArray());
+                response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
+                response->setEntity(entity);
+                w->write(response);
+                return;
+            }
             //st(ServletRequestManager)::getInstance()->removeRequest();
         }
+
+        response->getHeader()->setResponseStatus(st(HttpStatus)::BadRequest);
+        w->write(response);
     }
 }
 

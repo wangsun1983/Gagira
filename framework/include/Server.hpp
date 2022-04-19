@@ -16,6 +16,8 @@
 #include "HttpLinker.hpp"
 #include "Controller.hpp"
 #include "HttpResourceManager.hpp"
+#include "Interceptor.hpp"
+#include "HashMap.hpp"
 
 using namespace obotcha;
 
@@ -37,11 +39,15 @@ public:
 
     void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
     
+    static void addinterceptors(int method,Interceptor);
+
 private:
     HttpServerBuilder mBuilder;
     HttpServer mServer;
     HttpRouterManager mRouterManager;
     HttpResourceManager mResourceManager;
+
+    static HashMap<Integer,ArrayList<Interceptor>> interceptors;
 };
 
 }
