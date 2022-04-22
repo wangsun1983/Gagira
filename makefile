@@ -34,6 +34,7 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/external/glog/ \
 		-I ./framework/include/ \
 		-I ./framework/template/include/ \
+		-I ./framework/mq/include/ \
 		-g \
 		-std=c++14 \
 		-fsanitize=address \
