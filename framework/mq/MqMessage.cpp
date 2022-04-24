@@ -17,9 +17,6 @@ ByteArray _MqMessage::toByteArray() {
     ByteArray serializeData = serialize();
     ByteArray finalData = createByteArray(serializeData->size() + 4);
     ByteArrayWriter writer = createByteArrayWriter(finalData);
-    if(data != nullptr) {
-        printf("data size is %d,serializeData size is %d \n",data->size(),serializeData->size());
-    }
     writer->writeInt(serializeData->size());
     writer->writeByteArray(serializeData);
 

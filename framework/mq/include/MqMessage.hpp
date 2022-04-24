@@ -13,8 +13,13 @@ using namespace obotcha;
 
 namespace gagira {
 
+class _MqWorker;
+class _MqCenter;
+
 DECLARE_CLASS(MqMessage) IMPLEMENTS(Serializable){
 public:
+    friend class _MqWorker;
+    friend class _MqCenter;
     enum MessageType {
         ShakeHand = 0,
         Subscribe,
@@ -35,6 +40,9 @@ private:
     int type;
     ByteArray data;
     String channel;
+
+    Socket mSocket;
+    ByteArray mSerializableData;
 
 public:
     DECLARE_REFLECT_FIELD(MqMessage,type,channel,data);

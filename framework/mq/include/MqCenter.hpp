@@ -9,14 +9,37 @@
 #include "ByteRingArray.hpp"
 #include "ByteRingArrayReader.hpp"
 #include "Condition.hpp"
+#include "MqMessage.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
+class _MqCenter;
+
+DECLARE_CLASS(MqWorker) IMPLEMENTS(Thread) {
+public:
+    _MqWorker(_MqCenter *c);
+
+    void enqueueMessage(MqMessage msg);
+
+    void run();
+
+    int size();
+
+private:
+    _MqCenter *center;
+    BlockingLinkedList<MqMessage> actions;
+    Mutex mMutex;
+    HashMap<String,Integer> mChannelCounts;
+
+    bool isRunning;
+};
+
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
-    _MqCenter(String url,int buffsize = 1024);
+    friend class _MqWorker;
+    _MqCenter(String url,int workers = 4,int buffsize = 1024);
 
     void waitForExit(long interval = 0);
 
@@ -27,6 +50,13 @@ private:
 
     void onSocketMessage(int,Socket,ByteArray);
     void dispatchMessage(Socket sock,ByteArray);
+
+    ArrayList<OutputStream> getOutputStreams(String);
+    void setOutputStreams(String channel,ArrayList<OutputStream> list);
+    void addStickyMessage(String,ByteArray);
+    ByteArray getStickyMessage(String);
+
+    void removeWorkerRecord(String channel);
 
     InetAddress mAddrss;
     ServerSocket sock;
@@ -43,6 +73,13 @@ private:
     HashMap<String,ByteArray> mStickyMessasge;
 
     Condition waitExit;
+
+    //worker
+    ReadWriteLock mWorkerReadWriteLock;
+    ReadLock mWorkerReadLock;
+    WriteLock mWorkerWriteLock;
+    ArrayList<MqWorker> mWorkers;
+    HashMap<String,MqWorker> mMqWorkerMap;
 
     int mCurrentMsgLen;
 };
