@@ -1,16 +1,26 @@
+#include <mutex>
+
 #include "MqMessage.hpp"
 #include "ByteArrayWriter.hpp"
 
 namespace gagira {
 
 _MqMessage::_MqMessage() {
-    //Do nothing
+
 }
 
-_MqMessage::_MqMessage(int type,String channel,ByteArray data) {
+_MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {
     this->data = data;
-    this->type = type;
     this->channel = channel;
+    this->flags = flags;
+}
+
+bool _MqMessage::isPersist() {
+    return (flags&Persistent) != 0;
+}
+
+bool _MqMessage::isAcknowledge() {
+    return (flags&Acknowledge) != 0;
 }
 
 ByteArray _MqMessage::toByteArray() {
@@ -24,7 +34,7 @@ ByteArray _MqMessage::toByteArray() {
 }
 
 int _MqMessage::getType() {
-    return type;
+    return (flags & ~MaxMessageType);
 }
 
 ByteArray _MqMessage::getData() {
@@ -33,6 +43,22 @@ ByteArray _MqMessage::getData() {
 
 String _MqMessage::getChannel() {
     return channel;
+}
+
+void _MqMessage::acknowledge() {
+    //TODO
+}
+
+void _MqMessage::setFlags(uint32_t flag) {
+    flags = flag;
+}
+
+String _MqMessage::getToken() {
+    return token;
+}
+
+void _MqMessage::setToken(String s) {
+    token = s;
 }
 
 }

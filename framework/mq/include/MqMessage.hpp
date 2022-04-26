@@ -8,6 +8,7 @@
 #include "Serializable.hpp"
 #include "String.hpp"
 #include "Serializable.hpp"
+#include "UUID.hpp"
 
 using namespace obotcha;
 
@@ -21,31 +22,54 @@ public:
     friend class _MqWorker;
     friend class _MqCenter;
     enum MessageType {
-        ShakeHand = 0,
-        Subscribe,
-        UnSubscribe,
-        Publish,
-        PublishStick,
+        //message type
+        ShakeHand = 1<<1,
+        Subscribe = 1<<2,
+        UnSubscribe = 1<<3,
+        Publish = 1<<4,
+        PublishOneShot = 1<<5,
+        MessageAck = 1<<6,
+        MaxMessageType = 1<<7,
+
+        //psersist
+        Persistent = 1<<10,
+        Acknowledge = 1<<11,
     };
+    
     _MqMessage();
-    _MqMessage(int type,String channel,ByteArray data);
+    _MqMessage(String channel,ByteArray data,uint32_t flags);
     
     ByteArray toByteArray();
 
     int getType();
+
     ByteArray getData();
+
     String getChannel();
 
+    bool isPersist();
+    bool isAcknowledge();
+
+    String getId();
+
+    String getToken();
+    void setToken(String);
+
+    void acknowledge();
+
+    void setFlags(uint32_t);
+
 private:
-    int type;
     ByteArray data;
     String channel;
+    String token;
+    uint32_t flags;
 
     Socket mSocket;
     ByteArray mSerializableData;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,type,channel,data);
+    DECLARE_REFLECT_FIELD(MqMessage,channel,data,token,flags);
 };
 
 

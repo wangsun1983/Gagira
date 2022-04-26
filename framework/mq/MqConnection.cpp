@@ -55,7 +55,7 @@ int _MqConnection::subscribe(String channel,MqConnectionListener listener) {
         list->add(listener);
     }
     
-    MqMessage msg = createMqMessage(st(MqMessage)::Subscribe,channel,nullptr);
+    MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
     return mOutput->write(msg->toByteArray());
 }
 
@@ -80,7 +80,11 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             auto iterator = list->getIterator();
                             while(iterator->hasValue()) {
                                 auto listener = iterator->getValue();
-                                listener->onEvent(channel,msg->getData());
+                                //TODO
+                                if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
+                                    msg->setFlags(st(MqMessage)::MessageAck);
+                                    mOutput->write(msg->toByteArray());
+                                }
                                 iterator->next();
                             }
                         }

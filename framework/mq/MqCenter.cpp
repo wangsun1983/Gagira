@@ -21,6 +21,7 @@ _MqWorker::_MqWorker(_MqCenter *c) {
     center = c;
     actions = createBlockingLinkedList<MqMessage>();
     mChannelCounts = createHashMap<String,Integer>();
+    mQueueProcessorIndexs = createHashMap<String,Integer>();
     mMutex = createMutex();
     isRunning = true;
 }
@@ -43,10 +44,31 @@ void _MqWorker::enqueueMessage(MqMessage a) {
 
 void _MqWorker::run() {
     while(isRunning) {
+        bool isSendSuccess = true;
         MqMessage msg = actions->takeFirst();
         printf("MqWorker run start,get a msg type is %d\n",msg->getType());
         ArrayList<OutputStream> outputStreams = center->getOutputStreams(msg->getChannel());
+        
+        String token = nullptr;
+        if(msg->isPersist()) {
+            if(outputStreams == nullptr) {
+                center->mPersistentComp->newChannel(msg->getChannel());
+            }
+
+            if(msg->getType() != st(MqMessage)::Subscribe) {
+                token = center->mPersistentComp->newMessage(msg->getChannel(),
+                                                            msg->mSerializableData);
+                msg->setToken(token);
+            }
+        }
+        printf("msg type is %d \n",msg->getType());
+        
         switch(msg->getType()) {
+            case st(MqMessage)::MessageAck: {
+                //TODO
+            }
+            break;
+
             case st(MqMessage)::Subscribe: {
                 if(outputStreams == nullptr) {
                     outputStreams = createArrayList<OutputStream>();
@@ -55,19 +77,67 @@ void _MqWorker::run() {
                 outputStreams->add(msg->mSocket->getOutputStream());
 
                 //check whether there is sticky message in hashmap;
-                ByteArray serialData = center->getStickyMessage(msg->getChannel());
-                if(msg->mSocket != nullptr && serialData != nullptr) {
-                    msg->mSocket->getOutputStream()->write(serialData);
+                MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
+                            Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
+                while(1) {
+                    ByteArray persistData;
+                    String token;
+                    FetchRet(token,persistData) = comp->take(msg->getChannel());
+                    printf("subscribe trace1 \n");
+                    if(persistData != nullptr && msg->mSocket->getOutputStream()->write(persistData) > 0) {
+                        printf("subscribe trace2,token is %s \n",token->toChars());
+                        comp->remove(msg->getChannel(),token);
+                    } else {
+                        break;
+                    }
                 }
             }
             break;
 
-            case st(MqMessage)::PublishStick:
-                if(msg->mSerializableData != nullptr) {
-                    center->addStickyMessage(msg->getChannel(),msg->mSerializableData);
+            case st(MqMessage)::PublishOneShot:{
+                if(outputStreams == nullptr || outputStreams->size() == 0) {
+                    isSendSuccess = false;
+                } else {
+                    Integer index = mQueueProcessorIndexs->get(msg->getChannel());
+                    if(index == nullptr) {
+                        index = createInteger(0);
+                        mQueueProcessorIndexs->put(msg->getChannel(),index);
+                    }
+
+                    int current = index->toValue();
+                    if(current >= outputStreams->size()) {
+                        current = 0;
+                    }
+
+                    if(msg->isAcknowledge()) {
+                        String token = center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
+                        msg->setToken(token);
+                    }
+
+                    while(current < outputStreams->size() - 1 &&
+                        outputStreams->get(current)->write(msg->mSerializableData) <= 0) {
+                        outputStreams->removeAt(current);
+                        isSendSuccess = false;
+                    }
+                    current++;
+                    index->update(current);
                 }
 
+                //wangsl
+                if(!msg->isPersist() & !isSendSuccess && !msg->isAcknowledge()) {
+                    printf("MqCenter add msg for send fail \n");
+                    center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
+                }
+                //wangsl
+            }
+            break;
+
             case st(MqMessage)::Publish: {
+                if(outputStreams == nullptr || outputStreams->size() == 0) {
+                    isSendSuccess = false;
+                    break;
+                }
+
                 printf("MqWorker run start,public message trace1\n");
                 auto iterator = outputStreams->getIterator();
                 while(iterator->hasValue()) {
@@ -81,7 +151,14 @@ void _MqWorker::run() {
                     iterator->next();
                 }
             }
+            break;
         }
+
+        //wangsl
+        if(msg->isPersist() && isSendSuccess && !msg->isAcknowledge()) {
+            center->mPersistentComp->remove(msg->getChannel(),token);
+        }
+        //wangsl
 
         AutoLock l(mMutex);
         Integer v = mChannelCounts->get(msg->getChannel());
@@ -98,19 +175,22 @@ int _MqWorker::size() {
 }
 
 //------------MqCenter-------------
-_MqCenter::_MqCenter(String s,int workers,int buffsize) {
+_MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,int acktimeout) {
     static std::once_flag s_flag;
     std::call_once(s_flag, [&]() {
         monitor = createSocketMonitor();
     });
 
+    mUndeliveredComp = createMqUndeliveredComponent();
+
+    if(c != nullptr) {
+        mPersistentComp = c;
+    } else {
+        mPersistentComp = mUndeliveredComp;
+    }
+
     HttpUrl url = createHttpUrl(s);
     mAddrss = url->getInetAddress()->get(0);
-
-    //create server socket
-    sock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
-    sock->bind();
-    monitor->bind(sock,AutoClone(this));
 
     mOutputStreams = createHashMap<String,ArrayList<OutputStream>>();
     mReadWriteLock = createReadWriteLock();
@@ -120,9 +200,6 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize) {
     mBuffer = createByteRingArray(buffsize);
     mReader = createByteRingArrayReader(mBuffer);
     mCurrentMsgLen = 0;
-
-    mMutex = createMutex();
-    mStickyMessasge = createHashMap<String,ByteArray>();
 
     mWorkerReadWriteLock = createReadWriteLock();
     mWorkerReadLock = mWorkerReadWriteLock->getReadLock();
@@ -134,8 +211,16 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize) {
         worker->start();
         mWorkers->add(worker);
     }
-
+    
+    mMutex = createMutex();
     waitExit = createCondition();
+
+    mAckTimeout = acktimeout;
+
+    //create server socket
+    sock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
+    sock->bind();
+    monitor->bind(sock,AutoClone(this));
 }
 
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
@@ -185,7 +270,6 @@ void _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     msg->mSerializableData = data;
 
     String channel = msg->getChannel();
-
     
     //find a worker thread
     {
@@ -227,11 +311,6 @@ int _MqCenter::close() {
         mOutputStreams->clear();
     }
 
-    {
-        AutoLock l(mMutex);
-        mStickyMessasge->clear();
-    }
-
     waitExit->notify();
     return 0;
 }
@@ -251,15 +330,6 @@ void _MqCenter::setOutputStreams(String channel,ArrayList<OutputStream> list) {
     mOutputStreams->put(channel,list);
 }
 
-void _MqCenter::addStickyMessage(String channel,ByteArray data) {
-    AutoLock l(mMutex);
-    mStickyMessasge->put(channel,data);
-}
-
-ByteArray _MqCenter::getStickyMessage(String channel) {
-    AutoLock l(mMutex);
-    return mStickyMessasge->get(channel);
-}
 
 void _MqCenter::removeWorkerRecord(String channel) {
     AutoLock l(mWorkerWriteLock);

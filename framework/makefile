@@ -34,7 +34,9 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/templatefunctioncmdparser.o \
 		$(outtmp)/mqcenter.o \
 		$(outtmp)/mqmessage.o \
-		$(outtmp)/mqconnection.o 
+		$(outtmp)/mqconnection.o \
+		$(outtmp)/mqcenterbuilder.o \
+		$(outtmp)/mqundeliveredcomponent.o
 
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
@@ -135,6 +137,12 @@ $(outtmp)/templatefunctioncmdparser.o :$(frameworkDir)/template/TemplateFunction
 
 $(outtmp)/mqcenter.o :$(frameworkDir)/mq/MqCenter.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqCenter.cpp -o $(outtmp)/mqcenter.o
+
+$(outtmp)/mqcenterbuilder.o :$(frameworkDir)/mq/MqCenterBuilder.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqCenterBuilder.cpp -o $(outtmp)/mqcenterbuilder.o
+
+$(outtmp)/mqundeliveredcomponent.o :$(frameworkDir)/mq/MqUndeliveredComponent.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqUndeliveredComponent.cpp -o $(outtmp)/mqundeliveredcomponent.o
 
 $(outtmp)/mqmessage.o :$(frameworkDir)/mq/MqMessage.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqMessage.cpp -o $(outtmp)/mqmessage.o

@@ -10,12 +10,21 @@
 #include "ByteRingArrayReader.hpp"
 #include "Condition.hpp"
 #include "MqMessage.hpp"
+#include "MqPersistentComponent.hpp"
+#include "MqUndeliveredComponent.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
 class _MqCenter;
+
+DECLARE_CLASS(MqPersistInterface) {
+public:
+    void onNewChannel(String channel);
+    void onNewMessage(String channel,Message msg);
+    Message takeOneMessage(String channel);
+};
 
 DECLARE_CLASS(MqWorker) IMPLEMENTS(Thread) {
 public:
@@ -32,14 +41,15 @@ private:
     BlockingLinkedList<MqMessage> actions;
     Mutex mMutex;
     HashMap<String,Integer> mChannelCounts;
-
+    HashMap<String,Integer> mQueueProcessorIndexs;
     bool isRunning;
 };
 
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
+
     friend class _MqWorker;
-    _MqCenter(String url,int workers = 4,int buffsize = 1024);
+    _MqCenter(String url,int workers,int buffsize,MqPersistentComponent component,int acktimeout);
 
     void waitForExit(long interval = 0);
 
@@ -70,8 +80,6 @@ private:
     ByteRingArrayReader mReader;
 
     Mutex mMutex;
-    HashMap<String,ByteArray> mStickyMessasge;
-
     Condition waitExit;
 
     //worker
@@ -81,7 +89,13 @@ private:
     ArrayList<MqWorker> mWorkers;
     HashMap<String,MqWorker> mMqWorkerMap;
 
+    MqPersistentComponent mPersistentComp;
+
+    MqUndeliveredComponent mUndeliveredComp; 
+
     int mCurrentMsgLen;
+
+    int mAckTimeout;
 };
 
 }

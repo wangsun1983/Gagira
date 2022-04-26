@@ -16,7 +16,7 @@ namespace gagira {
 
 DECLARE_CLASS(MqConnectionListener) {
 public:
-    virtual void onEvent(String channel,ByteArray data) = 0;
+    virtual bool onEvent(String channel,ByteArray data) = 0;
 };
 
 template<typename T>
@@ -53,17 +53,9 @@ public:
     int connect();
 
     template<typename T>
-    int publish(String channel,T obj) {
+    int publish(String channel,T obj,int flags) {
         ByteArray data = _connection_helper<T>(obj).toData();
-        MqMessage msg = createMqMessage(st(MqMessage)::Publish,channel,data);
-        ByteArray testdata = msg->toByteArray();
-        return mOutput->write(msg->toByteArray());
-    }
-    
-    template<typename T>
-    int publishStick(String channel,T obj) {
-        ByteArray data = _connection_helper<T>(obj).toData();
-        MqMessage msg = createMqMessage(st(MqMessage)::PublishStick,channel,data);
+        MqMessage msg = createMqMessage(channel,data,flags);
         return mOutput->write(msg->toByteArray());
     }
 
