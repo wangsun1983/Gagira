@@ -12,6 +12,7 @@
 #include "MqMessage.hpp"
 #include "MqPersistentComponent.hpp"
 #include "MqUndeliveredComponent.hpp"
+#include "ThreadScheduledPoolExecutor.hpp"
 
 using namespace obotcha;
 
@@ -89,6 +90,8 @@ private:
     ArrayList<MqWorker> mWorkers;
     HashMap<String,MqWorker> mMqWorkerMap;
 
+    HashMap<String,Future> mAckTimerFuture;
+
     MqPersistentComponent mPersistentComp;
 
     MqUndeliveredComponent mUndeliveredComp; 
@@ -96,6 +99,8 @@ private:
     int mCurrentMsgLen;
 
     int mAckTimeout;
+
+    ThreadScheduledPoolExecutor mTimer;
 };
 
 }

@@ -61,97 +61,139 @@ void _MqWorker::run() {
                 msg->setToken(token);
             }
         }
-        printf("msg type is %d \n",msg->getType());
+        printf("msg type is %x \n",msg->getType());
         
-        switch(msg->getType()) {
-            case st(MqMessage)::MessageAck: {
-                //TODO
+        if((msg->getType() & st(MqMessage)::MessageAck) != 0) {
+            MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
+                        Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
+            comp->remove(msg->getChannel(),msg->getToken());
+
+            Future future = nullptr;
+
+            {
+                AutoLock l(center->mMutex);
+                future = center->mAckTimerFuture->get(msg->getToken());
+                center->mAckTimerFuture->remove(msg->getToken());
             }
-            break;
 
-            case st(MqMessage)::Subscribe: {
-                if(outputStreams == nullptr) {
-                    outputStreams = createArrayList<OutputStream>();
-                    center->setOutputStreams(msg->getChannel(),outputStreams);
+            if(future != nullptr) {
+                future->cancel();
+            }
+        } else if((msg->getType() & st(MqMessage)::Subscribe) != 0) {
+            if(outputStreams == nullptr) {
+                outputStreams = createArrayList<OutputStream>();
+                center->setOutputStreams(msg->getChannel(),outputStreams);
+            }
+            outputStreams->add(msg->mSocket->getOutputStream());
+
+            //check whether there is sticky message in hashmap;
+            MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
+                        Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
+            while(1) {
+                ByteArray persistData;
+                String token;
+                FetchRet(token,persistData) = comp->take(msg->getChannel());
+                printf("subscribe trace1 \n");
+                if(persistData != nullptr && msg->mSocket->getOutputStream()->write(persistData) > 0) {
+                    printf("subscribe trace2,token is %s \n",token->toChars());
+                    comp->remove(msg->getChannel(),token);
+                } else {
+                    break;
                 }
-                outputStreams->add(msg->mSocket->getOutputStream());
+            }
+        } else if((msg->getType() & st(MqMessage)::PublishOneShot) != 0) {
+            printf("publish one shot!!! \n");
+            if(outputStreams == nullptr || outputStreams->size() == 0) {
+                isSendSuccess = false;
+            } else {
+                Integer index = mQueueProcessorIndexs->get(msg->getChannel());
+                if(index == nullptr) {
+                    index = createInteger(0);
+                    mQueueProcessorIndexs->put(msg->getChannel(),index);
+                }
 
-                //check whether there is sticky message in hashmap;
-                MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
-                            Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
-                while(1) {
-                    ByteArray persistData;
-                    String token;
-                    FetchRet(token,persistData) = comp->take(msg->getChannel());
-                    printf("subscribe trace1 \n");
-                    if(persistData != nullptr && msg->mSocket->getOutputStream()->write(persistData) > 0) {
-                        printf("subscribe trace2,token is %s \n",token->toChars());
-                        comp->remove(msg->getChannel(),token);
+                int current = index->toValue();
+                if(current >= outputStreams->size()) {
+                    current = 0;
+                }
+
+                printf("publish one shot trace1!!! \n");
+                if(msg->isAcknowledge()) {
+                    String token = center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
+                    msg->setToken(token);
+                    //post to timer
+                }
+                printf("publish one shot trace2,size is %d!!!,current is %d \n",outputStreams->size(),current);
+                while(current < outputStreams->size()) {
+                    printf("publish one shot trace3 \n");
+                    if(outputStreams->get(current)->write(msg->mSerializableData) <= 0) {
+                        printf("publish one shot trace4 \n");
+                        outputStreams->removeAt(current);
+                        isSendSuccess = false;
+                        current++;
+                        continue;
                     } else {
+                        printf("publish one shot trace5 \n");
+                        isSendSuccess = true;
+                        current++;
                         break;
                     }
                 }
-            }
-            break;
 
-            case st(MqMessage)::PublishOneShot:{
-                if(outputStreams == nullptr || outputStreams->size() == 0) {
+                if(isSendSuccess && msg->isAcknowledge()) {
                     isSendSuccess = false;
-                } else {
-                    Integer index = mQueueProcessorIndexs->get(msg->getChannel());
-                    if(index == nullptr) {
-                        index = createInteger(0);
-                        mQueueProcessorIndexs->put(msg->getChannel(),index);
-                    }
+                    Future future = center->mTimer->schedule(center->mAckTimeout,[this,msg](){
+                        printf("msg timeout,msg type is %d,msg token is %s \n",msg->getType(),msg->getToken()->toChars());
+                        MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
+                        Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
+                        if(comp->remove(msg->getChannel(),msg->getToken())== 0) {
+                            //TODO(move to next channel???);
+                            printf("msg timeout,remove it!!!!\n");
+                        }
 
-                    int current = index->toValue();
-                    if(current >= outputStreams->size()) {
-                        current = 0;
-                    }
+                        //reduce count
+                        {
+                            AutoLock l(mMutex);
+                            Integer v = mChannelCounts->get(msg->getChannel());
+                            if(v->toValue() == 1) {
+                                center->removeWorkerRecord(msg->getChannel());
+                            } else {
+                                v->update(v->toValue() - 1);
+                            }
+                        }
+                    });
 
-                    if(msg->isAcknowledge()) {
-                        String token = center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
-                        msg->setToken(token);
-                    }
-
-                    while(current < outputStreams->size() - 1 &&
-                        outputStreams->get(current)->write(msg->mSerializableData) <= 0) {
-                        outputStreams->removeAt(current);
-                        isSendSuccess = false;
-                    }
-                    current++;
-                    index->update(current);
+                    AutoLock l(center->mMutex);
+                    center->mAckTimerFuture->put(msg->getToken(),future);
                 }
-
-                //wangsl
-                if(!msg->isPersist() & !isSendSuccess && !msg->isAcknowledge()) {
-                    printf("MqCenter add msg for send fail \n");
-                    center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
-                }
-                //wangsl
+                
+                index->update(current);
             }
-            break;
 
-            case st(MqMessage)::Publish: {
-                if(outputStreams == nullptr || outputStreams->size() == 0) {
-                    isSendSuccess = false;
-                    break;
-                }
-
-                printf("MqWorker run start,public message trace1\n");
-                auto iterator = outputStreams->getIterator();
-                while(iterator->hasValue()) {
-                    auto output = iterator->getValue();
-                    printf("MqWorker run start,public message trace2\n");
-                    if(output->write(msg->mSerializableData) <= 0) {
-                        LOG(ERROR)<<"MqCenter send fail,this connection may be closed";
-                        iterator->remove();
-                        continue;
-                    }
-                    iterator->next();
-                }
+            //wangsl
+            if(!msg->isPersist() & !isSendSuccess && !msg->isAcknowledge()) {
+                printf("MqCenter add msg for send fail \n");
+                center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
             }
-            break;
+            //wangsl
+        } else if((msg->getType() & st(MqMessage)::Publish) != 0) {
+            if(outputStreams == nullptr || outputStreams->size() == 0) {
+                isSendSuccess = false;
+                break;
+            }
+
+            printf("MqWorker run start,public message trace1\n");
+            auto iterator = outputStreams->getIterator();
+            while(iterator->hasValue()) {
+                auto output = iterator->getValue();
+                printf("MqWorker run start,public message trace2\n");
+                if(output->write(msg->mSerializableData) <= 0) {
+                    LOG(ERROR)<<"MqCenter send fail,this connection may be closed";
+                    iterator->remove();
+                    continue;
+                }
+                iterator->next();
+            }
         }
 
         //wangsl
@@ -159,13 +201,14 @@ void _MqWorker::run() {
             center->mPersistentComp->remove(msg->getChannel(),token);
         }
         //wangsl
-
-        AutoLock l(mMutex);
-        Integer v = mChannelCounts->get(msg->getChannel());
-        if(v->toValue() == 1) {
-            center->removeWorkerRecord(msg->getChannel());
-        } else {
-            v->update(v->toValue() - 1);
+        if(isSendSuccess) {
+            AutoLock l(mMutex);
+            Integer v = mChannelCounts->get(msg->getChannel());
+            if(v->toValue() == 1) {
+                center->removeWorkerRecord(msg->getChannel());
+            } else {
+                v->update(v->toValue() - 1);
+            }
         }
     }
 }
@@ -217,6 +260,9 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,i
 
     mAckTimeout = acktimeout;
 
+    mAckTimerFuture = createHashMap<String,Future>();
+
+    mTimer = createThreadScheduledPoolExecutor();
     //create server socket
     sock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
     sock->bind();

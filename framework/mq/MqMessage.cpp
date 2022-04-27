@@ -45,10 +45,6 @@ String _MqMessage::getChannel() {
     return channel;
 }
 
-void _MqMessage::acknowledge() {
-    //TODO
-}
-
 void _MqMessage::setFlags(uint32_t flag) {
     flags = flag;
 }

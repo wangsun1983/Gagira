@@ -80,10 +80,12 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             auto iterator = list->getIterator();
                             while(iterator->hasValue()) {
                                 auto listener = iterator->getValue();
-                                //TODO
+                                printf("mqconnection on socket message trace1 \n");
                                 if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
                                     msg->setFlags(st(MqMessage)::MessageAck);
                                     mOutput->write(msg->toByteArray());
+                                } else {
+                                    printf("mqconnection on socket message trace2 \n");
                                 }
                                 iterator->next();
                             }

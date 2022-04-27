@@ -53,9 +53,8 @@ public:
     String getId();
 
     String getToken();
-    void setToken(String);
 
-    void acknowledge();
+    void setToken(String);
 
     void setFlags(uint32_t);
 

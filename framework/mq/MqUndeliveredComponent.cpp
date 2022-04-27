@@ -44,11 +44,13 @@ int _MqUndeliveredComponent::remove(String channel,String token) {
     auto iterator = list->getIterator();
 
     uint64_t hashCode = token->toBasicUint64();
-    
+    int result = -1;
+
     while(iterator->hasValue()) {
         auto value = iterator->getValue();
         if(value->hashcode() == hashCode) {
             iterator->remove();
+            result = 0;
             break;
         }
         iterator->next();
@@ -58,7 +60,7 @@ int _MqUndeliveredComponent::remove(String channel,String token) {
         mDatas->remove(channel);
     }
 
-    return 0;
+    return result;
 }
 
 }
