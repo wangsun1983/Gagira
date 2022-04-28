@@ -18,6 +18,8 @@ public:
     _MqCenterBuilder * setBufferSize(int);
     _MqCenterBuilder * setPersistentComponent(MqPersistentComponent);
     _MqCenterBuilder * setAckTimeout(int);
+    _MqCenterBuilder * setRedeliveryInterval(int);
+    _MqCenterBuilder * setRedeliveryTimes(int);
     
     MqCenter build();
 
@@ -25,11 +27,16 @@ private:
     static const int DefaultThreadNum;
     static const int DefaultBufferSize;
     static const int DefaultAckTimeout;
-    
+    static const int DefaultRedeliveryInterval;
+    static const int DefaultRedeliveryTimes;
+
     String mUrl;
     int mThreadNum;
     int mBuffSize;
     int mAckTimeout;
+    int mRedeliveryInterval;
+    int mRedeliveryTimes;
+    
     MqPersistentComponent mPersistentComp;
 };
 

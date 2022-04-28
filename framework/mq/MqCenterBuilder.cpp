@@ -6,7 +6,9 @@ namespace gagira {
 
 const int _MqCenterBuilder::DefaultThreadNum = 4;
 const int _MqCenterBuilder::DefaultBufferSize = 1024*4;
-const int _MqCenterBuilder::DefaultAckTimeout = 1000*60;
+const int _MqCenterBuilder::DefaultAckTimeout = 1000;
+const int _MqCenterBuilder::DefaultRedeliveryInterval = 1000;
+const int _MqCenterBuilder::DefaultRedeliveryTimes = 3;
 
 _MqCenterBuilder::_MqCenterBuilder() {
     mUrl = nullptr;
@@ -14,6 +16,8 @@ _MqCenterBuilder::_MqCenterBuilder() {
     mBuffSize = DefaultBufferSize;
     mPersistentComp = nullptr;
     mAckTimeout = DefaultAckTimeout;
+    mRedeliveryInterval = DefaultRedeliveryInterval;
+    mRedeliveryTimes = DefaultRedeliveryTimes;
 }
 
 _MqCenterBuilder * _MqCenterBuilder::setUrl(String url) {
@@ -41,8 +45,18 @@ _MqCenterBuilder * _MqCenterBuilder::setAckTimeout(int c) {
     return this;
 }
 
+_MqCenterBuilder * _MqCenterBuilder::setRedeliveryInterval(int c) {
+    mRedeliveryInterval = c;
+    return this;
+}
+
+_MqCenterBuilder * _MqCenterBuilder::setRedeliveryTimes(int c) {
+    mRedeliveryTimes = c;
+    return this;
+}
+
 MqCenter _MqCenterBuilder::build() {
-    return createMqCenter(mUrl,mThreadNum,mBuffSize,mPersistentComp,mAckTimeout);
+    return createMqCenter(mUrl,mThreadNum,mBuffSize,mPersistentComp,mAckTimeout,mRedeliveryTimes,mRedeliveryInterval);
 }
 
 }

@@ -58,6 +58,9 @@ public:
 
     void setFlags(uint32_t);
 
+    int getRetryTimes();
+    void setRetryTimes(int);
+
 private:
     ByteArray data;
     String channel;
@@ -66,9 +69,10 @@ private:
 
     Socket mSocket;
     ByteArray mSerializableData;
+    int retryTimes;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,channel,data,token,flags);
+    DECLARE_REFLECT_FIELD(MqMessage,channel,data,token,flags,retryTimes);
 };
 
 

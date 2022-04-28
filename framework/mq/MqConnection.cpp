@@ -31,15 +31,16 @@ _MqConnection::_MqConnection(String s) {
 }
 
 int _MqConnection::connect() {
+    printf("MqConnection connect \n");
     sock = createSocketBuilder()->setAddress(mAddress)->newSocket();
     int ret = sock->connect();
     if(ret < 0) {
         return ret;
     }
-
+    printf("MqConnection trace1 \n");
     mInput = sock->getInputStream();
     mOutput = sock->getOutputStream();
-
+    printf("MqConnection trace2 \n");
     monitor->bind(sock,AutoClone(this));
     return 0;
 }
@@ -66,7 +67,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
             
             while(1) {
                 int availableDataSize = mBuffer->getAvailDataSize();
-                printf("mq mCurrentMsgLen is %d,availableDataSize is %d \n",mCurrentMsgLen,availableDataSize);
+                //printf("mq mCurrentMsgLen is %d,availableDataSize is %d \n",mCurrentMsgLen,availableDataSize);
                 if(mCurrentMsgLen != 0) {
                     if(mCurrentMsgLen <= availableDataSize) {
                         mReader->move(mCurrentMsgLen);
@@ -80,12 +81,12 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             auto iterator = list->getIterator();
                             while(iterator->hasValue()) {
                                 auto listener = iterator->getValue();
-                                printf("mqconnection on socket message trace1 \n");
+                                //printf("mqconnection on socket message trace1 \n");
                                 if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
                                     msg->setFlags(st(MqMessage)::MessageAck);
                                     mOutput->write(msg->toByteArray());
                                 } else {
-                                    printf("mqconnection on socket message trace2 \n");
+                                    //printf("mqconnection on socket message trace2 \n");
                                 }
                                 iterator->next();
                             }
@@ -97,7 +98,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                     }
                 } else {
                     if(mReader->read<int>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
-                        printf("mCurrentMsgLen is %d \n",mCurrentMsgLen);
+                        //printf("mCurrentMsgLen is %d \n",mCurrentMsgLen);
                         //pop size content
                         mReader->pop();
                         continue;

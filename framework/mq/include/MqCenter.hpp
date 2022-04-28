@@ -38,6 +38,15 @@ public:
     int size();
 
 private:
+    void setAcknowledgeTimer(MqMessage msg);
+    void decreaseCount(String channel,int count = 1);
+    void increaseCount(String channel,int count = 1);
+
+    void processSubscribe(MqMessage);
+    void processOneshot(MqMessage);
+    void processPublish(MqMessage);
+    void processAck(MqMessage);
+
     _MqCenter *center;
     BlockingLinkedList<MqMessage> actions;
     Mutex mMutex;
@@ -50,7 +59,7 @@ DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
 
     friend class _MqWorker;
-    _MqCenter(String url,int workers,int buffsize,MqPersistentComponent component,int acktimeout);
+    _MqCenter(String url,int workers,int buffsize,MqPersistentComponent component,int acktimeout,int retryTimes,int retryInterval);
 
     void waitForExit(long interval = 0);
 
@@ -99,6 +108,9 @@ private:
     int mCurrentMsgLen;
 
     int mAckTimeout;
+
+    int mRetryTimes;
+    int mRetryInterval;
 
     ThreadScheduledPoolExecutor mTimer;
 };

@@ -6,7 +6,7 @@
 namespace gagira {
 
 _MqMessage::_MqMessage() {
-
+    retryTimes = 0;
 }
 
 _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {
@@ -20,6 +20,8 @@ bool _MqMessage::isPersist() {
 }
 
 bool _MqMessage::isAcknowledge() {
+    printf("flags is %lx,result is %lx,ack is %lx,oneshot is %lx \n",flags,flags&Acknowledge,Acknowledge,PublishOneShot);
+
     return (flags&Acknowledge) != 0;
 }
 
@@ -55,6 +57,14 @@ String _MqMessage::getToken() {
 
 void _MqMessage::setToken(String s) {
     token = s;
+}
+
+int _MqMessage::getRetryTimes() {
+    return retryTimes;
+}
+
+void _MqMessage::setRetryTimes(int s) {
+    retryTimes = s;
 }
 
 }

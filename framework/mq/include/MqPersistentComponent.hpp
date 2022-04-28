@@ -15,6 +15,7 @@ public:
     virtual String newMessage(String channel,ByteArray msg) = 0;
     virtual DefRet(String,ByteArray) take(String channel) = 0;
     virtual int remove(String channel,String token) = 0;
+    //virtual int newDeadLetterMessage(String channel,ByteArray msg) = 0;
 };
 
 }
