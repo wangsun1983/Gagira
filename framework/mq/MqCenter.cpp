@@ -15,8 +15,6 @@ using namespace obotcha;
 
 namespace gagira {
 
-SocketMonitor _MqCenter::monitor = nullptr;
-
 //------------MqWorker-------------
 _MqWorker::_MqWorker(_MqCenter *c) {
     center = c;
@@ -25,6 +23,14 @@ _MqWorker::_MqWorker(_MqCenter *c) {
     mQueueProcessorIndexs = createHashMap<String,Integer>();
     mMutex = createMutex();
     isRunning = true;
+}
+
+_MqWorker::~_MqWorker() {
+    close();
+}
+
+void _MqWorker::close() {
+    actions->destroy();
 }
 
 void _MqWorker::enqueueMessage(MqMessage a) {
@@ -44,9 +50,12 @@ void _MqWorker::enqueueMessage(MqMessage a) {
 }
 
 void _MqWorker::run() {
-    while(isRunning) {
+    while(1) {
         bool isSendSuccess = true;
         MqMessage msg = actions->takeFirst();
+        if(msg == nullptr) {
+            break;
+        }
         //printf("MqWorker run start,get a msg type is %d\n",msg->getType());
         ArrayList<OutputStream> outputStreams = center->getOutputStreams(msg->getChannel());
         
@@ -192,6 +201,12 @@ void _MqWorker::processOneshot(MqMessage msg) {
 
 void _MqWorker::processSubscribe(MqMessage msg) {
     printf("process subscribe start \n");
+    if(msg->mSocket->getFileDescriptor() == nullptr) {
+        printf("process subscribe file descriptor is nullptr \n");
+    } else {
+        printf("process subscribe file descriptor is not nullptr \n");
+    }
+
     auto outputStreams = center->getOutputStreams(msg->getChannel());
     if(outputStreams == nullptr) {
         outputStreams = createArrayList<OutputStream>();
@@ -213,6 +228,7 @@ void _MqWorker::processSubscribe(MqMessage msg) {
                                                     true);
 
             MqMessage persistMsg = DeSerialize<MqMessage>(convertData);
+            printf("subscribe trace1_1 \n");
             if(msg->mSocket->getOutputStream()->write(persistData) > 0) {
                 printf("subscribe trace2,token is %s \n",token->toChars());
                 comp->remove(persistMsg->getChannel(),token);
@@ -291,11 +307,9 @@ void _MqWorker::setAcknowledgeTimer(MqMessage msg) {
 
 //------------MqCenter-------------
 _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,int acktimeout,int retryTimes,int retryintervals) {
-    static std::once_flag s_flag;
-    std::call_once(s_flag, [&]() {
-        monitor = createSocketMonitor();
-    });
-
+    
+    monitor = createSocketMonitor();
+    
     mUndeliveredComp = createMqUndeliveredComponent();
 
     if(c != nullptr) {
@@ -339,9 +353,12 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,i
 
     mTimer = createThreadScheduledPoolExecutor();
     //create server socket
+    printf("MqCenter create start \n");
     sock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
-    sock->bind();
+    int ret = sock->bind();
+    printf("MqCenter create,ret is %d,error is %s \n",ret,CurrentError);
     monitor->bind(sock,AutoClone(this));
+    printf("MqCenter create end \n");
 }
 
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
@@ -432,6 +449,36 @@ int _MqCenter::close() {
         mOutputStreams->clear();
     }
 
+    {
+        auto iterator = mWorkers->getIterator();
+        while(iterator->hasValue()) {
+            auto worker = iterator->getValue();
+            worker->close();
+            worker->join();
+            iterator->next();
+        }
+        mWorkers->clear();
+    }
+
+    printf("center close!!! \n");
+    {
+        this->mTimer->shutdown();
+        mTimer->awaitTermination();
+    }
+    
+    if(sock != nullptr) {
+        monitor->remove(sock);
+        sock->close();
+        sock = nullptr;
+    }
+
+    if(monitor != nullptr) {
+        printf("close monitor \n");
+        monitor->close();
+        monitor = nullptr;
+    }
+    printf("center trace1 close!!! \n");
+
     waitExit->notify();
     return 0;
 }
@@ -455,6 +502,11 @@ void _MqCenter::setOutputStreams(String channel,ArrayList<OutputStream> list) {
 void _MqCenter::removeWorkerRecord(String channel) {
     AutoLock l(mWorkerWriteLock);
     mMqWorkerMap->remove(channel);
+}
+
+_MqCenter::~_MqCenter() {
+    printf("~~~~~mq center~~~~~\n");
+    this->close();
 }
 
 }

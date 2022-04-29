@@ -35,6 +35,7 @@ int _MqConnection::connect() {
     sock = createSocketBuilder()->setAddress(mAddress)->newSocket();
     int ret = sock->connect();
     if(ret < 0) {
+        printf("connect fail,reason is %s \n",CurrentError);
         return ret;
     }
     printf("MqConnection trace1 \n");
@@ -109,10 +110,32 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
             }
         }
         break;
-    }
-    
+    }    
+}
 
-    
+int _MqConnection::close() {
+    printf("mqconnection close()!!! \n");
+    if(mOutput != nullptr) {
+        mOutput->close();
+        mOutput = nullptr;
+    }
+
+    if(mInput != nullptr) {
+        mInput->close();
+        mInput = nullptr;
+    }
+
+    if(sock != nullptr) {
+        monitor->remove(sock,false);
+        sock->close();
+        sock = nullptr;
+    }
+    printf("mqconnection close() trace1 !!! \n");
+    return 0;
+}
+
+_MqConnection::~_MqConnection() {
+    close();
 }
 
 

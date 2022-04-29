@@ -50,7 +50,9 @@ public:
 DECLARE_CLASS(MqConnection) IMPLEMENTS(SocketListener) {
 public:
     _MqConnection(String);
+    ~_MqConnection();
     int connect();
+    int close();
 
     template<typename T>
     int publish(String channel,T obj,int flags) {

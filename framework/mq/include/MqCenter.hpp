@@ -30,6 +30,8 @@ public:
 DECLARE_CLASS(MqWorker) IMPLEMENTS(Thread) {
 public:
     _MqWorker(_MqCenter *c);
+    ~_MqWorker();
+    void close();
 
     void enqueueMessage(MqMessage msg);
 
@@ -64,9 +66,10 @@ public:
     void waitForExit(long interval = 0);
 
     int close();
+    ~_MqCenter();
 
 private:
-    static SocketMonitor monitor;
+    SocketMonitor monitor;
 
     void onSocketMessage(int,Socket,ByteArray);
     void dispatchMessage(Socket sock,ByteArray);
