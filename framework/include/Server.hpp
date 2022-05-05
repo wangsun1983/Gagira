@@ -30,6 +30,7 @@ public:
     _Server();
     _Server* setAddress(InetAddress);
     _Server* setOption(HttpOption);
+    _Server* setConfigFile(String);
 
     int start();
 
@@ -46,6 +47,8 @@ private:
     HttpServer mServer;
     HttpRouterManager mRouterManager;
     HttpResourceManager mResourceManager;
+
+    String mConfigPath;
 
     static HashMap<Integer,ArrayList<Interceptor>> interceptors;
 };

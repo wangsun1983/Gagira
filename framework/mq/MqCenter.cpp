@@ -505,7 +505,6 @@ void _MqCenter::removeWorkerRecord(String channel) {
 }
 
 _MqCenter::~_MqCenter() {
-    printf("~~~~~mq center~~~~~\n");
     this->close();
 }
 

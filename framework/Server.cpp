@@ -8,6 +8,9 @@
 #include "ServletRequestManager.hpp"
 #include "HttpResourceManager.hpp"
 #include "NetEvent.hpp"
+#include "Configs.hpp"
+#include "Inet4Address.hpp"
+#include "Inet6Address.hpp"
 
 using namespace obotcha;
 
@@ -30,6 +33,21 @@ _Server* _Server::setAddress(InetAddress addr) {
 
 _Server* _Server::setOption(HttpOption option) {
     mBuilder->setOption(option);
+    return this;
+}
+
+_Server* _Server::setConfigFile(String path) {
+    st(Configs)::getInstance()->load(createFile(path));
+    String ip = st(Configs)::getInstance()->getServerAddress();
+    int port = st(Configs)::getInstance()->getServerPort();
+
+    InetAddress address;
+    if(ip->contains(":")) {
+        address = createInet6Address(ip,port);
+    } else {
+        address = createInet4Address(ip,port);
+    }
+    mBuilder->setAddress(address);
     return this;
 }
 
@@ -110,7 +128,6 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
 
             //st(ServletRequestManager)::getInstance()->addRequest(req);
             HttpResponseEntity obj = router->invoke();
-            
             
             if(obj != nullptr) {
                 entity->setContent(obj->getContent()->get()->toByteArray());

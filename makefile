@@ -12,7 +12,7 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/util/concurrent/ \
 		-I ./3rdparty/Obotcha/include/util/coroutine/ \
 		-I ./3rdparty/Obotcha/include/util/text/ \
-		-I ./3rdparty/Obotcha/include/util/sql/ \
+		-I ./3rdparty/Obotcha/include/sql/ \
 		-I ./3rdparty/Obotcha/include/lang/ \
 		-I ./3rdparty/Obotcha/include/io/ \
 		-I ./3rdparty/Obotcha/include/util/ \
@@ -27,6 +27,7 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/external/yaml/ \
 		-I ./3rdparty/Obotcha/include/external/crc32/ \
 		-I ./3rdparty/Obotcha/include/external/openssl/ \
+		-I ./3rdparty/Obotcha/include/external/mysql_connector/ \
 		-I ./3rdparty/Obotcha/include/external/ \
 		-I ./3rdparty/Obotcha/include/external/sqlite3/ \
 		-I ./3rdparty/Obotcha/include/external/http_parser/ \
@@ -35,6 +36,9 @@ cflags = -fpic \
 		-I ./framework/include/ \
 		-I ./framework/template/include/ \
 		-I ./framework/mq/include/ \
+		-I ./framework/config/include \
+		-I ./framework/dao/include \
+		-I ./framework/app/include \
 		-g \
 		-std=c++14 \
 		-fsanitize=address \
@@ -60,6 +64,9 @@ gagiracppflags = $(cppflags)
 everything : $(libname)
 
 include framework/makefile
+include framework/config/makefile
+include framework/dao/makefile
+include app/makefile
 
 $(libname): $(objs)
 	$(cppcompiler) *.cpp $(cflags) $(objs) -o gagria_server $(external) $(sharelib)

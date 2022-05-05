@@ -25,7 +25,7 @@ _MqConnection::_MqConnection(String s) {
     mListeners = createHashMap<String,ArrayList<MqConnectionListener>>();
     mMutex = createMutex();
 
-    mBuffer = createByteRingArray(1024);
+    mBuffer = createByteRingArray(1024*4);
     mReader = createByteRingArrayReader(mBuffer);
     mCurrentMsgLen = 0;
 }
