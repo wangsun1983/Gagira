@@ -5,8 +5,9 @@
 #include "HttpEntity.hpp"
 #include "HttpResponse.hpp"
 #include "HttpServer.hpp"
-#include "ServletRequestManager.hpp"
+#include "GlobalCacheManager.hpp"
 #include "HttpResourceManager.hpp"
+#include "WebSocketRouterManager.hpp"
 #include "NetEvent.hpp"
 #include "Configs.hpp"
 #include "Inet4Address.hpp"
@@ -16,6 +17,8 @@ using namespace obotcha;
 
 namespace gagira  {
 
+sp<_Server> _Server::mInstance = nullptr;
+
 HashMap<Integer,ArrayList<Interceptor>> _Server::interceptors 
             = createHashMap<Integer,ArrayList<Interceptor>>();
 
@@ -24,6 +27,16 @@ _Server::_Server() {
     mServer = nullptr;
     mRouterManager = st(HttpRouterManager)::getInstance();
     mResourceManager = st(HttpResourceManager)::getInstance();
+
+    mInstance = AutoClone(this);
+}
+
+sp<_Server> _Server::getInstance() {
+    return mInstance;
+}
+
+WebSocketServer _Server::getWebSocketServer() {
+    return this->mWsServer;
 }
 
 _Server* _Server::setAddress(InetAddress addr) {
@@ -38,8 +51,10 @@ _Server* _Server::setOption(HttpOption option) {
 
 _Server* _Server::setConfigFile(String path) {
     st(Configs)::getInstance()->load(createFile(path));
-    String ip = st(Configs)::getInstance()->getServerAddress();
-    int port = st(Configs)::getInstance()->getServerPort();
+
+    //init http server
+    String ip = st(Configs)::getInstance()->getHttpServerAddress();
+    int port = st(Configs)::getInstance()->getHttpServerPort();
 
     InetAddress address;
     if(ip->contains(":")) {
@@ -48,6 +63,21 @@ _Server* _Server::setConfigFile(String path) {
         address = createInet4Address(ip,port);
     }
     mBuilder->setAddress(address);
+
+    //init websocket server
+    String ws_ip = st(Configs)::getInstance()->getWebSocketServerAddress();
+    int ws_port = st(Configs)::getInstance()->getWebSocketServerPort();
+
+    if(ws_ip != nullptr && ws_port != -1) {
+        this->mWebSocketBuilder = createWebSocketServerBuilder();
+        InetAddress address;
+        if(ws_ip->contains(":")) {
+            address = createInet6Address(ws_ip,ws_port);
+        } else {
+            address = createInet4Address(ws_ip,ws_port);
+        }
+        mWebSocketBuilder->setInetAddr(address);
+    }
     return this;
 }
 
@@ -80,6 +110,39 @@ void _Server::addinterceptors(int method,Interceptor c) {
     interceptors->put(createInteger(method),list);
 }
 
+//websocket
+int _Server::onData(WebSocketFrame frame,sp<_WebSocketLinker> client) {
+    st(GlobalCacheManager)::getInstance()->add(createWebSocketRequestCache(frame->getData(),client));
+    auto router = st(WebSocketRouterManager)::getInstance()->getRouter(client->getPath());
+    HttpResponseEntity result = router->onInvoke();
+    if(result != nullptr) {
+        client->sendTextMessage(result->getContent()->get());
+    }
+
+    return 0;
+}
+
+int _Server::onConnect(sp<_WebSocketLinker> client) {
+    //TODO
+    return 0;
+}
+
+int _Server::onDisconnect(sp<_WebSocketLinker> client) {
+    //TODO
+    return 0;
+}
+
+int _Server::onPong(String,sp<_WebSocketLinker> client) {
+    //TODO
+    return 0;
+}
+
+int _Server::onPing(String,sp<_WebSocketLinker> client) {
+    //TODO
+    return 0;
+}
+
+//http
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
     
     if(event == st(NetEvent)::Message) {
@@ -87,7 +150,7 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         ServletRequest req = createServletRequest(msg,client);
         //printf("client is %s \n",client->getInetAddress()->toChars());
         ServletRequestCache cache = createServletRequestCache(req,map);
-        st(ServletRequestManager)::getInstance()->add(cache);
+        st(GlobalCacheManager)::getInstance()->add(cache);
 
         int method = msg->getHeader()->getMethod();
         HttpResponse response = createHttpResponse();
@@ -126,7 +189,7 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             HttpEntity entity = createHttpEntity();
             
 
-            //st(ServletRequestManager)::getInstance()->addRequest(req);
+            //st(GlobalCacheManager)::getInstance()->addRequest(req);
             HttpResponseEntity obj = router->invoke();
             
             if(obj != nullptr) {
@@ -136,7 +199,7 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
                 w->write(response);
                 return;
             }
-            //st(ServletRequestManager)::getInstance()->removeRequest();
+            //st(GlobalCacheManager)::getInstance()->removeRequest();
         }
 
         response->getHeader()->setResponseStatus(st(HttpStatus)::BadRequest);

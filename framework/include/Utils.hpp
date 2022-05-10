@@ -11,27 +11,28 @@
 #include "HttpRouter.hpp"
 #include "HttpRouterManager.hpp"
 #include "Interceptor.hpp"
-#include "ServletRequestManager.hpp"
+#include "GlobalCacheManager.hpp"
 #include "String.hpp"
 #include "TextContent.hpp"
+#include "WebSocketRouterManager.hpp"
 
 namespace gagira {
 
 #define GetIntParam(key)                                                       \
     ({                                                                         \
-        auto param = st(ServletRequestManager)::getInstance()->getParam();     \
+        auto param = st(GlobalCacheManager)::getInstance()->getParam();     \
         param->get<Integer>(#key);                                             \
     })
 
 #define GetBoolParam(key)                                                      \
     ({                                                                         \
-        auto param = st(ServletRequestManager)::getInstance()->getParam();     \
+        auto param = st(GlobalCacheManager)::getInstance()->getParam();     \
         param->get<Boolean>(#key);                                             \
     })
 
 #define GetStringParam(key)                                                    \
     ({                                                                         \
-        auto param = st(ServletRequestManager)::getInstance()->getParam();     \
+        auto param = st(GlobalCacheManager)::getInstance()->getParam();     \
         param->get<String>(#key);                                              \
     })
 
@@ -70,6 +71,15 @@ template <typename T> T getClass(sp<T>) {
 #define InjectGlobalInterceptor(method,instance) \
     {\
         st(Server)::addinterceptors(method,instance);\
+    }
+
+#define InjectWebSocketController(path, instance, function) \
+    {                                                                          \
+        auto func = std::bind(&decltype(getClass(instance))::function,         \
+                              instance.get_pointer());                         \
+        ControllerRouter r = createControllerRouter(func, instance);           \
+        st(WebSocketRouterManager)::getInstance()->addRouter(path, r);          \
+        st(Server)::getInstance()->getWebSocketServer()->bind(path,st(Server)::getInstance()); \
     }
 
 } // namespace gagira

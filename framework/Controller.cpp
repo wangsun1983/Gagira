@@ -1,12 +1,20 @@
 #include "Controller.hpp"
 #include "HttpRouter.hpp"
-#include "ServletRequestManager.hpp"
+#include "GlobalCacheManager.hpp"
 
 namespace gagira  {
 
-//------------------- Controller Router -----------------
+//------------------- Controller -----------------
 ServletRequest _Controller::getRequest() {
-    return st(ServletRequestManager)::getInstance()->getRequest();
+    return st(GlobalCacheManager)::getInstance()->getRequest();
+}
+
+ByteArray _Controller::getWebSocketRequest() {
+    return st(GlobalCacheManager)::getInstance()->getWsRequest();
+}
+
+WebSocketLinker _Controller::getWebSocketClient() {
+    return st(GlobalCacheManager)::getInstance()->getWsClient();
 }
 
 //------------------- Controller Router -----------------

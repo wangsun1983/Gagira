@@ -123,12 +123,26 @@ void _Configs::save(File file,int type) {
     }
 }
 
-String _Configs::getServerAddress() {
+String _Configs::getHttpServerAddress() {
     return items->serverconfig->ip;
 }
 
-int _Configs::getServerPort() {
+int _Configs::getHttpServerPort() {
     return items->serverconfig->port;
+}
+
+String _Configs::getWebSocketServerAddress() {
+    if(items->wsconfigs != nullptr) {
+        return items->wsconfigs->ip;
+    }
+    return nullptr;
+}
+
+int _Configs::getWebSocketServerPort() {
+    if(items->wsconfigs != nullptr) {
+        return items->wsconfigs->port;
+    }
+    return -1;
 }
 
 } // namespace gagira

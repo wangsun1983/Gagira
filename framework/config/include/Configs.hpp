@@ -8,6 +8,7 @@
 #include "Reflect.hpp"
 #include "ServerConfig.hpp"
 #include "File.hpp"
+#include "WebSocketServerConfig.hpp"
 
 using namespace obotcha;
 
@@ -17,7 +18,8 @@ DECLARE_CLASS(ConfigItems) {
 public:
     ServerConfig serverconfig;
     ArrayList<SqlConfig> sqlconfigs;
-    DECLARE_REFLECT_FIELD(ConfigItems,serverconfig,sqlconfigs);
+    WebSocketServerConfig wsconfigs;
+    DECLARE_REFLECT_FIELD(ConfigItems,serverconfig,sqlconfigs,wsconfigs);
 };
 
 DECLARE_CLASS(Configs) {
@@ -29,8 +31,11 @@ public:
 
     void save(File,int type = Json);
 
-    String getServerAddress();
-    int getServerPort();
+    String getHttpServerAddress();
+    int getHttpServerPort();
+
+    String getWebSocketServerAddress();
+    int getWebSocketServerPort();
 
     ConfigItems items;
 private:

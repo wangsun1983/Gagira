@@ -18,12 +18,15 @@
 #include "HttpResourceManager.hpp"
 #include "Interceptor.hpp"
 #include "HashMap.hpp"
+#include "WebSocketServer.hpp"
+#include "WebSocketServerBuilder.hpp"
+#include "WebSocketListener.hpp"
 
 using namespace obotcha;
 
 namespace gagira  {
 
-DECLARE_CLASS(Server) IMPLEMENTS(HttpListener){
+DECLARE_CLASS(Server) IMPLEMENTS(HttpListener,WebSocketListener){
 public:
     friend class _Controller;
 
@@ -40,11 +43,30 @@ public:
 
     void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
     
+    int onData(WebSocketFrame frame,sp<_WebSocketLinker> client);
+
+    int onConnect(sp<_WebSocketLinker> client);
+
+    int onDisconnect(sp<_WebSocketLinker> client);
+
+    int onPong(String,sp<_WebSocketLinker> client);
+
+    int onPing(String,sp<_WebSocketLinker> client);
+
     static void addinterceptors(int method,Interceptor);
 
+    static sp<_Server> getInstance();
+
+    WebSocketServer getWebSocketServer();
+
 private:
+    static sp<_Server> mInstance;
+
     HttpServerBuilder mBuilder;
+    WebSocketServerBuilder mWebSocketBuilder;
+    
     HttpServer mServer;
+    WebSocketServer mWsServer;
     HttpRouterManager mRouterManager;
     HttpResourceManager mResourceManager;
 

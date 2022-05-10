@@ -3,9 +3,10 @@ frameworkDir = framework
 objs += $(outtmp)/controller.o \
 		$(outtmp)/server.o \
 		$(outtmp)/servletrequest.o \
-		$(outtmp)/servletrequestmgr.o \
+		$(outtmp)/globalcachemanager.o \
 		$(outtmp)/controllerparam.o \
 		$(outtmp)/httproutermanager.o \
+		$(outtmp)/websocketroutermanager.o \
 		$(outtmp)/httproutermap.o \
 		$(outtmp)/httpresourcemanager.o \
 		$(outtmp)/httpresponseentity.o \
@@ -36,11 +37,14 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/mqmessage.o \
 		$(outtmp)/mqconnection.o \
 		$(outtmp)/mqcenterbuilder.o \
-		$(outtmp)/mqundeliveredcomponent.o
+		$(outtmp)/mqundeliveredcomponent.o 
 
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/HttpRouterManager.cpp -o $(outtmp)/httproutermanager.o
+
+$(outtmp)/websocketroutermanager.o :$(frameworkDir)/WebSocketRouterManager.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/WebSocketRouterManager.cpp -o $(outtmp)/websocketroutermanager.o
 
 $(outtmp)/httproutermap.o :$(frameworkDir)/HttpRouterMap.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/HttpRouterMap.cpp -o $(outtmp)/httproutermap.o
@@ -66,8 +70,8 @@ $(outtmp)/server.o :$(frameworkDir)/Server.cpp
 $(outtmp)/servletrequest.o :$(frameworkDir)/ServletRequest.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/ServletRequest.cpp -o $(outtmp)/servletrequest.o
 
-$(outtmp)/servletrequestmgr.o :$(frameworkDir)/ServletRequestManager.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/ServletRequestManager.cpp -o $(outtmp)/servletrequestmgr.o
+$(outtmp)/globalcachemanager.o :$(frameworkDir)/GlobalCacheManager.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/GlobalCacheManager.cpp -o $(outtmp)/globalcachemanager.o
 
 $(outtmp)/htmltemplate.o :$(frameworkDir)/template/HtmlTemplate.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/template/HtmlTemplate.cpp -o $(outtmp)/htmltemplate.o

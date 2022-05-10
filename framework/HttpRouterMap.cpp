@@ -22,6 +22,7 @@ void _HttpRouterMap::addRouter(HttpRouter r) {
     HttpRouterNode node = nullptr;
     while (iterator->hasValue()) {
         String segment = iterator->getValue();
+        printf("addRouter segment is %s \n",segment->toChars());
         node = current->get(segment);
         if (node == nullptr) {
             node = createHttpRouterNode(segment, nullptr);
@@ -37,7 +38,7 @@ void _HttpRouterMap::addRouter(HttpRouter r) {
     } else {
         node->mRouter = r;
     }
-    
+    printf("addRouter,mRoots size is %d \n",mRoots->size());
 }
 
 HttpRouter _HttpRouterMap::findRouter(String path,
@@ -52,9 +53,11 @@ _HttpRouterMap::_findRouter(ArrayList<String> &segments, int segmentStartIndex,
                             HashMap<String, HttpRouterNode> searchNode,
                             HashMap<String, String> &result) {
     String segment = segments->get(segmentStartIndex);
+    printf("findRouter segment is %s,index is %d，searchNode size is %d \n",segment->toChars(),segmentStartIndex,searchNode->size());
     HttpRouterNode node = searchNode->get(segment);
     HttpRouter router = nullptr;
     if (node != nullptr) {
+        printf("findRouter segment trace1 \n");
         segmentStartIndex++;
         if (segmentStartIndex == segments->size()) {
             return node->mRouter;
@@ -62,6 +65,7 @@ _HttpRouterMap::_findRouter(ArrayList<String> &segments, int segmentStartIndex,
         router =
             _findRouter(segments, segmentStartIndex, node->mNextNodes, result);
         if (router != nullptr) {
+            printf("findRouter segment trace2 \n");
             return router;
         }
     } else {

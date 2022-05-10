@@ -11,6 +11,7 @@
 #include "HttpLinker.hpp"
 #include "ServletRequest.hpp"
 #include "MethodNotSupportException.hpp"
+#include "WebSocketLinker.hpp"
 
 using namespace obotcha;
 
@@ -21,6 +22,8 @@ using ControllerFunction = std::function<HttpResponseEntity()>;
 DECLARE_CLASS(Controller) {
 public:
     ServletRequest getRequest();
+    ByteArray getWebSocketRequest();
+    WebSocketLinker getWebSocketClient();
 };
 
 DECLARE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
