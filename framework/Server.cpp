@@ -63,6 +63,8 @@ _Server* _Server::setConfigFile(String path) {
         address = createInet4Address(ip,port);
     }
     mBuilder->setAddress(address);
+    mBuilder->setListener(AutoClone(this));
+    mServer = mBuilder->build();
 
     //init websocket server
     String ws_ip = st(Configs)::getInstance()->getWebSocketServerAddress();
@@ -77,19 +79,21 @@ _Server* _Server::setConfigFile(String path) {
             address = createInet4Address(ws_ip,ws_port);
         }
         mWebSocketBuilder->setInetAddr(address);
-    }
+        mWsServer = mWebSocketBuilder->build();
+    }   
     return this;
 }
 
 int _Server::start() {
-    mBuilder->setListener(AutoClone(this));
-    mServer = mBuilder->build();
-    
     if(mServer != nullptr) {
-        return mServer->start();
+        mServer->start();
     }
 
-    return -1;
+    if(mWsServer != nullptr) {
+        mWsServer->start();
+    }
+
+    return 0;
 }
 
 void _Server::close() {
@@ -144,7 +148,6 @@ int _Server::onPing(String,sp<_WebSocketLinker> client) {
 
 //http
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
-    
     if(event == st(NetEvent)::Message) {
         HashMap<String,String> map = createHashMap<String,String>();
         ServletRequest req = createServletRequest(msg,client);
