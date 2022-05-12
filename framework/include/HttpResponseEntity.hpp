@@ -15,6 +15,9 @@ namespace gagira {
 DECLARE_CLASS(HttpResponseEntity) {
 
 public:
+    static const int NoResponse = -100;
+    _HttpResponseEntity(int status);
+
     template<typename U>
     _HttpResponseEntity(U v,int status = st(HttpStatus)::Ok,ArrayList<HttpCookie> cookies = nullptr) {
         mContent = createTextContent(v);
@@ -25,7 +28,7 @@ public:
     int getStatus();
     TextContent getContent();
     ArrayList<HttpCookie> getCookies();
-
+    
 private:
     int mStatus;
     TextContent mContent;

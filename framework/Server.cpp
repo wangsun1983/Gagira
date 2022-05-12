@@ -196,10 +196,12 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             HttpResponseEntity obj = router->invoke();
             
             if(obj != nullptr) {
-                entity->setContent(obj->getContent()->get()->toByteArray());
-                response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
-                response->setEntity(entity);
-                w->write(response);
+                if(obj->getStatus() != st(HttpResponseEntity)::NoResponse) {
+                    entity->setContent(obj->getContent()->get()->toByteArray());
+                    response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
+                    response->setEntity(entity);
+                    w->write(response);
+                }
                 return;
             }
             //st(GlobalCacheManager)::getInstance()->removeRequest();

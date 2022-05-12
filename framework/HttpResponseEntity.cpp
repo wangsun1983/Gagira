@@ -3,6 +3,10 @@
 
 namespace gagira {
 
+_HttpResponseEntity::_HttpResponseEntity(int status) {
+    mStatus = status;
+}
+
 int _HttpResponseEntity::getStatus() { 
     return mStatus; 
 }
