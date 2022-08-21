@@ -58,7 +58,7 @@ void _MqWorker::run() {
         }
         //printf("MqWorker run start,get a msg type is %d\n",msg->getType());
         ArrayList<OutputStream> outputStreams = center->getOutputStreams(msg->getChannel());
-        
+
         String token = nullptr;
         if(msg->isPersist()) {
             if(outputStreams == nullptr) {
@@ -72,7 +72,7 @@ void _MqWorker::run() {
             }
         }
         //printf("msg type is %x \n",msg->getType());
-        
+
         if((msg->getType() & st(MqMessage)::MessageAck) != 0) {
             processAck(msg);
         } else if((msg->getType() & st(MqMessage)::Subscribe) != 0) {
@@ -88,7 +88,7 @@ void _MqWorker::run() {
 void _MqWorker::processAck(MqMessage msg) {
     MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
                 Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
-    
+
     comp->remove(msg->getChannel(),msg->getToken());
 
     Future future = nullptr;
@@ -139,8 +139,8 @@ void _MqWorker::processOneshot(MqMessage msg) {
     auto outputStreams = center->getOutputStreams(msg->getChannel());
     if(outputStreams == nullptr || outputStreams->size() == 0) {
         if(!msg->isPersist()) {
-            printf("publish one shot,but no subscriber \n");
-            center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
+            printf("publish one shot,but no subscriber,msg size is %d \n",msg->toByteArray()->size());
+            center->mUndeliveredComp->newMessage(msg->getChannel(),msg->toByteArray());
         }
     } else {
         Integer index = mQueueProcessorIndexs->get(msg->getChannel());
@@ -192,7 +192,8 @@ void _MqWorker::processOneshot(MqMessage msg) {
             }
         } else {
             if(!msg->isPersist()) {
-                center->mUndeliveredComp->newMessage(msg->getChannel(),msg->mSerializableData);
+                printf("persist data save!!!!!! \n");
+                center->mUndeliveredComp->newMessage(msg->getChannel(),msg->toByteArray());
             }
         }
     }
@@ -218,8 +219,8 @@ void _MqWorker::processSubscribe(MqMessage msg) {
     MqPersistentComponent comp = ((center->mPersistentComp == nullptr)?
                 Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
     while(1) {
-        ByteArray persistData;
-        String token;
+        ByteArray persistData = nullptr;
+        String token = nullptr;
         FetchRet(token,persistData) = comp->take(msg->getChannel());
         printf("subscribe trace1 \n");
         if(persistData != nullptr) {
@@ -229,14 +230,22 @@ void _MqWorker::processSubscribe(MqMessage msg) {
 
             MqMessage persistMsg = DeSerialize<MqMessage>(convertData);
             printf("subscribe trace1_1 \n");
-            if(msg->mSocket->getOutputStream()->write(persistData) > 0) {
+            if(persistData == nullptr) {
+              printf("subscribe trace1_1 is null!!! \n");
+            } else {
+              printf("persistMsg size is %d \n",convertData->size());
+              printf("persistMsg[0] is %d \n",convertData[0]);
+              printf("persistMsg[1] is %d \n",convertData[1]);
+            }
+
+            if(persistData != nullptr && msg->mSocket->getOutputStream()->write(persistData) > 0) {
                 printf("subscribe trace2,token is %s \n",token->toChars());
                 comp->remove(persistMsg->getChannel(),token);
                 if(persistMsg->isAcknowledge()) {
                     printf("setAcknoledgeTimer \n");
                     setAcknowledgeTimer(persistMsg);
-                } 
-                
+                }
+
                 decreaseCount(msg->getChannel());
                 continue;
             }
@@ -280,7 +289,7 @@ void _MqWorker::setAcknowledgeTimer(MqMessage msg) {
         Cast<MqPersistentComponent>(center->mUndeliveredComp):center->mPersistentComp);
         printf("retryTimes is %d,center->mRetryTimes is %d \n",retryTimes,center->mRetryTimes);
         if(retryTimes >= center->mRetryTimes) {
-            decreaseCount(msg->getChannel()); 
+            decreaseCount(msg->getChannel());
         } else {
             //resend this action
             msg->setRetryTimes(retryTimes + 1);
@@ -288,8 +297,8 @@ void _MqWorker::setAcknowledgeTimer(MqMessage msg) {
             ByteArray serialdata = Serialize(msg);
             ByteArray savedata = createByteArray(serialdata->size() + sizeof(int));
             ByteArrayWriter writer = createByteArrayWriter(savedata);
-            writer->writeInt(serialdata->size());
-            writer->writeByteArray(serialdata);
+            writer->write<int>(serialdata->size());
+            writer->write(serialdata);
             msg->mSerializableData = savedata;
 
             comp->newMessage(msg->getChannel(),msg->mSerializableData);
@@ -307,9 +316,9 @@ void _MqWorker::setAcknowledgeTimer(MqMessage msg) {
 
 //------------MqCenter-------------
 _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,int acktimeout,int retryTimes,int retryintervals) {
-    
+
     monitor = createSocketMonitor();
-    
+
     mUndeliveredComp = createMqUndeliveredComponent();
 
     if(c != nullptr) {
@@ -326,6 +335,7 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,i
     mReadLock = mReadWriteLock->getReadLock();
     mWriteLock = mReadWriteLock->getWriteLock();
 
+    printf("buffsize is %d \n",buffsize);
     mBuffer = createByteRingArray(buffsize);
     mReader = createByteRingArrayReader(mBuffer);
     mCurrentMsgLen = 0;
@@ -340,7 +350,7 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,i
         worker->start();
         mWorkers->add(worker);
     }
-    
+
     mMutex = createMutex();
     waitExit = createCondition();
 
@@ -364,17 +374,17 @@ _MqCenter::_MqCenter(String s,int workers,int buffsize,MqPersistentComponent c,i
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message:
-            //printf("mq center onSocket message,data size is %d \n",data->size());
+            printf("mq center onSocket message,data size is %d \n",data->size());
             mBuffer->push(data);
-            
+
             while(1) {
                 int availableDataSize = mBuffer->getAvailDataSize();
-                //printf("mq mCurrentMsgLen is %d,availableDataSize is %d \n",mCurrentMsgLen,availableDataSize);
+                printf("mq mCurrentMsgLen is %d,availableDataSize is %d \n",mCurrentMsgLen,availableDataSize);
                 if(mCurrentMsgLen != 0) {
                     if(mCurrentMsgLen <= availableDataSize) {
                         mReader->move(mCurrentMsgLen);
                         ByteArray data = mReader->pop();
-                        //printf("mq dispatch message \n");
+                        printf("mq dispatch message \n");
                         dispatchMessage(sock,data);
                         mCurrentMsgLen = 0;
                         continue;
@@ -408,7 +418,7 @@ void _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     msg->mSerializableData = data;
 
     String channel = msg->getChannel();
-    
+
     //find a worker thread
     {
         AutoLock l(mWorkerReadLock);
@@ -436,12 +446,12 @@ void _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
             minSize = size;
         }
     }
-    
+
     AutoLock l(mWorkerWriteLock);
     mMqWorkerMap->put(channel,mWorkers->get(minIndex));
     mWorkers->get(minIndex)->enqueueMessage(msg);
 }
-    
+
 
 int _MqCenter::close() {
     {
@@ -465,7 +475,7 @@ int _MqCenter::close() {
         this->mTimer->shutdown();
         mTimer->awaitTermination();
     }
-    
+
     if(sock != nullptr) {
         monitor->remove(sock);
         sock->close();

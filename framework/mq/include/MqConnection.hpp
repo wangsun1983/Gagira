@@ -25,7 +25,7 @@ public:
     _connection_helper(T t) {
         this->t = t;
     }
-    
+
     ByteArray toData() {
         return t->serialize();
     }
@@ -39,12 +39,26 @@ public:
     _connection_helper(String t) {
         this->t = t;
     }
-    
+
     ByteArray toData() {
         return t->toByteArray();
     }
 public:
     String t;
+};
+
+template<>
+class _connection_helper<ByteArray> {
+public:
+    _connection_helper(ByteArray t) {
+        this->t = t;
+    }
+
+    ByteArray toData() {
+        return t;
+    }
+public:
+    ByteArray t;
 };
 
 DECLARE_CLASS(MqConnection) IMPLEMENTS(SocketListener) {
@@ -56,8 +70,15 @@ public:
 
     template<typename T>
     int publish(String channel,T obj,int flags) {
+        printf("publish channel is %s \n",channel->toChars());
         ByteArray data = _connection_helper<T>(obj).toData();
+        if(data == nullptr) {
+          printf("publish channel data is nullptr \n");
+        }
+
+        printf("publish data size is %d \n",data->size());
         MqMessage msg = createMqMessage(channel,data,flags);
+        printf("publish msg data size is %d \n",msg->toByteArray()->size());
         return mOutput->write(msg->toByteArray());
     }
 

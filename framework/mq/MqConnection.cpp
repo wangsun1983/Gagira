@@ -18,7 +18,7 @@ _MqConnection::_MqConnection(String s) {
     std::call_once(s_flag, [&]() {
         monitor = createSocketMonitor();
     });
-
+    printf("s is %s \n",s->toChars());
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);
 
@@ -56,18 +56,21 @@ int _MqConnection::subscribe(String channel,MqConnectionListener listener) {
         }
         list->add(listener);
     }
-    
+
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
     return mOutput->write(msg->toByteArray());
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
+    printf("event is %d \n",event);
     switch(event) {
         case st(NetEvent)::Message: {
+            printf("onSocketMessage ,data size is %d \n",data->size());
             mBuffer->push(data);
-            
+
             while(1) {
                 int availableDataSize = mBuffer->getAvailDataSize();
+                printf("mq availableDataSize is %d,mCurrentMsgLen is %d \n",availableDataSize,mCurrentMsgLen);
                 //printf("mq mCurrentMsgLen is %d,availableDataSize is %d \n",mCurrentMsgLen,availableDataSize);
                 if(mCurrentMsgLen != 0) {
                     if(mCurrentMsgLen <= availableDataSize) {
@@ -82,7 +85,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             auto iterator = list->getIterator();
                             while(iterator->hasValue()) {
                                 auto listener = iterator->getValue();
-                                //printf("mqconnection on socket message trace1 \n");
+                                printf("mqconnection on socket message trace1 \n");
                                 if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
                                     msg->setFlags(st(MqMessage)::MessageAck);
                                     mOutput->write(msg->toByteArray());
@@ -110,7 +113,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
             }
         }
         break;
-    }    
+    }
 }
 
 int _MqConnection::close() {
