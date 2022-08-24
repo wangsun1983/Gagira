@@ -18,7 +18,6 @@ _MqConnection::_MqConnection(String s) {
     std::call_once(s_flag, [&]() {
         monitor = createSocketMonitor();
     });
-    printf("s is %s \n",s->toChars());
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);
 
@@ -31,17 +30,13 @@ _MqConnection::_MqConnection(String s) {
 }
 
 int _MqConnection::connect() {
-    printf("MqConnection connect \n");
     sock = createSocketBuilder()->setAddress(mAddress)->newSocket();
     int ret = sock->connect();
     if(ret < 0) {
-        printf("connect fail,reason is %s \n",CurrentError);
         return ret;
     }
-    printf("MqConnection trace1 \n");
     mInput = sock->getInputStream();
     mOutput = sock->getOutputStream();
-    printf("MqConnection trace2 \n");
     monitor->bind(sock,AutoClone(this));
     return 0;
 }
@@ -62,16 +57,12 @@ int _MqConnection::subscribe(String channel,MqConnectionListener listener) {
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
-    printf("event is %d \n",event);
     switch(event) {
         case st(NetEvent)::Message: {
-            printf("onSocketMessage ,data size is %d \n",data->size());
             mBuffer->push(data);
 
             while(1) {
                 int availableDataSize = mBuffer->getAvailDataSize();
-                printf("mq availableDataSize is %d,mCurrentMsgLen is %d \n",availableDataSize,mCurrentMsgLen);
-                //printf("mq mCurrentMsgLen is %d,availableDataSize is %d \n",mCurrentMsgLen,availableDataSize);
                 if(mCurrentMsgLen != 0) {
                     if(mCurrentMsgLen <= availableDataSize) {
                         mReader->move(mCurrentMsgLen);
@@ -85,12 +76,9 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             auto iterator = list->getIterator();
                             while(iterator->hasValue()) {
                                 auto listener = iterator->getValue();
-                                printf("mqconnection on socket message trace1 \n");
                                 if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
                                     msg->setFlags(st(MqMessage)::MessageAck);
                                     mOutput->write(msg->toByteArray());
-                                } else {
-                                    //printf("mqconnection on socket message trace2 \n");
                                 }
                                 iterator->next();
                             }
@@ -102,7 +90,6 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                     }
                 } else {
                     if(mReader->read<int>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
-                        //printf("mCurrentMsgLen is %d \n",mCurrentMsgLen);
                         //pop size content
                         mReader->pop();
                         continue;
@@ -117,7 +104,6 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
 }
 
 int _MqConnection::close() {
-    printf("mqconnection close()!!! \n");
     if(mOutput != nullptr) {
         mOutput->close();
         mOutput = nullptr;
@@ -133,7 +119,6 @@ int _MqConnection::close() {
         sock->close();
         sock = nullptr;
     }
-    printf("mqconnection close() trace1 !!! \n");
     return 0;
 }
 

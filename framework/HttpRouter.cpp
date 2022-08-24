@@ -28,7 +28,6 @@ RouterListener _HttpRouter::getListener() {
 
 HttpResponseEntity _HttpRouter::invoke() {
     HttpResponseEntity result = nullptr;
-    printf("HttpRouter,invoke,this is %lx \n",this);
     auto beforeExecIterator = beforeExecInterceptors->getIterator();
     while(beforeExecIterator->hasValue()) {
         if(!beforeExecIterator->getValue()->onIntercept()) {
@@ -55,12 +54,10 @@ HttpResponseEntity _HttpRouter::invoke() {
 }
 
 void _HttpRouter::addBeforeExecInterceptor(Interceptor l) {
-    printf("HttpRouter,addBeforeExecInterceptor,this is %lx \n",this);
     beforeExecInterceptors->add(l);
 }
 
 void _HttpRouter::addAfterExecInterceptor(Interceptor l) {
-    printf("HttpRouter,addAfterExecInterceptor,this is %lx \n",this);
     afterExecInterceptors->add(l);
 }
 

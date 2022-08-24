@@ -38,7 +38,6 @@ void _HttpResourceManager::setViewRedirect(String segment, String filename) {
 
 File _HttpResourceManager::findResource(String path) {
     //add Interceptor
-    printf("resource manager path is %s \n",path->toChars());
     ArrayList<Interceptor> list = mInterceptors->get(path);
     if(list != nullptr) {
         auto iterator = list->getIterator();

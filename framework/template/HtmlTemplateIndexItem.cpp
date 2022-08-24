@@ -15,7 +15,6 @@ String _HtmlTemplateIndexItem::toString(Object o) {
 }
 
 Object _HtmlTemplateIndexItem::toObject(Object o) {
-    printf("_HtmlTemplateIndexItem index is %d \n",index);
     if(index >= o->__getContainerSize("")) {
         return nullptr;
     }

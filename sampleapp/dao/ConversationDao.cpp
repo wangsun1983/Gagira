@@ -12,7 +12,7 @@ ArrayList<Conversation> _ConversationDao::getConversation(String groupname) {
 
 ArrayList<Conversation> _ConversationDao::getConversationAfter(String groupname,long time) {
     SqlQuery query = createSqlQuery("select * from $1_conversation_table where time > $2");
-    query->bindParam(groupname,st(String)::valueOf((uint64_t)time));
+    query->bindParam(groupname,createString((uint64_t)time));
     return connection->query(query);
 }
 

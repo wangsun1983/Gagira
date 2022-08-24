@@ -175,26 +175,20 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
 
         String url = msg->getHeader()->getUrl()->getRawUrl();
         File file = mResourceManager->findResource(url);
-        printf("url is %s \n",url->toChars());
         if(file != nullptr) {
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
             //response->setFile(file);
             HttpChunk chunk = createHttpChunk(file);
             response->getEntity()->setChunk(chunk);
             w->write(response);
-            printf("url %s response \n",url->toChars());
             return;
         }
         HttpRouter router = mRouterManager->getRouter(method,url,map);
         if(router != nullptr) {
             //TODO?
-            printf("http router is not nullptr \n");
             HttpEntity entity = createHttpEntity();
-            
-
             //st(GlobalCacheManager)::getInstance()->addRequest(req);
             HttpResponseEntity obj = router->invoke();
-            
             if(obj != nullptr) {
                 if(obj->getStatus() != st(HttpResponseEntity)::NoResponse) {
                     entity->setContent(obj->getContent()->get()->toByteArray());

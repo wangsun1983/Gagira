@@ -21,7 +21,6 @@ _HttpRouterManager::_HttpRouterManager() {
 }
 
 void _HttpRouterManager::addRouter(int method, HttpRouter r) {
-    printf("addRouter method is %d \n",method);
     mMaps[method]->addRouter(r);
 }
 

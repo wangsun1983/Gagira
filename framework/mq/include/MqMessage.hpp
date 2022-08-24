@@ -35,10 +35,10 @@ public:
         Persistent = 1<<10,
         Acknowledge = 1<<11,
     };
-    
+
     _MqMessage();
     _MqMessage(String channel,ByteArray data,uint32_t flags);
-    
+
     ByteArray toByteArray();
 
     int getType();

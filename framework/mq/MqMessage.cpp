@@ -13,11 +13,6 @@ _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage(
     this->data = data;
     this->channel = channel;
     this->flags = flags;
-    if(this->data == nullptr) {
-        printf("_MqMessage create data is nullptr \n");
-    } else {
-        printf("[%p] _MqMessage create data is not nullptr \n",this);
-    }
 }
 
 bool _MqMessage::isPersist() {
@@ -25,17 +20,11 @@ bool _MqMessage::isPersist() {
 }
 
 bool _MqMessage::isAcknowledge() {
-    printf("flags is %lx,result is %lx,ack is %lx,oneshot is %lx \n",flags,flags&Acknowledge,Acknowledge,PublishOneShot);
-
     return (flags&Acknowledge) != 0;
 }
 
 ByteArray _MqMessage::toByteArray() {
     ByteArray serializeData = serialize();
-    if(this->data == nullptr) {
-        printf("_MqMessage toByteArray data is nullptr \n");
-    }
-    printf("[%p] _MqMessage serializeData2 size is %d \n",this,serializeData->size());
     ByteArray finalData = createByteArray(serializeData->size() + sizeof(int));
     ByteArrayWriter writer = createByteArrayWriter(finalData);
     writer->write<int>(serializeData->size());
