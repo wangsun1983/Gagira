@@ -37,7 +37,7 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/mqmessage.o \
 		$(outtmp)/mqconnection.o \
 		$(outtmp)/mqcenterbuilder.o \
-		$(outtmp)/mqundeliveredcomponent.o 
+		$(outtmp)/mqdefaultpersistence.o 
 
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
@@ -145,8 +145,8 @@ $(outtmp)/mqcenter.o :$(frameworkDir)/mq/MqCenter.cpp
 $(outtmp)/mqcenterbuilder.o :$(frameworkDir)/mq/MqCenterBuilder.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqCenterBuilder.cpp -o $(outtmp)/mqcenterbuilder.o
 
-$(outtmp)/mqundeliveredcomponent.o :$(frameworkDir)/mq/MqUndeliveredComponent.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqUndeliveredComponent.cpp -o $(outtmp)/mqundeliveredcomponent.o
+$(outtmp)/mqdefaultpersistence.o :$(frameworkDir)/mq/MqDefaultPersistence.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqDefaultPersistence.cpp -o $(outtmp)/mqdefaultpersistence.o
 
 $(outtmp)/mqmessage.o :$(frameworkDir)/mq/MqMessage.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/mq/MqMessage.cpp -o $(outtmp)/mqmessage.o

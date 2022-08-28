@@ -11,7 +11,7 @@ namespace gagira {
 
 DECLARE_CLASS(MqPersistenceInterface) {
 public:
-    virtual int init();
+    virtual int init() = 0;
     virtual String onNewMessage(String channel,ByteArray msg,int flag) = 0;
     virtual String onFail(String channel,ByteArray msg,int flag) = 0;
     virtual DefRet(String,ByteArray,int) onTakeMessage(String channel) = 0;

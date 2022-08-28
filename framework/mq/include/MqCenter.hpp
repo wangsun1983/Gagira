@@ -10,9 +10,9 @@
 #include "ByteRingArrayReader.hpp"
 #include "Condition.hpp"
 #include "MqMessage.hpp"
-#include "MqPersistentComponent.hpp"
-#include "MqUndeliveredComponent.hpp"
+#include "MqPersistenceInterface.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
+#include "Random.hpp"
 
 using namespace obotcha;
 
@@ -20,17 +20,12 @@ namespace gagira {
 
 class _MqCenter;
 
-DECLARE_CLASS(MqPersistInterface) {
-public:
-    void onNewChannel(String channel);
-    void onNewMessage(String channel,Message msg);
-    Message takeOneMessage(String channel);
-};
-
 DECLARE_CLASS(MqWorker) IMPLEMENTS(Thread) {
 public:
     _MqWorker(_MqCenter *c);
+
     ~_MqWorker();
+    
     void close();
 
     void enqueueMessage(MqMessage msg);
@@ -40,31 +35,37 @@ public:
     int size();
 
 private:
-    void setAcknowledgeTimer(MqMessage msg);
-    void decreaseCount(String channel,int count = 1);
-    void increaseCount(String channel,int count = 1);
-
-    void processSubscribe(MqMessage);
-    void processOneshot(MqMessage);
-    void processPublish(MqMessage);
-    void processAck(MqMessage);
-
     _MqCenter *center;
     BlockingLinkedList<MqMessage> actions;
-    Mutex mMutex;
-    HashMap<String,Integer> mChannelCounts;
-    HashMap<String,Integer> mQueueProcessorIndexs;
-    bool isRunning;
+};
+
+DECLARE_CLASS(MqStreamGroup) {
+public:
+    _MqStreamGroup();
+    ReadWriteLock mReadWriteLock;
+    ReadLock mRdLock;
+    WriteLock mWrLock;
+    ArrayList<OutputStream> streams;
+    Random mRand;
+
+    int doSubscribe(MqMessage);
+    int doOneshot(MqMessage);
+    int doPublish(MqMessage);
+    int doAck(MqMessage);
 };
 
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
-
     friend class _MqWorker;
-    _MqCenter(String url,int workers,int buffsize,MqPersistentComponent component,int acktimeout,int retryTimes,int retryInterval);
+    _MqCenter(String url,
+              int workers,
+              int buffsize,
+              MqPersistenceInterface component,
+              int acktimeout,
+              int retryTimes,
+              int retryInterval);
 
     void waitForExit(long interval = 0);
-
     int close();
     ~_MqCenter();
 
@@ -74,20 +75,19 @@ private:
     void onSocketMessage(int,Socket,ByteArray);
     void dispatchMessage(Socket sock,ByteArray);
 
-    ArrayList<OutputStream> getOutputStreams(String);
-    void setOutputStreams(String channel,ArrayList<OutputStream> list);
-    void addStickyMessage(String,ByteArray);
-    ByteArray getStickyMessage(String);
-
-    void removeWorkerRecord(String channel);
+    int processSubscribe(MqMessage);
+    int processOneshot(MqMessage);
+    int processPublish(MqMessage);
+    int processAck(MqMessage);
+    int setAcknowledgeTimer(MqMessage msg);
 
     InetAddress mAddrss;
     ServerSocket sock;
 
-    ReadWriteLock mReadWriteLock;
-    ReadLock mReadLock;
-    WriteLock mWriteLock;
-    HashMap<String,ArrayList<OutputStream>> mOutputStreams;
+    ReadWriteLock mStreamRwLock;
+    ReadLock mStreamReadLock;
+    WriteLock mStreamWriteLock;
+    HashMap<String,MqStreamGroup> mStreams;
 
     ByteRingArray mBuffer;
     ByteRingArrayReader mReader;
@@ -101,17 +101,12 @@ private:
     WriteLock mWorkerWriteLock;
     ArrayList<MqWorker> mWorkers;
     HashMap<String,MqWorker> mMqWorkerMap;
-
     HashMap<String,Future> mAckTimerFuture;
 
-    MqPersistentComponent mPersistentComp;
-
-    MqUndeliveredComponent mUndeliveredComp; 
+    MqPersistenceInterface mPersistence;
 
     int mCurrentMsgLen;
-
     int mAckTimeout;
-
     int mRetryTimes;
     int mRetryInterval;
 

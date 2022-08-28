@@ -21,6 +21,8 @@ DECLARE_CLASS(MqMessage) IMPLEMENTS(Serializable){
 public:
     friend class _MqWorker;
     friend class _MqCenter;
+    friend class _MqStreamGroup;
+
     enum MessageType {
         //message type
         ShakeHand = 1<<1,
@@ -57,6 +59,7 @@ public:
     void setToken(String);
 
     void setFlags(uint32_t);
+    uint32_t getFlags();
 
     int getRetryTimes();
     void setRetryTimes(int);

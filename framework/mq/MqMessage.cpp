@@ -49,6 +49,10 @@ void _MqMessage::setFlags(uint32_t flag) {
     flags = flag;
 }
 
+uint32_t _MqMessage::getFlags() {
+    return flags;
+}
+
 String _MqMessage::getToken() {
     return token;
 }

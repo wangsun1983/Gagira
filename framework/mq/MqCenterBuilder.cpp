@@ -1,4 +1,5 @@
 #include "MqCenterBuilder.hpp"
+#include "MqDefaultPersistence.hpp"
 
 using namespace obotcha;
 
@@ -14,7 +15,9 @@ _MqCenterBuilder::_MqCenterBuilder() {
     mUrl = nullptr;
     mThreadNum = DefaultThreadNum;
     mBuffSize = DefaultBufferSize;
-    mPersistentComp = nullptr;
+    mPersistence = createMqDefaultPersistence();
+    mPersistence->init();
+    
     mAckTimeout = DefaultAckTimeout;
     mRedeliveryInterval = DefaultRedeliveryInterval;
     mRedeliveryTimes = DefaultRedeliveryTimes;
@@ -35,8 +38,8 @@ _MqCenterBuilder * _MqCenterBuilder::setBufferSize(int s) {
     return this;
 }
 
-_MqCenterBuilder * _MqCenterBuilder::setPersistentComponent(MqPersistentComponent c) {
-    mPersistentComp = c;
+_MqCenterBuilder * _MqCenterBuilder::setPersistence(MqPersistenceInterface c) {
+    mPersistence = c;
     return this;
 }
 
@@ -56,7 +59,7 @@ _MqCenterBuilder * _MqCenterBuilder::setRedeliveryTimes(int c) {
 }
 
 MqCenter _MqCenterBuilder::build() {
-    return createMqCenter(mUrl,mThreadNum,mBuffSize,mPersistentComp,mAckTimeout,mRedeliveryTimes,mRedeliveryInterval);
+    return createMqCenter(mUrl,mThreadNum,mBuffSize,mPersistence,mAckTimeout,mRedeliveryTimes,mRedeliveryInterval);
 }
 
 }

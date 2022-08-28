@@ -16,7 +16,7 @@ public:
     _MqCenterBuilder * setUrl(String url);
     _MqCenterBuilder * setThreadNum(int num);
     _MqCenterBuilder * setBufferSize(int);
-    _MqCenterBuilder * setPersistentComponent(MqPersistentComponent);
+    _MqCenterBuilder * setPersistence(MqPersistenceInterface);
     _MqCenterBuilder * setAckTimeout(int);
     _MqCenterBuilder * setRedeliveryInterval(int);
     _MqCenterBuilder * setRedeliveryTimes(int);
@@ -37,7 +37,7 @@ private:
     int mRedeliveryInterval;
     int mRedeliveryTimes;
     
-    MqPersistentComponent mPersistentComp;
+    MqPersistenceInterface mPersistence;
 };
 
 }
