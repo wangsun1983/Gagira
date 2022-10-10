@@ -13,6 +13,8 @@
 #include "MqPersistenceInterface.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
 #include "Random.hpp"
+#include "ConcurrentHashMap.hpp"
+#include "ConcurrentQueue.hpp"
 
 using namespace obotcha;
 
@@ -20,38 +22,11 @@ namespace gagira {
 
 class _MqCenter;
 
-DECLARE_CLASS(MqWorker) IMPLEMENTS(Thread) {
-public:
-    _MqWorker(_MqCenter *c);
-
-    ~_MqWorker();
-    
-    void close();
-
-    void enqueueMessage(MqMessage msg);
-
-    void run();
-
-    int size();
-
-private:
-    _MqCenter *center;
-    BlockingLinkedList<MqMessage> actions;
-};
-
 DECLARE_CLASS(MqStreamGroup) {
 public:
-    _MqStreamGroup();
-    ReadWriteLock mReadWriteLock;
-    ReadLock mRdLock;
-    WriteLock mWrLock;
-    ArrayList<OutputStream> streams;
-    Random mRand;
-
-    int doSubscribe(MqMessage);
-    int doOneshot(MqMessage);
-    int doPublish(MqMessage);
-    int doAck(MqMessage);
+    _MqStreamGroup(String);
+    ConcurrentQueue<OutputStream> mStreams;
+    String mChannel;
 };
 
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
@@ -60,12 +35,13 @@ public:
     _MqCenter(String url,
               int workers,
               int buffsize,
-              MqPersistenceInterface component,
               int acktimeout,
               int retryTimes,
-              int retryInterval);
+              int retryInterval,
+              MqPersistenceInterface inf);
 
     void waitForExit(long interval = 0);
+    int start();
     int close();
     ~_MqCenter();
 
@@ -76,6 +52,8 @@ private:
     void dispatchMessage(Socket sock,ByteArray);
 
     int processSubscribe(MqMessage);
+    int processUnSubscribe(MqMessage);
+    
     int processOneshot(MqMessage);
     int processPublish(MqMessage);
     int processAck(MqMessage);
@@ -84,10 +62,7 @@ private:
     InetAddress mAddrss;
     ServerSocket sock;
 
-    ReadWriteLock mStreamRwLock;
-    ReadLock mStreamReadLock;
-    WriteLock mStreamWriteLock;
-    HashMap<String,MqStreamGroup> mStreams;
+    ConcurrentHashMap<String,MqStreamGroup> mStreams;
 
     ByteRingArray mBuffer;
     ByteRingArrayReader mReader;
@@ -95,12 +70,6 @@ private:
     Mutex mMutex;
     Condition waitExit;
 
-    //worker
-    ReadWriteLock mWorkerReadWriteLock;
-    ReadLock mWorkerReadLock;
-    WriteLock mWorkerWriteLock;
-    ArrayList<MqWorker> mWorkers;
-    HashMap<String,MqWorker> mMqWorkerMap;
     HashMap<String,Future> mAckTimerFuture;
 
     MqPersistenceInterface mPersistence;

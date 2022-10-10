@@ -72,7 +72,7 @@ public:
     int publish(String channel,T obj,int flags) {
         ByteArray data = _connection_helper<T>(obj).toData();
         MqMessage msg = createMqMessage(channel,data,flags);
-        return mOutput->write(msg->toByteArray());
+        return mOutput->write(msg->generatePacket());
     }
 
     int subscribe(String channel,MqConnectionListener);

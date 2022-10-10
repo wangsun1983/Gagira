@@ -17,6 +17,12 @@ namespace gagira {
 class _MqWorker;
 class _MqCenter;
 
+/**
+ * 
+ * MqMessage Serializable Struct
+ * {totalsize|size1|data1|size2|data2....}
+ * 
+ */
 DECLARE_CLASS(MqMessage) IMPLEMENTS(Serializable){
 public:
     friend class _MqWorker;
@@ -39,29 +45,43 @@ public:
     };
 
     _MqMessage();
-    _MqMessage(String channel,ByteArray data,uint32_t flags);
+    
+    _MqMessage(String channel,ByteArray data,uint32_t types);
 
-    ByteArray toByteArray();
-
-    int getType();
+    ByteArray generatePacket();
+    
+    static MqMessage generateMessage(ByteArray); 
 
     ByteArray getData();
 
     String getChannel();
 
     bool isPersist();
+
     bool isAcknowledge();
 
-    String getId();
+    bool isShakeHand();
+
+    bool isSubscribe();
+
+    bool isUnSubscribe();
+
+    bool isPublish();
+
+    bool isPublishOneShot();
+    
+    bool isAck();
 
     String getToken();
 
     void setToken(String);
 
     void setFlags(uint32_t);
+
     uint32_t getFlags();
 
     int getRetryTimes();
+
     void setRetryTimes(int);
 
 private:
@@ -71,7 +91,7 @@ private:
     uint32_t flags;
 
     Socket mSocket;
-    ByteArray mSerializableData;
+    ByteArray mPacketData;
     int retryTimes;
 
 public:

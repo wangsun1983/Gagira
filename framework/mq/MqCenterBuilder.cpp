@@ -59,7 +59,7 @@ _MqCenterBuilder * _MqCenterBuilder::setRedeliveryTimes(int c) {
 }
 
 MqCenter _MqCenterBuilder::build() {
-    return createMqCenter(mUrl,mThreadNum,mBuffSize,mPersistence,mAckTimeout,mRedeliveryTimes,mRedeliveryInterval);
+    return createMqCenter(mUrl,mThreadNum,mBuffSize,mAckTimeout,mRedeliveryTimes,mRedeliveryInterval);
 }
 
 }

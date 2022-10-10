@@ -20,7 +20,7 @@ _MqConnection::_MqConnection(String s) {
     });
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);
-
+    
     mListeners = createHashMap<String,ArrayList<MqConnectionListener>>();
     mMutex = createMutex();
 
@@ -31,14 +31,13 @@ _MqConnection::_MqConnection(String s) {
 
 int _MqConnection::connect() {
     sock = createSocketBuilder()->setAddress(mAddress)->newSocket();
-    int ret = sock->connect();
-    if(ret < 0) {
-        return ret;
+    if(sock->connect() < 0) {
+        return -1;
     }
     mInput = sock->getInputStream();
     mOutput = sock->getOutputStream();
-    monitor->bind(sock,AutoClone(this));
-    return 0;
+    auto conn = AutoClone(this);
+    return monitor->bind(sock,conn);
 }
 
 int _MqConnection::subscribe(String channel,MqConnectionListener listener) {
@@ -49,11 +48,12 @@ int _MqConnection::subscribe(String channel,MqConnectionListener listener) {
             list = createArrayList<MqConnectionListener>();
             mListeners->put(channel,list);
         }
+        printf("subscribe channel is %s,mListeners[%lx] size is %d,this is %lx \n",channel->toChars(),mListeners.get_pointer(),mListeners->size(),this);
         list->add(listener);
     }
 
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
-    return mOutput->write(msg->toByteArray());
+    return mOutput->write(msg->generatePacket());
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
@@ -73,14 +73,18 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                         {
                             AutoLock l(mMutex);
                             auto list = mListeners->get(channel);
-                            auto iterator = list->getIterator();
-                            while(iterator->hasValue()) {
-                                auto listener = iterator->getValue();
-                                if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
-                                    msg->setFlags(st(MqMessage)::MessageAck);
-                                    mOutput->write(msg->toByteArray());
+                            if(list != nullptr) {
+                                auto iterator = list->getIterator();
+                                while(iterator->hasValue()) {
+                                    auto listener = iterator->getValue();
+                                    if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
+                                        msg->setFlags(st(MqMessage)::MessageAck);
+                                        mOutput->write(msg->generatePacket());
+                                    }
+                                    iterator->next();
                                 }
-                                iterator->next();
+                            } else {
+                                printf("list is nullptr,channel is %s,mListeners[%lx] size is %d,this is %lx,pid is %d \n",channel->toChars(),mListeners.get_pointer(),mListeners->size(),this,st(System)::myPid());
                             }
                         }
                         mCurrentMsgLen = 0;

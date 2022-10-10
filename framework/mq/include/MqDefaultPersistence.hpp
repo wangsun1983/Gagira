@@ -5,6 +5,7 @@
 #include "MqMessage.hpp"
 #include "MqPersistenceInterface.hpp"
 #include "OStdReturnValue.hpp"
+#include "ConcurrentHashMap.hpp"
 
 using namespace obotcha;
 

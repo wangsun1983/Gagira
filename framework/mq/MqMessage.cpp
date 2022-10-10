@@ -19,11 +19,7 @@ bool _MqMessage::isPersist() {
     return (flags&Persistent) != 0;
 }
 
-bool _MqMessage::isAcknowledge() {
-    return (flags&Acknowledge) != 0;
-}
-
-ByteArray _MqMessage::toByteArray() {
+ByteArray _MqMessage::generatePacket() {
     ByteArray serializeData = serialize();
     ByteArray finalData = createByteArray(serializeData->size() + sizeof(int));
     ByteArrayWriter writer = createByteArrayWriter(finalData);
@@ -33,8 +29,40 @@ ByteArray _MqMessage::toByteArray() {
     return finalData;
 }
 
-int _MqMessage::getType() {
-    return (flags & ~MaxMessageType);
+MqMessage _MqMessage::generateMessage(ByteArray data) {
+    ByteArray msgData = createByteArray(data->toValue() + sizeof(int),data->size() - sizeof(int),true);
+    MqMessage msg = createMqMessage();
+    msg->deserialize(msgData);
+    msg->mPacketData = data;
+    return msg;
+}
+
+bool _MqMessage::isAcknowledge() {
+    return (flags&Acknowledge) != 0;
+}
+
+bool _MqMessage::isShakeHand() {
+    return (flags & ShakeHand) != 0;
+}
+
+bool _MqMessage::isSubscribe() {
+    return (flags & Subscribe) != 0;
+}
+
+bool _MqMessage::isUnSubscribe() {
+    return (flags & UnSubscribe) != 0;
+}
+
+bool _MqMessage::isPublish() {
+    return (flags & Publish) != 0;
+}
+
+bool _MqMessage::isPublishOneShot() {
+    return (flags & PublishOneShot) != 0;
+}
+
+bool _MqMessage::isAck() {
+    return (flags & MessageAck) != 0;
 }
 
 ByteArray _MqMessage::getData() {
