@@ -6,61 +6,54 @@
 #include "MqMessage.hpp"
 #include "ByteArrayWriter.hpp"
 #include "NetEvent.hpp"
+#include "InitializeException.hpp"
+#include "ForEveryOne.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-SocketMonitor _MqConnection::monitor = nullptr;
-
-_MqConnection::_MqConnection(String s) {
-    static std::once_flag s_flag;
-    std::call_once(s_flag, [&]() {
-        monitor = createSocketMonitor();
-    });
+_MqConnection::_MqConnection(String s,MqConnectionListener l) {    
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);
-    
-    mListeners = createHashMap<String,ArrayList<MqConnectionListener>>();
-    mMutex = createMutex();
+    if(mAddress == nullptr) {
+        Trigger(InitializeException,"Failed to find MqCenter");
+    }
 
+    //mMutex = createMutex();
+    //mListeners = createHashMap<String,ArrayList<MqConnectionListener>>();
+    mListener = l;
+    
     mBuffer = createByteRingArray(1024*4);
     mReader = createByteRingArrayReader(mBuffer);
+    mSocketMonitor = createSocketMonitor();
+    
     mCurrentMsgLen = 0;
 }
 
 int _MqConnection::connect() {
-    sock = createSocketBuilder()->setAddress(mAddress)->newSocket();
-    if(sock->connect() < 0) {
+    mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
+    if(mSock->connect() < 0) {
         return -1;
     }
-    mInput = sock->getInputStream();
-    mOutput = sock->getOutputStream();
-    auto conn = AutoClone(this);
-    return monitor->bind(sock,conn);
+    mInput = mSock->getInputStream();
+    mOutput = mSock->getOutputStream();
+    return mSocketMonitor->bind(mSock,AutoClone(this));
 }
 
-int _MqConnection::subscribe(String channel,MqConnectionListener listener) {
-    {
-        AutoLock l(mMutex);
-        auto list = mListeners->get(channel);
-        if(list == nullptr) {
-            list = createArrayList<MqConnectionListener>();
-            mListeners->put(channel,list);
-        }
-        printf("subscribe channel is %s,mListeners[%lx] size is %d,this is %lx \n",channel->toChars(),mListeners.get_pointer(),mListeners->size(),this);
-        list->add(listener);
+int _MqConnection::subscribe(String channel) {
+    MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
+    if(mOutput->write(msg->generatePacket()) > 0) {
+        return 0;
     }
 
-    MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
-    return mOutput->write(msg->generatePacket());
+    return -1;
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {
             mBuffer->push(data);
-
             while(1) {
                 int availableDataSize = mBuffer->getAvailDataSize();
                 if(mCurrentMsgLen != 0) {
@@ -70,44 +63,54 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                         MqMessage msg = createMqMessage();
                         msg->deserialize(data);
                         String channel = msg->getChannel();
-                        {
-                            AutoLock l(mMutex);
-                            auto list = mListeners->get(channel);
-                            if(list != nullptr) {
-                                auto iterator = list->getIterator();
-                                while(iterator->hasValue()) {
-                                    auto listener = iterator->getValue();
-                                    if(listener->onEvent(channel,msg->getData()) && msg->isAcknowledge()) {
-                                        msg->setFlags(st(MqMessage)::MessageAck);
-                                        mOutput->write(msg->generatePacket());
-                                    }
-                                    iterator->next();
-                                }
-                            } else {
-                                printf("list is nullptr,channel is %s,mListeners[%lx] size is %d,this is %lx,pid is %d \n",channel->toChars(),mListeners.get_pointer(),mListeners->size(),this,st(System)::myPid());
-                            }
+                        if(mListener != nullptr) {
+                            mListener->onMessage(channel,msg->getData());//TODO isNeedAck?
                         }
                         mCurrentMsgLen = 0;
                         continue;
-                    } else {
-                        break;
                     }
                 } else {
-                    if(mReader->read<int>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
+                    if(mReader->read<uint32_t>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
                         //pop size content
                         mReader->pop();
                         continue;
-                    } else {
-                        break;
                     }
                 }
+                break;
             }
         }
+
+        case st(NetEvent)::Connect:{
+            if(mListener != nullptr) {
+                mListener->onConnect();
+            }
+            break;
+        }
+
+        case st(NetEvent)::Disconnect:{
+            if(mListener != nullptr) {
+                mListener->onDisconnect();
+            }
+            break;
+        }
+
+        default:
         break;
     }
 }
 
 int _MqConnection::close() {
+    if(mSock != nullptr) {
+        mSocketMonitor->remove(mSock,false);
+        mSock->close();
+        mSock = nullptr;
+    }
+
+    if(mSocketMonitor != nullptr) {
+        mSocketMonitor->close();
+        mSocketMonitor = nullptr;
+    }
+
     if(mOutput != nullptr) {
         mOutput->close();
         mOutput = nullptr;
@@ -118,11 +121,6 @@ int _MqConnection::close() {
         mInput = nullptr;
     }
 
-    if(sock != nullptr) {
-        monitor->remove(sock,false);
-        sock->close();
-        sock = nullptr;
-    }
     return 0;
 }
 

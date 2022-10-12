@@ -37,8 +37,7 @@ public:
               int buffsize,
               int acktimeout,
               int retryTimes,
-              int retryInterval,
-              MqPersistenceInterface inf);
+              int retryInterval);
 
     void waitForExit(long interval = 0);
     int start();

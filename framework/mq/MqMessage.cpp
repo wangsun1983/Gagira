@@ -21,16 +21,16 @@ bool _MqMessage::isPersist() {
 
 ByteArray _MqMessage::generatePacket() {
     ByteArray serializeData = serialize();
-    ByteArray finalData = createByteArray(serializeData->size() + sizeof(int));
+    ByteArray finalData = createByteArray(serializeData->size() + sizeof(uint32_t));
     ByteArrayWriter writer = createByteArrayWriter(finalData);
-    writer->write<int>(serializeData->size());
+    writer->write<uint32_t>(serializeData->size());
     writer->write(serializeData);
 
     return finalData;
 }
 
 MqMessage _MqMessage::generateMessage(ByteArray data) {
-    ByteArray msgData = createByteArray(data->toValue() + sizeof(int),data->size() - sizeof(int),true);
+    ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
     MqMessage msg = createMqMessage();
     msg->deserialize(msgData);
     msg->mPacketData = data;

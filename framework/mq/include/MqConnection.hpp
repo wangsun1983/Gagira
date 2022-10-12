@@ -16,7 +16,10 @@ namespace gagira {
 
 DECLARE_CLASS(MqConnectionListener) {
 public:
-    virtual bool onEvent(String channel,ByteArray data) = 0;
+    virtual bool onMessage(String channel,ByteArray data) = 0;
+    virtual bool onDisconnect() = 0;
+    virtual bool onConnect() = 0;
+    virtual bool onDetach(String channel) = 0;
 };
 
 template<typename T>
@@ -63,7 +66,7 @@ public:
 
 DECLARE_CLASS(MqConnection) IMPLEMENTS(SocketListener) {
 public:
-    _MqConnection(String);
+    _MqConnection(String,MqConnectionListener l = nullptr);
     ~_MqConnection();
     int connect();
     int close();
@@ -75,22 +78,24 @@ public:
         return mOutput->write(msg->generatePacket());
     }
 
-    int subscribe(String channel,MqConnectionListener);
+    int subscribe(String channel);
+    int unSubscribe(String channel);
 
 private:
     InetAddress mAddress;
-    Socket sock;
+    Socket mSock;
     InputStream mInput;
     OutputStream mOutput;
 
     ByteRingArray mBuffer;
     ByteRingArrayReader mReader;
-    int mCurrentMsgLen;
+    uint32_t mCurrentMsgLen;
 
-    Mutex mMutex;
-    HashMap<String,ArrayList<MqConnectionListener>> mListeners;
+    //Mutex mMutex;
+    //HashMap<String,ArrayList<MqConnectionListener>> mListeners;
+    MqConnectionListener mListener;
 
-    static SocketMonitor monitor;
+    SocketMonitor mSocketMonitor;
     void onSocketMessage(int,Socket,ByteArray);
 };
 

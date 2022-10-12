@@ -12,6 +12,7 @@
 #include "ByteArrayWriter.hpp"
 #include "InitializeException.hpp"
 #include "MqDefaultPersistence.hpp"
+#include "ForEveryOne.hpp"
 
 using namespace obotcha;
 
@@ -24,7 +25,7 @@ _MqStreamGroup::_MqStreamGroup(String ch) {
 }
 
 //------------MqCenter-------------
-_MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retryTimes,int retryintervals,MqPersistenceInterface inf) {
+_MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retryTimes,int retryintervals) {
 
     monitor = createSocketMonitor();
 
@@ -48,10 +49,10 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
 
     mTimer = createThreadScheduledPoolExecutor();
 
-    if(inf == nullptr) {
-        mPersistence = createMqDefaultPersistence();
-        mPersistence->init();
-    }
+    //if(inf == nullptr) {
+    //    mPersistence = createMqDefaultPersistence();
+    //    mPersistence->init();
+    //}
     
     //create server socket
     sock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
@@ -111,15 +112,15 @@ void _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         result = processOneshot(msg);
     }
     
-    if(msg->isPersist()) {
-        if(result == 0) {
-            mPersistence->onNewMessage(msg->channel,data,msg->flags);
-        }
-    }
+    //if(msg->isPersist()) {
+    //    if(result == 0) {
+    //        mPersistence->onNewMessage(msg->channel,data,msg->flags);
+    //    }
+    //}
 
-    if(result == -1) {
-        mPersistence->onFail(msg->channel,data,msg->flags);
-    }
+    //if(result == -1) {
+    //    mPersistence->onFail(msg->channel,data,msg->flags);
+    //}
 }
 
 
@@ -160,11 +161,11 @@ int _MqCenter::processPublish(MqMessage msg) {
     mStreams->syncReadAction([this,&msg,&result]{
         MqStreamGroup group = mStreams->get(msg->channel);
         if(group != nullptr) {
-            group->mStreams->foreach([&msg](const OutputStream & stream) {
-                auto packet = msg->generatePacket(); //TODO? donot generate again??
+            printf("processPublish!!!!,size is %d \n",group->mStreams->size());
+            ForEveryOne(stream,group->mStreams) {
+                auto packet = msg->generatePacket();
                 stream->write(packet);
-                return Global::Continue;
-            });
+            }
             result = 0;
         }
     });
@@ -176,11 +177,15 @@ int _MqCenter::processOneshot(MqMessage msg) {
     int result = -1;
     mStreams->syncReadAction([this,&msg,&result]{
         MqStreamGroup group = mStreams->get(msg->channel);
-        group->mStreams->syncReadAction([&msg,&result,&group]{
-            int random = st(System)::currentTimeMillis()%group->mStreams->size();
-            auto packet = msg->generatePacket();//TODO? donot generate again??
-            result = group->mStreams->get(random)->write(packet);
-        });
+        if(group != nullptr) {
+            group->mStreams->syncReadAction([&msg,&result,&group]{
+                int random = st(System)::currentTimeMillis()%group->mStreams->size();
+                auto packet = msg->generatePacket();//TODO? donot generate again??
+                result = group->mStreams->get(random)->write(packet);
+            });
+        } else{
+            //TODO? Need resend????
+        }
     });
 
     return result;
@@ -193,6 +198,13 @@ int _MqCenter::processSubscribe(MqMessage msg) {
             group = createMqStreamGroup(msg->getChannel());
             mStreams->put(msg->channel,group);
         }
+        //check whether duplicated subscribe msg was sent
+        auto outputStream = msg->mSocket->getOutputStream();
+        ForEveryOne(stream,group->mStreams) {
+            if(stream == outputStream) {
+                return;
+            }
+        }
         group->mStreams->add(msg->mSocket->getOutputStream());
     });
     
@@ -204,8 +216,11 @@ int _MqCenter::processUnSubscribe(MqMessage msg) {
         MqStreamGroup group = mStreams->get(msg->channel);
         if(group != nullptr && group->mStreams != nullptr) {
             group->mStreams->remove(msg->mSocket->getOutputStream());
+            return;
         }
     });
+
+    return 0;
 }
     
 
