@@ -38,6 +38,10 @@ public:
         PublishOneShot = 1<<5,
         MessageAck = 1<<6,
         MaxMessageType = 1<<7,
+        
+        //1.Response for unsubscribe.....
+        //2.If client was removed from server,send this message.
+        Detach = 1<<8,
 
         //psersist
         Persistent = 1<<10,
@@ -69,6 +73,8 @@ public:
     bool isPublish();
 
     bool isPublishOneShot();
+
+    bool isDetach();
     
     bool isAck();
 
@@ -91,7 +97,7 @@ private:
     uint32_t flags;
 
     Socket mSocket;
-    ByteArray mPacketData;
+    //ByteArray mPacketData;
     int retryTimes;
 
 public:

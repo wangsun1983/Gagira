@@ -13,6 +13,8 @@
 #include "InitializeException.hpp"
 #include "MqDefaultPersistence.hpp"
 #include "ForEveryOne.hpp"
+#include "ArrayList.hpp"
+#include "System.hpp"
 
 using namespace obotcha;
 
@@ -34,7 +36,9 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
     mStreams = createConcurrentHashMap<String,MqStreamGroup>();
 
     mBuffer = createByteRingArray(buffsize);
+    
     mReader = createByteRingArrayReader(mBuffer);
+
     mCurrentMsgLen = 0;
 
     mMutex = createMutex();
@@ -55,12 +59,12 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
     //}
     
     //create server socket
-    sock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
-    if(sock->bind() < 0) {
+    mServerSock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
+    if(mServerSock->bind() < 0) {
         Trigger(InitializeException,"MqCenter socket bind failed,err is %s",strerror(errno));
     }
     
-    if(monitor->bind(sock,AutoClone(this)) < 0) {
+    if(monitor->bind(mServerSock,AutoClone(this)) < 0) {
         Trigger(InitializeException,"MqCenter monitor bind failed");
     }
 }
@@ -69,7 +73,6 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message:
             mBuffer->push(data);
-
             while(1) {
                 int availableDataSize = mBuffer->getAvailDataSize();
                 if(mCurrentMsgLen != 0) {
@@ -79,13 +82,8 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
                         dispatchMessage(sock,data);
                         mCurrentMsgLen = 0;
                         continue;
-                    } 
-                    break;
-                }
-                
-                if(mReader->read<int>(mCurrentMsgLen) 
-                    == st(ByteRingArrayReader)::Continue) {
-                    //pop size content
+                    }
+                } else if(mReader->read<uint32_t>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
                     //mReader->pop();
                     continue;
                 }
@@ -103,13 +101,15 @@ void _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
     int result = 0;
-
+    
     if(msg->isSubscribe()) {
         result = processSubscribe(msg);
     } else if(msg->isPublish()) {
         result = processPublish(msg);
     } else if(msg->isPublishOneShot()) {
         result = processOneshot(msg);
+    } else if(msg->isUnSubscribe()) {
+        result = processUnSubscribe(msg);
     }
     
     //if(msg->isPersist()) {
@@ -129,11 +129,10 @@ int _MqCenter::close() {
     
     this->mTimer->shutdown();
     mTimer->awaitTermination();
-
-    if(sock != nullptr) {
-        monitor->remove(sock);
-        sock->close();
-        sock = nullptr;
+    if(mServerSock != nullptr) {
+        mServerSock->close();
+        monitor->remove(mServerSock);
+        mServerSock = nullptr;
     }
 
     if(monitor != nullptr) {
@@ -161,12 +160,18 @@ int _MqCenter::processPublish(MqMessage msg) {
     mStreams->syncReadAction([this,&msg,&result]{
         MqStreamGroup group = mStreams->get(msg->channel);
         if(group != nullptr) {
-            printf("processPublish!!!!,size is %d \n",group->mStreams->size());
+            auto ll = createArrayList<OutputStream>();
+            auto packet = msg->generatePacket();
             ForEveryOne(stream,group->mStreams) {
-                auto packet = msg->generatePacket();
-                stream->write(packet);
+                result = stream->write(packet);
+                if(result < 0) {
+                    ll->add(stream);
+                }
             }
-            result = 0;
+
+            if(ll->size() > 0) {
+                group->mStreams->removeAll(ll);
+            }
         }
     });
 
@@ -179,9 +184,11 @@ int _MqCenter::processOneshot(MqMessage msg) {
         MqStreamGroup group = mStreams->get(msg->channel);
         if(group != nullptr) {
             group->mStreams->syncReadAction([&msg,&result,&group]{
-                int random = st(System)::currentTimeMillis()%group->mStreams->size();
-                auto packet = msg->generatePacket();//TODO? donot generate again??
-                result = group->mStreams->get(random)->write(packet);
+                if(group->mStreams->size() > 0) {
+                    int random = st(System)::currentTimeMillis()%group->mStreams->size();
+                    auto packet = msg->generatePacket();//TODO? donot generate again??
+                    result = group->mStreams->get(random)->write(packet);
+                }
             });
         } else{
             //TODO? Need resend????
@@ -212,10 +219,16 @@ int _MqCenter::processSubscribe(MqMessage msg) {
 }
 
 int _MqCenter::processUnSubscribe(MqMessage msg) {
-    mStreams->syncWriteAction([this,&msg]{
+    MqMessage resp = createMqMessage(msg->getChannel(),nullptr,st(MqMessage)::Detach);
+
+    mStreams->syncWriteAction([this,&msg,&resp]{
         MqStreamGroup group = mStreams->get(msg->channel);
         if(group != nullptr && group->mStreams != nullptr) {
+            msg->mSocket->getOutputStream()->write(resp->generatePacket());
             group->mStreams->remove(msg->mSocket->getOutputStream());
+            if(group->mStreams->size() == 0) {
+                mStreams->remove(msg->channel);
+            }
             return;
         }
     });

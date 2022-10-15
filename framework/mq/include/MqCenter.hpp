@@ -59,7 +59,7 @@ private:
     int setAcknowledgeTimer(MqMessage msg);
 
     InetAddress mAddrss;
-    ServerSocket sock;
+    ServerSocket mServerSock;
 
     ConcurrentHashMap<String,MqStreamGroup> mStreams;
 
@@ -73,7 +73,7 @@ private:
 
     MqPersistenceInterface mPersistence;
 
-    int mCurrentMsgLen;
+    uint32_t mCurrentMsgLen;
     int mAckTimeout;
     int mRetryTimes;
     int mRetryInterval;

@@ -33,7 +33,7 @@ MqMessage _MqMessage::generateMessage(ByteArray data) {
     ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
     MqMessage msg = createMqMessage();
     msg->deserialize(msgData);
-    msg->mPacketData = data;
+    //msg->mPacketData = data;
     return msg;
 }
 
@@ -43,6 +43,10 @@ bool _MqMessage::isAcknowledge() {
 
 bool _MqMessage::isShakeHand() {
     return (flags & ShakeHand) != 0;
+}
+
+bool _MqMessage::isDetach() {
+    return (flags & Detach) != 0;
 }
 
 bool _MqMessage::isSubscribe() {

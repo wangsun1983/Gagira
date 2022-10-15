@@ -38,6 +38,11 @@ int _MqConnection::connect() {
     }
     mInput = mSock->getInputStream();
     mOutput = mSock->getOutputStream();
+    
+    if(mListener != nullptr) {
+        mListener->onConnect();
+    }
+
     return mSocketMonitor->bind(mSock,AutoClone(this));
 }
 
@@ -50,6 +55,16 @@ int _MqConnection::subscribe(String channel) {
     return -1;
 }
 
+int _MqConnection::unSubscribe(String channel) {
+    MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::UnSubscribe);
+    if(mOutput->write(msg->generatePacket()) > 0) {
+        return 0;
+    }
+
+    return -1;
+}
+
+
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {
@@ -60,30 +75,28 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                     if(mCurrentMsgLen <= availableDataSize) {
                         mReader->move(mCurrentMsgLen);
                         ByteArray data = mReader->pop();
-                        MqMessage msg = createMqMessage();
-                        msg->deserialize(data);
+                        auto msg = st(MqMessage)::generateMessage(data);
                         String channel = msg->getChannel();
                         if(mListener != nullptr) {
-                            mListener->onMessage(channel,msg->getData());//TODO isNeedAck?
+                            if(msg->isDetach()) {
+                                mListener->onDetach(channel);
+                            } else {
+                                mListener->onMessage(channel,msg->getData());//TODO isNeedAck?
+                            }
                         }
                         mCurrentMsgLen = 0;
                         continue;
                     }
-                } else {
-                    if(mReader->read<uint32_t>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
-                        //pop size content
-                        mReader->pop();
-                        continue;
-                    }
+                } else if(mReader->read<uint32_t>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
+                    //mReader->pop();
+                    continue;
                 }
                 break;
             }
         }
 
         case st(NetEvent)::Connect:{
-            if(mListener != nullptr) {
-                mListener->onConnect();
-            }
+            //call onConnect when connected server successfully
             break;
         }
 
