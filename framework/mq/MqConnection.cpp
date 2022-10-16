@@ -48,6 +48,10 @@ int _MqConnection::connect() {
 
 int _MqConnection::subscribe(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
+    auto packet = msg->generatePacket();
+    printf("packet size is %x \n",packet->size());
+    packet->dump("sssss");
+    
     if(mOutput->write(msg->generatePacket()) > 0) {
         return 0;
     }

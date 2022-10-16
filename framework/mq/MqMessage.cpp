@@ -7,6 +7,10 @@ namespace gagira {
 
 _MqMessage::_MqMessage() {
     retryTimes = 0;
+    token = nullptr;
+    data = nullptr;
+    flags = 0;
+    channel = nullptr;
 }
 
 _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {

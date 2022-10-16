@@ -26,6 +26,13 @@ _MqStreamGroup::_MqStreamGroup(String ch) {
     mChannel = ch;
 }
 
+//------------MqClientInfo-------
+_MqClientInfo::_MqClientInfo(int buffsize){
+    mBuffer = createByteRingArray(buffsize);
+    mReader = createByteRingArrayReader(mBuffer);
+    mCurrentMsgLen = 0;
+}
+
 //------------MqCenter-------------
 _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retryTimes,int retryintervals) {
 
@@ -35,11 +42,9 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
     
     mStreams = createConcurrentHashMap<String,MqStreamGroup>();
 
-    mBuffer = createByteRingArray(buffsize);
-    
-    mReader = createByteRingArrayReader(mBuffer);
+    mClients = createConcurrentHashMap<Socket,MqClientInfo>();
 
-    mCurrentMsgLen = 0;
+    //mCurrentMsgLen = 0;
 
     mMutex = createMutex();
     waitExit = createCondition();
@@ -52,6 +57,8 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
     mRetryTimes = retryTimes;
 
     mTimer = createThreadScheduledPoolExecutor();
+
+    mBuffSize = buffsize;
 
     //if(inf == nullptr) {
     //    mPersistence = createMqDefaultPersistence();
@@ -70,6 +77,16 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
 }
 
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
+    auto client = mClients->get(sock);
+    if(client == nullptr) {
+        client = createMqClientInfo(mBuffSize);
+        mClients->put(sock,client);
+    }
+
+    auto mBuffer = client->mBuffer;
+    auto mReader = client->mReader;
+    auto &mCurrentMsgLen = client->mCurrentMsgLen;
+    
     switch(event) {
         case st(NetEvent)::Message:
             mBuffer->push(data);

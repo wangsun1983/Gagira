@@ -29,6 +29,14 @@ public:
     String mChannel;
 };
 
+DECLARE_CLASS(MqClientInfo) {
+public:
+    _MqClientInfo(int buffsize);
+    ByteRingArray mBuffer;
+    ByteRingArrayReader mReader;
+    uint32_t mCurrentMsgLen;
+};
+
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
     friend class _MqWorker;
@@ -62,9 +70,10 @@ private:
     ServerSocket mServerSock;
 
     ConcurrentHashMap<String,MqStreamGroup> mStreams;
-
-    ByteRingArray mBuffer;
-    ByteRingArrayReader mReader;
+    
+    ConcurrentHashMap<Socket,MqClientInfo> mClients;
+    //ByteRingArray mBuffer;
+    //ByteRingArrayReader mReader;
 
     Mutex mMutex;
     Condition waitExit;
@@ -73,10 +82,11 @@ private:
 
     MqPersistenceInterface mPersistence;
 
-    uint32_t mCurrentMsgLen;
+    //uint32_t mCurrentMsgLen;
     int mAckTimeout;
     int mRetryTimes;
     int mRetryInterval;
+    int mBuffSize;
 
     ThreadScheduledPoolExecutor mTimer;
 };
