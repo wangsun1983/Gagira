@@ -109,7 +109,7 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
         break;
 
         case st(NetEvent)::Disconnect:
-        //Do nothing
+        mClients->remove(sock);
         break;
     }
 }

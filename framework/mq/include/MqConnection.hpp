@@ -72,7 +72,7 @@ public:
     int close();
 
     template<typename T>
-    int publish(String channel,T obj,int flags) {
+    int publish(String channel,T obj,int flags = st(MqMessage)::Publish) {
         ByteArray data = _connection_helper<T>(obj).toData();
         MqMessage msg = createMqMessage(channel,data,flags);
         return mOutput->write(msg->generatePacket());

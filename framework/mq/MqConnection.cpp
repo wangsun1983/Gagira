@@ -49,10 +49,7 @@ int _MqConnection::connect() {
 int _MqConnection::subscribe(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
     auto packet = msg->generatePacket();
-    printf("packet size is %x \n",packet->size());
-    packet->dump("sssss");
-    
-    if(mOutput->write(msg->generatePacket()) > 0) {
+    if(mOutput->write(packet) > 0) {
         return 0;
     }
 
@@ -67,7 +64,6 @@ int _MqConnection::unSubscribe(String channel) {
 
     return -1;
 }
-
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
