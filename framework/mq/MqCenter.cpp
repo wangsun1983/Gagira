@@ -21,7 +21,7 @@ using namespace obotcha;
 namespace gagira {
 
 //------------MqStreamGroup-------
-_MqStreamGroup::_MqStreamGroup(String ch) {
+_MqChannelGroup::_MqChannelGroup(String ch) {
     mStreams = createConcurrentQueue<OutputStream>();
     mChannel = ch;
 }
@@ -36,43 +36,40 @@ _MqClientInfo::_MqClientInfo(int buffsize){
 //------------MqCenter-------------
 _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retryTimes,int retryintervals) {
 
-    monitor = createSocketMonitor();
+    mSocketMonitor = createSocketMonitor();
 
     mAddrss = createHttpUrl(url)->getInetAddress()->get(0);
-    
-    mStreams = createConcurrentHashMap<String,MqStreamGroup>();
+
+    mChannelGroups = createConcurrentHashMap<String,MqChannelGroup>();
 
     mClients = createConcurrentHashMap<Socket,MqClientInfo>();
 
-    //mCurrentMsgLen = 0;
-
-    mMutex = createMutex();
-    waitExit = createCondition();
+    mExitLatch = createCountDownLatch(1);
 
     mAckTimeout = acktimeout;
 
     mAckTimerFuture = createHashMap<String,Future>();
 
+    mStickyMutex = createMutex();
+
+    mStickyMessages = createHashMap<String,HashMap<String,MqMessage>>();
+
     mRetryInterval = retryintervals;
+
     mRetryTimes = retryTimes;
 
     mTimer = createThreadScheduledPoolExecutor();
 
     mBuffSize = buffsize;
 
-    //if(inf == nullptr) {
-    //    mPersistence = createMqDefaultPersistence();
-    //    mPersistence->init();
-    //}
-    
     //create server socket
     mServerSock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
     if(mServerSock->bind() < 0) {
         Trigger(InitializeException,"MqCenter socket bind failed,err is %s",strerror(errno));
     }
-    
-    if(monitor->bind(mServerSock,AutoClone(this)) < 0) {
-        Trigger(InitializeException,"MqCenter monitor bind failed");
+
+    if(mSocketMonitor->bind(mServerSock,AutoClone(this)) < 0) {
+        Trigger(InitializeException,"MqCenter socket monitor bind failed");
     }
 }
 
@@ -83,87 +80,81 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
         mClients->put(sock,client);
     }
 
-    auto mBuffer = client->mBuffer;
-    auto mReader = client->mReader;
-    auto &mCurrentMsgLen = client->mCurrentMsgLen;
-    
+    auto buffer = client->mBuffer;
+    auto reader = client->mReader;
+    auto &msgLen = client->mCurrentMsgLen;
+
     switch(event) {
-        case st(NetEvent)::Message:
-            mBuffer->push(data);
+        case st(NetEvent)::Message: {
+            buffer->push(data);
             while(1) {
-                int availableDataSize = mBuffer->getAvailDataSize();
-                if(mCurrentMsgLen != 0) {
-                    if(mCurrentMsgLen <= availableDataSize) {
-                        mReader->move(mCurrentMsgLen);
-                        ByteArray data = mReader->pop();
+                int availableDataSize = buffer->getAvailDataSize();
+                if(msgLen != 0) {
+                    if(msgLen <= availableDataSize) {
+                        reader->move(msgLen);
+                        ByteArray data = reader->pop();
                         dispatchMessage(sock,data);
-                        mCurrentMsgLen = 0;
+                        msgLen = 0;
                         continue;
                     }
-                } else if(mReader->read<uint32_t>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
-                    //mReader->pop();
+                } else if(reader->read<uint32_t>(msgLen)
+                          == st(ByteRingArrayReader)::Continue) {
                     continue;
                 }
                 break;
             }
+        }
         break;
 
-        case st(NetEvent)::Disconnect:
-        mClients->remove(sock);
+        case st(NetEvent)::Disconnect: {
+            mClients->remove(sock);
+        }
         break;
     }
 }
 
-void _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
+int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
-    int result = 0;
-    
-    if(msg->isSubscribe()) {
-        result = processSubscribe(msg);
-    } else if(msg->isPublish()) {
-        result = processPublish(msg);
-    } else if(msg->isPublishOneShot()) {
-        result = processOneshot(msg);
-    } else if(msg->isUnSubscribe()) {
-        result = processUnSubscribe(msg);
-    }
-    
-    //if(msg->isPersist()) {
-    //    if(result == 0) {
-    //        mPersistence->onNewMessage(msg->channel,data,msg->flags);
-    //    }
-    //}
 
-    //if(result == -1) {
-    //    mPersistence->onFail(msg->channel,data,msg->flags);
-    //}
+    if(msg->isSubscribe()) {
+        return processSubscribe(msg);
+    } else if(msg->isPublish()) {
+        return processPublish(msg);
+    } else if(msg->isPublishOneShot()) {
+        return processOneshot(msg);
+    } else if(msg->isUnSubscribe()) {
+        return processUnSubscribe(msg);
+    }
+
+    return -1;
 }
 
 
 int _MqCenter::close() {
-    mStreams->clear();
-    
     this->mTimer->shutdown();
     mTimer->awaitTermination();
+
     if(mServerSock != nullptr) {
         mServerSock->close();
-        monitor->remove(mServerSock);
+        mSocketMonitor->remove(mServerSock);
         mServerSock = nullptr;
     }
 
-    if(monitor != nullptr) {
-        monitor->close();
-        monitor = nullptr;
+    if(mSocketMonitor != nullptr) {
+        mSocketMonitor->close();
+        mSocketMonitor = nullptr;
     }
-    
-    waitExit->notify();
+
+    mChannelGroups->clear();
+    mClients->clear();
+
+    mExitLatch->countDown();
     return 0;
 }
 
 void _MqCenter::waitForExit(long interval) {
-    AutoLock l(mMutex);
-    waitExit->wait(mMutex,interval);
+    mExitLatch->await(interval);
 }
 
 //process function
@@ -173,15 +164,13 @@ int _MqCenter::processAck(MqMessage msg) {
 }
 
 int _MqCenter::processPublish(MqMessage msg) {
-    int result = -1;
-    mStreams->syncReadAction([this,&msg,&result]{
-        MqStreamGroup group = mStreams->get(msg->channel);
-        if(group != nullptr) {
+    mChannelGroups->syncReadAction([this,&msg]{
+        MqChannelGroup group = mChannelGroups->get(msg->getChannel());
+        if(group != nullptr && group->mStreams->size() != 0) {
             auto ll = createArrayList<OutputStream>();
             auto packet = msg->generatePacket();
             ForEveryOne(stream,group->mStreams) {
-                result = stream->write(packet);
-                if(result < 0) {
+                if(stream->write(packet) < 0) {
                     ll->add(stream);
                 }
             }
@@ -192,13 +181,41 @@ int _MqCenter::processPublish(MqMessage msg) {
         }
     });
 
-    return result;
+    return processStick(msg);
+}
+
+int _MqCenter::processStick(MqMessage msg) {
+    String tag = msg->getStickTag();
+    String channel = msg->getChannel();
+    if(msg->isSticky()) {
+        auto saveMessage = createMqMessage(channel,
+                                           tag,
+                                           msg->getData(),
+                                           st(MqMessage)::Sticky);
+        {
+            AutoLock l(mStickyMutex);
+            auto stickyMap = mStickyMessages->get(channel);
+            if(stickyMap == nullptr) {
+                stickyMap = createHashMap<String,MqMessage>();
+                mStickyMessages->put(channel,stickyMap);
+            }
+            stickyMap->put(tag,saveMessage);
+        }
+    } else {
+        AutoLock l(mStickyMutex);
+        auto stickyMap = mStickyMessages->get(channel);
+        if(stickyMap != nullptr) {
+            stickyMap->remove(tag);
+        }
+    }
+
+    return 0;
 }
 
 int _MqCenter::processOneshot(MqMessage msg) {
     int result = -1;
-    mStreams->syncReadAction([this,&msg,&result]{
-        MqStreamGroup group = mStreams->get(msg->channel);
+    mChannelGroups->syncReadAction([this,&msg,&result]{
+        MqChannelGroup group = mChannelGroups->get(msg->getChannel());
         if(group != nullptr) {
             group->mStreams->syncReadAction([&msg,&result,&group]{
                 if(group->mStreams->size() > 0) {
@@ -216,11 +233,12 @@ int _MqCenter::processOneshot(MqMessage msg) {
 }
 
 int _MqCenter::processSubscribe(MqMessage msg) {
-    mStreams->syncWriteAction([this,&msg]{
-        MqStreamGroup group = mStreams->get(msg->channel);
+    mChannelGroups->syncWriteAction([this,&msg]{
+        auto channel = msg->getChannel();
+        MqChannelGroup group = mChannelGroups->get(channel);
         if(group == nullptr) {
-            group = createMqStreamGroup(msg->getChannel());
-            mStreams->put(msg->channel,group);
+            group = createMqChannelGroup(channel);
+            mChannelGroups->put(channel,group);
         }
         //check whether duplicated subscribe msg was sent
         auto outputStream = msg->mSocket->getOutputStream();
@@ -230,29 +248,41 @@ int _MqCenter::processSubscribe(MqMessage msg) {
             }
         }
         group->mStreams->add(msg->mSocket->getOutputStream());
-    });
-    
-    return 0;
-}
 
-int _MqCenter::processUnSubscribe(MqMessage msg) {
-    MqMessage resp = createMqMessage(msg->getChannel(),nullptr,st(MqMessage)::Detach);
-
-    mStreams->syncWriteAction([this,&msg,&resp]{
-        MqStreamGroup group = mStreams->get(msg->channel);
-        if(group != nullptr && group->mStreams != nullptr) {
-            msg->mSocket->getOutputStream()->write(resp->generatePacket());
-            group->mStreams->remove(msg->mSocket->getOutputStream());
-            if(group->mStreams->size() == 0) {
-                mStreams->remove(msg->channel);
+        //check sticky message
+        {
+            AutoLock l(mStickyMutex);
+            auto stickyMap = mStickyMessages->get(channel);
+            if(stickyMap != nullptr) {
+                ForEveryOne(pair,stickyMap) {
+                    msg->mSocket->getOutputStream()->write(pair->getValue()->generatePacket());
+                }
             }
-            return;
         }
     });
 
     return 0;
 }
-    
+
+int _MqCenter::processUnSubscribe(MqMessage msg) {
+    mChannelGroups->syncWriteAction([this,&msg]{
+        auto channel = msg->getChannel();
+        MqChannelGroup group = mChannelGroups->get(channel);
+        if(group != nullptr && group->mStreams != nullptr) {
+            MqMessage resp = createMqMessage(channel,nullptr,st(MqMessage)::Detach);
+            auto outputstream = msg->mSocket->getOutputStream();
+
+            outputstream->write(resp->generatePacket());
+            group->mStreams->remove(outputstream);
+            if(group->mStreams->size() == 0) {
+                mChannelGroups->remove(msg->channel);
+            }
+        }
+    });
+
+    return 0;
+}
+
 
 int _MqCenter::setAcknowledgeTimer(MqMessage msg) {
     return 0;

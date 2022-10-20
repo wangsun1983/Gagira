@@ -13,7 +13,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-_MqConnection::_MqConnection(String s,MqConnectionListener l) {    
+_MqConnection::_MqConnection(String s,MqConnectionListener l) {
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);
     if(mAddress == nullptr) {
@@ -23,22 +23,30 @@ _MqConnection::_MqConnection(String s,MqConnectionListener l) {
     //mMutex = createMutex();
     //mListeners = createHashMap<String,ArrayList<MqConnectionListener>>();
     mListener = l;
-    
+
     mBuffer = createByteRingArray(1024*4);
     mReader = createByteRingArrayReader(mBuffer);
     mSocketMonitor = createSocketMonitor();
-    
+
     mCurrentMsgLen = 0;
 }
 
 int _MqConnection::connect() {
     mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
+    printf("connect trace1 \n");
     if(mSock->connect() < 0) {
         return -1;
     }
+    printf("connect trace2 \n");
+
     mInput = mSock->getInputStream();
     mOutput = mSock->getOutputStream();
-    
+    if(mOutput == nullptr) {
+        printf("mOutput is nullptr \n");
+    } else {
+        printf("mOutput is not nullptr \n");
+    }
+
     if(mListener != nullptr) {
         mListener->onConnect();
     }
@@ -63,6 +71,15 @@ int _MqConnection::unSubscribe(String channel) {
     }
 
     return -1;
+}
+
+int _MqConnection::unStick(String channel,String tag) {
+  MqMessage msg = createMqMessage(channel,tag,nullptr,st(MqMessage)::UnStick);
+  if(mOutput->write(msg->generatePacket()) > 0) {
+      return 0;
+  }
+
+  return -1;
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
@@ -113,6 +130,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
 }
 
 int _MqConnection::close() {
+    printf("close !!! \n");
     if(mSock != nullptr) {
         mSocketMonitor->remove(mSock,false);
         mSock->close();

@@ -15,6 +15,7 @@
 #include "Random.hpp"
 #include "ConcurrentHashMap.hpp"
 #include "ConcurrentQueue.hpp"
+#include "CountDownLatch.hpp"
 
 using namespace obotcha;
 
@@ -22,9 +23,9 @@ namespace gagira {
 
 class _MqCenter;
 
-DECLARE_CLASS(MqStreamGroup) {
+DECLARE_CLASS(MqChannelGroup) {
 public:
-    _MqStreamGroup(String);
+    _MqChannelGroup(String);
     ConcurrentQueue<OutputStream> mStreams;
     String mChannel;
 };
@@ -53,30 +54,32 @@ public:
     ~_MqCenter();
 
 private:
-    SocketMonitor monitor;
+    SocketMonitor mSocketMonitor;
 
     void onSocketMessage(int,Socket,ByteArray);
-    void dispatchMessage(Socket sock,ByteArray);
+    int dispatchMessage(Socket sock,ByteArray);
 
     int processSubscribe(MqMessage);
     int processUnSubscribe(MqMessage);
-    
+
     int processOneshot(MqMessage);
     int processPublish(MqMessage);
     int processAck(MqMessage);
     int setAcknowledgeTimer(MqMessage msg);
 
+    int processStick(MqMessage msg);
+
     InetAddress mAddrss;
     ServerSocket mServerSock;
 
-    ConcurrentHashMap<String,MqStreamGroup> mStreams;
-    
+    ConcurrentHashMap<String,MqChannelGroup> mChannelGroups;
     ConcurrentHashMap<Socket,MqClientInfo> mClients;
-    //ByteRingArray mBuffer;
-    //ByteRingArrayReader mReader;
 
-    Mutex mMutex;
-    Condition waitExit;
+    //<Channel,HashMap<Tag,MqMessage>>;
+    Mutex mStickyMutex;
+    HashMap<String,HashMap<String,MqMessage>> mStickyMessages;
+
+    CountDownLatch mExitLatch;
 
     HashMap<String,Future> mAckTimerFuture;
 

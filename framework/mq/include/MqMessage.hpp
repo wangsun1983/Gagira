@@ -18,10 +18,10 @@ class _MqWorker;
 class _MqCenter;
 
 /**
- * 
+ *
  * MqMessage Serializable Struct
  * {totalsize|size1|data1|size2|data2....}
- * 
+ *
  */
 DECLARE_CLASS(MqMessage) IMPLEMENTS(Serializable){
 public:
@@ -38,7 +38,7 @@ public:
         PublishOneShot = 1<<5,
         MessageAck = 1<<6,
         MaxMessageType = 1<<7,
-        
+
         //1.Response for unsubscribe.....
         //2.If client was removed from server,send this message.
         Detach = 1<<8,
@@ -46,15 +46,20 @@ public:
         //psersist
         Persistent = 1<<10,
         Acknowledge = 1<<11,
+
+        Sticky = 1<<12,
+        UnStick = 1<<13,
     };
 
     _MqMessage();
-    
+
     _MqMessage(String channel,ByteArray data,uint32_t types);
 
+    _MqMessage(String channel,String tag,ByteArray data,uint32_t types);
+
     ByteArray generatePacket();
-    
-    static MqMessage generateMessage(ByteArray); 
+
+    static MqMessage generateMessage(ByteArray);
 
     ByteArray getData();
 
@@ -75,8 +80,10 @@ public:
     bool isPublishOneShot();
 
     bool isDetach();
-    
+
     bool isAck();
+
+    bool isSticky();
 
     String getToken();
 
@@ -90,6 +97,8 @@ public:
 
     void setRetryTimes(int);
 
+    String getStickTag();
+
 private:
     ByteArray data;
     String channel;
@@ -100,8 +109,10 @@ private:
     //ByteArray mPacketData;
     int retryTimes;
 
+    String stickTag;
+
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,channel,data,token,flags,retryTimes);
+    DECLARE_REFLECT_FIELD(MqMessage,channel,stickTag,data,token,flags,retryTimes);
 };
 
 

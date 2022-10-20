@@ -19,6 +19,11 @@ _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage(
     this->flags = flags;
 }
 
+_MqMessage::_MqMessage(String channel,String tag,ByteArray data,uint32_t types):
+                      _MqMessage(channel,data,types) {
+    stickTag = tag;
+}
+
 bool _MqMessage::isPersist() {
     return (flags&Persistent) != 0;
 }
@@ -73,6 +78,10 @@ bool _MqMessage::isAck() {
     return (flags & MessageAck) != 0;
 }
 
+bool _MqMessage::isSticky() {
+    return (flags & Sticky) != 0;
+}
+
 ByteArray _MqMessage::getData() {
     return data;
 }
@@ -103,6 +112,10 @@ int _MqMessage::getRetryTimes() {
 
 void _MqMessage::setRetryTimes(int s) {
     retryTimes = s;
+}
+
+String _MqMessage::getStickTag() {
+    return stickTag;
 }
 
 }

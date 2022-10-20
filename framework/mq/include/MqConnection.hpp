@@ -78,6 +78,15 @@ public:
         return mOutput->write(msg->generatePacket());
     }
 
+    template<typename T>
+    int stick(String channel,String tag,T obj,int flags = st(MqMessage)::Publish) {
+        ByteArray data = _connection_helper<T>(obj).toData();
+        MqMessage msg = createMqMessage(channel,tag,data,flags|st(MqMessage)::Sticky);
+        return mOutput->write(msg->generatePacket());
+    }
+
+    int unStick(String channel,String tag);
+
     int subscribe(String channel);
     int unSubscribe(String channel);
 
