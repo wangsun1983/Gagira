@@ -101,7 +101,7 @@ void _Server::close() {
 }
 
 void _Server::waitForExit(long interval) {
-    mServer->join(interval);
+    mServer->waitForExit(interval);
 }
 
 void _Server::addinterceptors(int method,Interceptor c) {
@@ -136,14 +136,14 @@ int _Server::onDisconnect(sp<_WebSocketLinker> client) {
     return 0;
 }
 
-int _Server::onPong(String,sp<_WebSocketLinker> client) {
+bool _Server::onPong(String,sp<_WebSocketLinker> client) {
     //TODO
-    return 0;
+    return true;
 }
 
-int _Server::onPing(String,sp<_WebSocketLinker> client) {
+bool _Server::onPing(String,sp<_WebSocketLinker> client) {
     //TODO
-    return 0;
+    return true;
 }
 
 //http

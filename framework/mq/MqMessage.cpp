@@ -78,9 +78,14 @@ bool _MqMessage::isAck() {
     return (flags & MessageAck) != 0;
 }
 
-bool _MqMessage::isSticky() {
-    return (flags & Sticky) != 0;
+bool _MqMessage::isStick() {
+    return (flags & Stick) != 0;
 }
+
+bool _MqMessage::isUnStick() {
+    return (flags & UnStick) != 0;
+}
+
 
 ByteArray _MqMessage::getData() {
     return data;

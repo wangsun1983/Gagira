@@ -16,6 +16,7 @@
 #include "ConcurrentHashMap.hpp"
 #include "ConcurrentQueue.hpp"
 #include "CountDownLatch.hpp"
+#include "MqOption.hpp"
 
 using namespace obotcha;
 
@@ -41,12 +42,7 @@ public:
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
     friend class _MqWorker;
-    _MqCenter(String url,
-              int workers,
-              int buffsize,
-              int acktimeout,
-              int retryTimes,
-              int retryInterval);
+    _MqCenter(String url,MqOption);
 
     void waitForExit(long interval = 0);
     int start();
@@ -77,7 +73,7 @@ private:
 
     //<Channel,HashMap<Tag,MqMessage>>;
     Mutex mStickyMutex;
-    HashMap<String,HashMap<String,MqMessage>> mStickyMessages;
+    HashMap<String,HashMap<String,ByteArray>> mStickyMessages;
 
     CountDownLatch mExitLatch;
 
@@ -85,12 +81,8 @@ private:
 
     MqPersistenceInterface mPersistence;
 
-    //uint32_t mCurrentMsgLen;
-    int mAckTimeout;
-    int mRetryTimes;
-    int mRetryInterval;
-    int mBuffSize;
-
+    MqOption mOption;
+    
     ThreadScheduledPoolExecutor mTimer;
 };
 

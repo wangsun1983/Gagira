@@ -79,9 +79,9 @@ public:
     }
 
     template<typename T>
-    int stick(String channel,String tag,T obj,int flags = st(MqMessage)::Publish) {
+    int stick(String channel,String tag,T obj) {
         ByteArray data = _connection_helper<T>(obj).toData();
-        MqMessage msg = createMqMessage(channel,tag,data,flags|st(MqMessage)::Sticky);
+        MqMessage msg = createMqMessage(channel,tag,data,st(MqMessage)::Publish|st(MqMessage)::Stick);
         return mOutput->write(msg->generatePacket());
     }
 

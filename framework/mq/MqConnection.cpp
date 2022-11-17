@@ -130,9 +130,9 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
 }
 
 int _MqConnection::close() {
-    printf("close !!! \n");
     if(mSock != nullptr) {
-        mSocketMonitor->remove(mSock,false);
+        //mSocketMonitor->remove(mSock,false);
+        mSocketMonitor->unbind(mSock,false);
         mSock->close();
         mSock = nullptr;
     }

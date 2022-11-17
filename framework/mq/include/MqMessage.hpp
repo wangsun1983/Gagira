@@ -47,7 +47,7 @@ public:
         Persistent = 1<<10,
         Acknowledge = 1<<11,
 
-        Sticky = 1<<12,
+        Stick = 1<<12,
         UnStick = 1<<13,
     };
 
@@ -83,7 +83,9 @@ public:
 
     bool isAck();
 
-    bool isSticky();
+    bool isStick();
+
+    bool isUnStick();
 
     String getToken();
 

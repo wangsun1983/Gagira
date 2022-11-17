@@ -1,4 +1,4 @@
-frameworkDaoDir = framework/dao
+frameworkDaoDir = ./framework/dao
 
 objs += $(outtmp)/mysqldao.o  \
 		$(outtmp)/dao.o 

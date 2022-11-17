@@ -15,6 +15,7 @@
 #include "ForEveryOne.hpp"
 #include "ArrayList.hpp"
 #include "System.hpp"
+#include "ExecutorBuilder.hpp"
 
 using namespace obotcha;
 
@@ -34,33 +35,17 @@ _MqClientInfo::_MqClientInfo(int buffsize){
 }
 
 //------------MqCenter-------------
-_MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retryTimes,int retryintervals) {
-
+_MqCenter::_MqCenter(String url,MqOption option) {
     mSocketMonitor = createSocketMonitor();
-
     mAddrss = createHttpUrl(url)->getInetAddress()->get(0);
-
     mChannelGroups = createConcurrentHashMap<String,MqChannelGroup>();
-
     mClients = createConcurrentHashMap<Socket,MqClientInfo>();
-
     mExitLatch = createCountDownLatch(1);
-
-    mAckTimeout = acktimeout;
-
     mAckTimerFuture = createHashMap<String,Future>();
-
     mStickyMutex = createMutex();
-
-    mStickyMessages = createHashMap<String,HashMap<String,MqMessage>>();
-
-    mRetryInterval = retryintervals;
-
-    mRetryTimes = retryTimes;
-
-    mTimer = createThreadScheduledPoolExecutor();
-
-    mBuffSize = buffsize;
+    mStickyMessages = createHashMap<String,HashMap<String,ByteArray>>();
+    mTimer = createExecutorBuilder()->newScheduledThreadPool();
+    mOption = option;
 
     //create server socket
     mServerSock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
@@ -76,7 +61,7 @@ _MqCenter::_MqCenter(String url,int workers,int buffsize,int acktimeout,int retr
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
     auto client = mClients->get(sock);
     if(client == nullptr) {
-        client = createMqClientInfo(mBuffSize);
+        client = createMqClientInfo(mOption->getClientRecvBuffSize());
         mClients->put(sock,client);
     }
 
@@ -137,7 +122,7 @@ int _MqCenter::close() {
 
     if(mServerSock != nullptr) {
         mServerSock->close();
-        mSocketMonitor->remove(mServerSock);
+        mSocketMonitor->unbind(mServerSock);
         mServerSock = nullptr;
     }
 
@@ -187,21 +172,21 @@ int _MqCenter::processPublish(MqMessage msg) {
 int _MqCenter::processStick(MqMessage msg) {
     String tag = msg->getStickTag();
     String channel = msg->getChannel();
-    if(msg->isSticky()) {
+    if(msg->isStick()) {
         auto saveMessage = createMqMessage(channel,
                                            tag,
                                            msg->getData(),
-                                           st(MqMessage)::Sticky);
+                                           st(MqMessage)::Stick);
         {
             AutoLock l(mStickyMutex);
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap == nullptr) {
-                stickyMap = createHashMap<String,MqMessage>();
+                stickyMap = createHashMap<String,ByteArray>();
                 mStickyMessages->put(channel,stickyMap);
             }
-            stickyMap->put(tag,saveMessage);
+            stickyMap->put(tag,saveMessage->generatePacket());
         }
-    } else {
+    } else if(msg->isUnStick()){
         AutoLock l(mStickyMutex);
         auto stickyMap = mStickyMessages->get(channel);
         if(stickyMap != nullptr) {
@@ -255,7 +240,7 @@ int _MqCenter::processSubscribe(MqMessage msg) {
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap != nullptr) {
                 ForEveryOne(pair,stickyMap) {
-                    msg->mSocket->getOutputStream()->write(pair->getValue()->generatePacket());
+                    msg->mSocket->getOutputStream()->write(pair->getValue());
                 }
             }
         }

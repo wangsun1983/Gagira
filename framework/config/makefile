@@ -1,4 +1,4 @@
-configDir = framework/config
+configDir = ./framework/config
 
 objs += $(outtmp)/configs.o 
 
