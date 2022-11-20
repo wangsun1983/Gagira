@@ -5,11 +5,19 @@ objs += $(outtmp)/mqcenter.o \
 		$(outtmp)/mqmessage.o \
 		$(outtmp)/mqconnection.o \
 		$(outtmp)/mqcenterbuilder.o \
-		$(outtmp)/mqdefaultpersistence.o 
-
+		$(outtmp)/mqdefaultpersistence.o \
+		$(outtmp)/mqparser.o \
+		$(outtmp)/mqlinker.o 
+		
 
 $(outtmp)/mqcenter.o :$(frameworkDir)/mq/MqCenter.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqCenter.cpp -o $(outtmp)/mqcenter.o
+
+$(outtmp)/mqparser.o :$(frameworkDir)/mq/MqParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqParser.cpp -o $(outtmp)/mqparser.o
+
+$(outtmp)/mqlinker.o :$(frameworkDir)/mq/MqLinker.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqLinker.cpp -o $(outtmp)/mqlinker.o
 
 $(outtmp)/mqoption.o :$(frameworkDir)/mq/MqOption.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqOption.cpp -o $(outtmp)/mqoption.o

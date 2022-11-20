@@ -16,77 +16,61 @@
 #include "ArrayList.hpp"
 #include "System.hpp"
 #include "ExecutorBuilder.hpp"
+#include "Log.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-//------------MqStreamGroup-------
-_MqChannelGroup::_MqChannelGroup(String ch) {
-    mStreams = createConcurrentQueue<OutputStream>();
-    mChannel = ch;
-}
-
-//------------MqClientInfo-------
-_MqClientInfo::_MqClientInfo(int buffsize){
-    mBuffer = createByteRingArray(buffsize);
-    mReader = createByteRingArrayReader(mBuffer);
-    mCurrentMsgLen = 0;
-}
-
-//------------MqCenter-------------
 _MqCenter::_MqCenter(String url,MqOption option) {
     mSocketMonitor = createSocketMonitor();
-    mAddrss = createHttpUrl(url)->getInetAddress()->get(0);
-    mChannelGroups = createConcurrentHashMap<String,MqChannelGroup>();
-    mClients = createConcurrentHashMap<Socket,MqClientInfo>();
+    mAddress = createHttpUrl(url)->getInetAddress()->get(0);
+    mChannelGroups = createConcurrentHashMap<String,ArrayList<OutputStream>>();
+    mClients = createConcurrentHashMap<Socket,MqLinker>();
     mExitLatch = createCountDownLatch(1);
-    mAckTimerFuture = createHashMap<String,Future>();
-    mStickyMutex = createMutex();
-    mStickyMessages = createHashMap<String,HashMap<String,ByteArray>>();
-    mTimer = createExecutorBuilder()->newScheduledThreadPool();
-    mOption = option;
+    mStickyMessages = createConcurrentHashMap<String,HashMap<String,ByteArray>>();
+    mOption = (option == nullptr)?createMqOption():option;
 
     //create server socket
-    mServerSock = createSocketBuilder()->setAddress(mAddrss)->newServerSocket();
+    mServerSock = createSocketBuilder()->setAddress(mAddress)->newServerSocket();
+}
+
+int _MqCenter::start() {
     if(mServerSock->bind() < 0) {
-        Trigger(InitializeException,"MqCenter socket bind failed,err is %s",strerror(errno));
+        printf("server sock bind error is %s \n",strerror(errno));
+        return -errno;
     }
 
     if(mSocketMonitor->bind(mServerSock,AutoClone(this)) < 0) {
-        Trigger(InitializeException,"MqCenter socket monitor bind failed");
+        return -1;
     }
+
+    return 0;
 }
 
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
     auto client = mClients->get(sock);
-    if(client == nullptr) {
-        client = createMqClientInfo(mOption->getClientRecvBuffSize());
-        mClients->put(sock,client);
-    }
-
-    auto buffer = client->mBuffer;
-    auto reader = client->mReader;
-    auto &msgLen = client->mCurrentMsgLen;
-
+    
     switch(event) {
+        case st(NetEvent)::Connect: {
+            client = createMqLinker(mOption->getClientRecvBuffSize());
+            mClients->put(sock,client);
+        }
+        break;
+
         case st(NetEvent)::Message: {
-            buffer->push(data);
-            while(1) {
-                int availableDataSize = buffer->getAvailDataSize();
-                if(msgLen != 0) {
-                    if(msgLen <= availableDataSize) {
-                        reader->move(msgLen);
-                        ByteArray data = reader->pop();
-                        dispatchMessage(sock,data);
-                        msgLen = 0;
-                        continue;
-                    }
-                } else if(reader->read<uint32_t>(msgLen)
-                          == st(ByteRingArrayReader)::Continue) {
-                    continue;
+            if(client == nullptr) {
+                LOG(ERROR)<<"Received a message,but can not find it's connection";
+                return;
+            }
+
+            auto parser = client->getParser();
+            parser->pushData(data);
+            ArrayList<ByteArray> result = parser->doParse();
+            if(result != nullptr && result->size() != 0) {
+                ForEveryOne(msg,result) {
+                    dispatchMessage(sock,msg);
                 }
-                break;
             }
         }
         break;
@@ -117,8 +101,6 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
 
 
 int _MqCenter::close() {
-    this->mTimer->shutdown();
-    mTimer->awaitTermination();
 
     if(mServerSock != nullptr) {
         mServerSock->close();
@@ -150,18 +132,18 @@ int _MqCenter::processAck(MqMessage msg) {
 
 int _MqCenter::processPublish(MqMessage msg) {
     mChannelGroups->syncReadAction([this,&msg]{
-        MqChannelGroup group = mChannelGroups->get(msg->getChannel());
-        if(group != nullptr && group->mStreams->size() != 0) {
+        auto channels = mChannelGroups->get(msg->getChannel());
+        if(channels != nullptr && channels->size() != 0) {
             auto ll = createArrayList<OutputStream>();
             auto packet = msg->generatePacket();
-            ForEveryOne(stream,group->mStreams) {
+            ForEveryOne(stream,channels) {
                 if(stream->write(packet) < 0) {
                     ll->add(stream);
                 }
             }
 
             if(ll->size() > 0) {
-                group->mStreams->removeAll(ll);
+                channels->removeAll(ll);
             }
         }
     });
@@ -177,21 +159,22 @@ int _MqCenter::processStick(MqMessage msg) {
                                            tag,
                                            msg->getData(),
                                            st(MqMessage)::Stick);
-        {
-            AutoLock l(mStickyMutex);
+
+        mStickyMessages->syncWriteAction([this,&saveMessage,&channel,&tag] {
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap == nullptr) {
                 stickyMap = createHashMap<String,ByteArray>();
                 mStickyMessages->put(channel,stickyMap);
             }
             stickyMap->put(tag,saveMessage->generatePacket());
-        }
+        });
     } else if(msg->isUnStick()){
-        AutoLock l(mStickyMutex);
-        auto stickyMap = mStickyMessages->get(channel);
-        if(stickyMap != nullptr) {
-            stickyMap->remove(tag);
-        }
+        mStickyMessages->syncWriteAction([this,&channel,&tag] {
+            auto stickyMap = mStickyMessages->get(channel);
+            if(stickyMap != nullptr) {
+                stickyMap->remove(tag);
+            }
+        });
     }
 
     return 0;
@@ -200,15 +183,11 @@ int _MqCenter::processStick(MqMessage msg) {
 int _MqCenter::processOneshot(MqMessage msg) {
     int result = -1;
     mChannelGroups->syncReadAction([this,&msg,&result]{
-        MqChannelGroup group = mChannelGroups->get(msg->getChannel());
-        if(group != nullptr) {
-            group->mStreams->syncReadAction([&msg,&result,&group]{
-                if(group->mStreams->size() > 0) {
-                    int random = st(System)::currentTimeMillis()%group->mStreams->size();
-                    auto packet = msg->generatePacket();//TODO? donot generate again??
-                    result = group->mStreams->get(random)->write(packet);
-                }
-            });
+        auto channels = mChannelGroups->get(msg->getChannel());
+        if(channels != nullptr && channels->size() != 0) {
+            int random = st(System)::currentTimeMillis()%channels->size();
+            auto packet = msg->generatePacket();//TODO? donot generate again??
+            result = channels->get(random)->write(packet);
         } else{
             //TODO? Need resend????
         }
@@ -220,30 +199,31 @@ int _MqCenter::processOneshot(MqMessage msg) {
 int _MqCenter::processSubscribe(MqMessage msg) {
     mChannelGroups->syncWriteAction([this,&msg]{
         auto channel = msg->getChannel();
-        MqChannelGroup group = mChannelGroups->get(channel);
-        if(group == nullptr) {
-            group = createMqChannelGroup(channel);
-            mChannelGroups->put(channel,group);
+        auto channels = mChannelGroups->get(channel);
+        if(channels == nullptr) {
+            channels = createArrayList<OutputStream>();
+            mChannelGroups->put(channel,channels);
         }
         //check whether duplicated subscribe msg was sent
         auto outputStream = msg->mSocket->getOutputStream();
-        ForEveryOne(stream,group->mStreams) {
+        ForEveryOne(stream,channels) {
             if(stream == outputStream) {
                 return;
             }
         }
-        group->mStreams->add(msg->mSocket->getOutputStream());
+        channels->add(outputStream);
 
         //check sticky message
-        {
-            AutoLock l(mStickyMutex);
+        mStickyMessages->syncReadAction([this,&channel,&msg,&outputStream] {
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap != nullptr) {
                 ForEveryOne(pair,stickyMap) {
-                    msg->mSocket->getOutputStream()->write(pair->getValue());
+                    if(outputStream->write(pair->getValue()) < 0) {
+                        break;
+                    }
                 }
             }
-        }
+        });
     });
 
     return 0;
@@ -252,24 +232,19 @@ int _MqCenter::processSubscribe(MqMessage msg) {
 int _MqCenter::processUnSubscribe(MqMessage msg) {
     mChannelGroups->syncWriteAction([this,&msg]{
         auto channel = msg->getChannel();
-        MqChannelGroup group = mChannelGroups->get(channel);
-        if(group != nullptr && group->mStreams != nullptr) {
+        auto channels = mChannelGroups->get(channel);
+        if(channels != nullptr && channels->size() > 0) {
             MqMessage resp = createMqMessage(channel,nullptr,st(MqMessage)::Detach);
             auto outputstream = msg->mSocket->getOutputStream();
 
             outputstream->write(resp->generatePacket());
-            group->mStreams->remove(outputstream);
-            if(group->mStreams->size() == 0) {
-                mChannelGroups->remove(msg->channel);
+            channels->remove(outputstream);
+            if(channels->size() == 0) {
+                mChannelGroups->remove(channel);
             }
         }
     });
 
-    return 0;
-}
-
-
-int _MqCenter::setAcknowledgeTimer(MqMessage msg) {
     return 0;
 }
 

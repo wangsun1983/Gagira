@@ -8,6 +8,7 @@
 #include "NetEvent.hpp"
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
+#include "Inspect.hpp"
 
 using namespace obotcha;
 
@@ -20,32 +21,17 @@ _MqConnection::_MqConnection(String s,MqConnectionListener l) {
         Trigger(InitializeException,"Failed to find MqCenter");
     }
 
-    //mMutex = createMutex();
-    //mListeners = createHashMap<String,ArrayList<MqConnectionListener>>();
     mListener = l;
-
-    mBuffer = createByteRingArray(1024*4);
-    mReader = createByteRingArrayReader(mBuffer);
     mSocketMonitor = createSocketMonitor();
-
-    mCurrentMsgLen = 0;
+    mParser = createMqParser(1024*4);
 }
 
 int _MqConnection::connect() {
     mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
-    printf("connect trace1 \n");
-    if(mSock->connect() < 0) {
-        return -1;
-    }
-    printf("connect trace2 \n");
+    Inspect(mSock->connect() < 0,-1);
 
     mInput = mSock->getInputStream();
     mOutput = mSock->getOutputStream();
-    if(mOutput == nullptr) {
-        printf("mOutput is nullptr \n");
-    } else {
-        printf("mOutput is not nullptr \n");
-    }
 
     if(mListener != nullptr) {
         mListener->onConnect();
@@ -74,41 +60,32 @@ int _MqConnection::unSubscribe(String channel) {
 }
 
 int _MqConnection::unStick(String channel,String tag) {
-  MqMessage msg = createMqMessage(channel,tag,nullptr,st(MqMessage)::UnStick);
-  if(mOutput->write(msg->generatePacket()) > 0) {
-      return 0;
-  }
+    MqMessage msg = createMqMessage(channel,tag,nullptr,st(MqMessage)::UnStick);
+    if(mOutput->write(msg->generatePacket()) > 0) {
+        return 0;
+    }
 
-  return -1;
+    return -1;
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {
-            mBuffer->push(data);
-            while(1) {
-                int availableDataSize = mBuffer->getAvailDataSize();
-                if(mCurrentMsgLen != 0) {
-                    if(mCurrentMsgLen <= availableDataSize) {
-                        mReader->move(mCurrentMsgLen);
-                        ByteArray data = mReader->pop();
-                        auto msg = st(MqMessage)::generateMessage(data);
-                        String channel = msg->getChannel();
-                        if(mListener != nullptr) {
-                            if(msg->isDetach()) {
-                                mListener->onDetach(channel);
-                            } else {
-                                mListener->onMessage(channel,msg->getData());//TODO isNeedAck?
-                            }
+            //mBuffer->push(data);
+            mParser->pushData(data);
+            auto result = mParser->doParse();
+            if(result != nullptr && result->size() != 0) {
+                ForEveryOne(data,result) {
+                    auto msg = st(MqMessage)::generateMessage(data);
+                    String channel = msg->getChannel();
+                    if(mListener != nullptr) {
+                        if(msg->isDetach()) {
+                            mListener->onDetach(channel);
+                        } else {
+                            mListener->onMessage(channel,msg->getData());//TODO isNeedAck?
                         }
-                        mCurrentMsgLen = 0;
-                        continue;
                     }
-                } else if(mReader->read<uint32_t>(mCurrentMsgLen) == st(ByteRingArrayReader)::Continue) {
-                    //mReader->pop();
-                    continue;
                 }
-                break;
             }
         }
 

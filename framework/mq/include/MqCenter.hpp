@@ -17,27 +17,11 @@
 #include "ConcurrentQueue.hpp"
 #include "CountDownLatch.hpp"
 #include "MqOption.hpp"
+#include "MqLinker.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
-
-class _MqCenter;
-
-DECLARE_CLASS(MqChannelGroup) {
-public:
-    _MqChannelGroup(String);
-    ConcurrentQueue<OutputStream> mStreams;
-    String mChannel;
-};
-
-DECLARE_CLASS(MqClientInfo) {
-public:
-    _MqClientInfo(int buffsize);
-    ByteRingArray mBuffer;
-    ByteRingArrayReader mReader;
-    uint32_t mCurrentMsgLen;
-};
 
 DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
 public:
@@ -57,33 +41,25 @@ private:
 
     int processSubscribe(MqMessage);
     int processUnSubscribe(MqMessage);
-
     int processOneshot(MqMessage);
     int processPublish(MqMessage);
     int processAck(MqMessage);
-    int setAcknowledgeTimer(MqMessage msg);
-
     int processStick(MqMessage msg);
 
-    InetAddress mAddrss;
+    InetAddress mAddress;
     ServerSocket mServerSock;
 
-    ConcurrentHashMap<String,MqChannelGroup> mChannelGroups;
-    ConcurrentHashMap<Socket,MqClientInfo> mClients;
+    ConcurrentHashMap<String,ArrayList<OutputStream>> mChannelGroups;
 
-    //<Channel,HashMap<Tag,MqMessage>>;
-    Mutex mStickyMutex;
-    HashMap<String,HashMap<String,ByteArray>> mStickyMessages;
+    ConcurrentHashMap<Socket,MqLinker> mClients;
+
+    ConcurrentHashMap<String,HashMap<String,ByteArray>> mStickyMessages;
 
     CountDownLatch mExitLatch;
-
-    HashMap<String,Future> mAckTimerFuture;
 
     MqPersistenceInterface mPersistence;
 
     MqOption mOption;
-    
-    ThreadScheduledPoolExecutor mTimer;
 };
 
 }

@@ -9,6 +9,7 @@
 #include "Mutex.hpp"
 #include "ByteRingArray.hpp"
 #include "ByteRingArrayReader.hpp"
+#include "MqParser.hpp"
 
 using namespace obotcha;
 
@@ -96,12 +97,7 @@ private:
     InputStream mInput;
     OutputStream mOutput;
 
-    ByteRingArray mBuffer;
-    ByteRingArrayReader mReader;
-    uint32_t mCurrentMsgLen;
-
-    //Mutex mMutex;
-    //HashMap<String,ArrayList<MqConnectionListener>> mListeners;
+    MqParser mParser;
     MqConnectionListener mListener;
 
     SocketMonitor mSocketMonitor;
