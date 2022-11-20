@@ -49,9 +49,9 @@ public:
 
     int onDisconnect(sp<_WebSocketLinker> client);
 
-    bool onPong(String,sp<_WebSocketLinker> client);
+    void onPong(String,sp<_WebSocketLinker> client);
 
-    bool onPing(String,sp<_WebSocketLinker> client);
+    int onPing(String,sp<_WebSocketLinker> client);
 
     static void addinterceptors(int method,Interceptor);
 

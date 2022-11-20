@@ -17,6 +17,10 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/io/ \
 		-I ./3rdparty/Obotcha/include/util/ \
 		-I ./3rdparty/Obotcha/include/net/ \
+		-I ./3rdparty/Obotcha/include/net/socket \
+		-I ./3rdparty/Obotcha/include/net/websocket \
+		-I ./3rdparty/Obotcha/include/net/http \
+		-I ./3rdparty/Obotcha/include/net/smtp \
 		-I ./3rdparty/Obotcha/include/security/ \
 		-I ./3rdparty/Obotcha/include/process/ \
 		-I ./3rdparty/Obotcha/include/external/iniparser/ \
@@ -64,9 +68,7 @@ gagiracppflags = $(cppflags)
 everything : $(libname)
 
 include framework/makefile
-include framework/config/makefile
-include framework/dao/makefile
-include app/makefile
+include sampleapp/makefile
 
 $(libname): $(objs)
 	$(cppcompiler) *.cpp $(cflags) $(objs) -o gagria_server $(external) $(sharelib)

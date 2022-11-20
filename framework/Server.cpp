@@ -136,14 +136,14 @@ int _Server::onDisconnect(sp<_WebSocketLinker> client) {
     return 0;
 }
 
-bool _Server::onPong(String,sp<_WebSocketLinker> client) {
+void _Server::onPong(String,sp<_WebSocketLinker> client) {
     //TODO
-    return true;
+    //return true;
 }
 
-bool _Server::onPing(String,sp<_WebSocketLinker> client) {
+int _Server::onPing(String,sp<_WebSocketLinker> client) {
     //TODO
-    return true;
+    return AutoResponse;
 }
 
 //http
