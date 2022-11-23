@@ -13,18 +13,27 @@ public:
     _MqOption();
 
     _MqOption *setClientRecvBuffSize(int);
+    _MqOption *setAckTimeout(int);
+    _MqOption *setReDeliveryInterval(long);
+    _MqOption *setReDeliveryTimes(int);
 
     int getClientRecvBuffSize();
+    int getAckTimeout();
+    long getReDeliveryInterval();
+    int getReDeliveryTimes();
 
 private:
     static const int DefaultClientRecvBuffSize;
     static const int DefaultThreadNum;
     static const int DefaultBufferSize;
-    static const int DefaultAckTimeout;
-    static const int DefaultRedeliveryInterval;
-    static const int DefaultRedeliveryTimes;
+    static const long DefaultAckTimeout;
+    static const int DefaultReDeliveryInterval;
+    static const int DefaultReDeliveryTimes;
 
     int mClientRecvBuffSize;
+    int mAckTimeout;
+    long mReDeliveryInterval;
+    int mReDeliveryTimes;
 };
 
 }

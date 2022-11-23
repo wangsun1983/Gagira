@@ -91,6 +91,10 @@ ByteArray _MqMessage::getData() {
     return data;
 }
 
+void _MqMessage::clearData() {
+    data = nullptr;
+}
+
 String _MqMessage::getChannel() {
     return channel;
 }

@@ -18,6 +18,7 @@
 #include "CountDownLatch.hpp"
 #include "MqOption.hpp"
 #include "MqLinker.hpp"
+#include "UUID.hpp"
 
 using namespace obotcha;
 
@@ -46,6 +47,8 @@ private:
     int processAck(MqMessage);
     int processStick(MqMessage msg);
 
+    int registWaitAckTask(MqMessage msg);
+
     InetAddress mAddress;
     ServerSocket mServerSock;
 
@@ -57,9 +60,12 @@ private:
 
     CountDownLatch mExitLatch;
 
-    MqPersistenceInterface mPersistence;
+    ThreadScheduledPoolExecutor mWaitAckThreadPools;
+    ConcurrentHashMap<String,Future> mWaitAckMessages;
 
     MqOption mOption;
+
+    UUID mUuid;
 };
 
 }

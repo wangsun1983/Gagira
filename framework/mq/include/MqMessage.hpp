@@ -36,7 +36,10 @@ public:
         UnSubscribe = 1<<3,
         Publish = 1<<4,
         PublishOneShot = 1<<5,
-        MessageAck = 1<<6,
+        //Server will remove msg when accept one ack message
+        //if no ack return in time,server will resend the message.
+        MessageAck = 1<<6, 
+
         MaxMessageType = 1<<7,
 
         //1.Response for unsubscribe.....
@@ -62,6 +65,7 @@ public:
     static MqMessage generateMessage(ByteArray);
 
     ByteArray getData();
+    void clearData();
 
     String getChannel();
 
@@ -108,13 +112,13 @@ private:
     uint32_t flags;
 
     Socket mSocket;
-    //ByteArray mPacketData;
+
     int retryTimes;
 
     String stickTag;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,channel,stickTag,data,token,flags,retryTimes);
+    DECLARE_REFLECT_FIELD(MqMessage,channel,stickTag,data,token,flags);
 };
 
 

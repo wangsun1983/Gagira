@@ -82,7 +82,15 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                         if(msg->isDetach()) {
                             mListener->onDetach(channel);
                         } else {
-                            mListener->onMessage(channel,msg->getData());//TODO isNeedAck?
+                            int ret = mListener->onMessage(channel,msg->getData());
+                            printf("connection ret is %d \n",ret);
+                            if(msg->isAcknowledge() && ret == 0) {
+                                printf("i send response");
+                                msg->setFlags(st(MqMessage)::MessageAck);
+                                msg->clearData();
+                                int ret = s->getOutputStream()->write(msg->generatePacket());
+                                printf("send result is %d \n",ret);
+                            }
                         }
                     }
                 }

@@ -18,6 +18,7 @@
 #include "ExecutorBuilder.hpp"
 #include "Log.hpp"
 
+
 using namespace obotcha;
 
 namespace gagira {
@@ -33,11 +34,15 @@ _MqCenter::_MqCenter(String url,MqOption option) {
 
     //create server socket
     mServerSock = createSocketBuilder()->setAddress(mAddress)->newServerSocket();
+
+    mUuid = createUUID();
+
+    mWaitAckThreadPools = createExecutorBuilder()->newScheduledThreadPool();
+    mWaitAckMessages = createConcurrentHashMap<String,Future>();
 }
 
 int _MqCenter::start() {
     if(mServerSock->bind() < 0) {
-        printf("server sock bind error is %s \n",strerror(errno));
         return -errno;
     }
 
@@ -85,7 +90,6 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
 int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
-
     if(msg->isSubscribe()) {
         return processSubscribe(msg);
     } else if(msg->isPublish()) {
@@ -94,6 +98,8 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         return processOneshot(msg);
     } else if(msg->isUnSubscribe()) {
         return processUnSubscribe(msg);
+    } else if(msg->isAck()) {
+        return processAck(msg);
     }
 
     return -1;
@@ -126,7 +132,29 @@ void _MqCenter::waitForExit(long interval) {
 
 //process function
 int _MqCenter::processAck(MqMessage msg) {
-    //TODO
+    auto fu = mWaitAckMessages->get(msg->getToken());
+    if(fu != nullptr) {
+        fu->cancel();
+    }
+
+    return 0;
+}
+
+int _MqCenter::registWaitAckTask(MqMessage msg) {
+    msg->setToken(mUuid->generate());
+    auto fu = mWaitAckThreadPools->schedule(mOption->getAckTimeout(),[this,msg](){
+        int retryTimes = msg->getRetryTimes();
+        if(retryTimes < mOption->getReDeliveryTimes()) {
+            msg->setRetryTimes(retryTimes + 1);
+            if(msg->isPublish()) {
+                processPublish(msg);
+            } else if(msg->isPublishOneShot()) {
+                processOneshot(msg);
+            }
+        }
+    });
+
+    mWaitAckMessages->put(msg->getToken(),fu);
     return 0;
 }
 
@@ -135,6 +163,10 @@ int _MqCenter::processPublish(MqMessage msg) {
         auto channels = mChannelGroups->get(msg->getChannel());
         if(channels != nullptr && channels->size() != 0) {
             auto ll = createArrayList<OutputStream>();
+            if(msg->isAcknowledge()) {
+                registWaitAckTask(msg);
+            }
+
             auto packet = msg->generatePacket();
             ForEveryOne(stream,channels) {
                 if(stream->write(packet) < 0) {

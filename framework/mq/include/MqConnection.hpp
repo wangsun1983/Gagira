@@ -17,10 +17,10 @@ namespace gagira {
 
 DECLARE_CLASS(MqConnectionListener) {
 public:
-    virtual bool onMessage(String channel,ByteArray data) = 0;
-    virtual bool onDisconnect() = 0;
-    virtual bool onConnect() = 0;
-    virtual bool onDetach(String channel) = 0;
+    virtual int onMessage(String channel,ByteArray data) = 0;
+    virtual void onDisconnect() = 0;
+    virtual void onConnect() = 0;
+    virtual void onDetach(String channel) = 0;
 };
 
 template<typename T>
@@ -87,7 +87,6 @@ public:
     }
 
     int unStick(String channel,String tag);
-
     int subscribe(String channel);
     int unSubscribe(String channel);
 
