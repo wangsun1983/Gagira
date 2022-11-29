@@ -83,13 +83,10 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             mListener->onDetach(channel);
                         } else {
                             int ret = mListener->onMessage(channel,msg->getData());
-                            printf("connection ret is %d \n",ret);
                             if(msg->isAcknowledge() && ret == 0) {
-                                printf("i send response");
                                 msg->setFlags(st(MqMessage)::MessageAck);
                                 msg->clearData();
                                 int ret = s->getOutputStream()->write(msg->generatePacket());
-                                printf("send result is %d \n",ret);
                             }
                         }
                     }

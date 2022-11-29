@@ -163,10 +163,6 @@ int _MqCenter::processPublish(MqMessage msg) {
         auto channels = mChannelGroups->get(msg->getChannel());
         if(channels != nullptr && channels->size() != 0) {
             auto ll = createArrayList<OutputStream>();
-            if(msg->isAcknowledge()) {
-                registWaitAckTask(msg);
-            }
-
             auto packet = msg->generatePacket();
             ForEveryOne(stream,channels) {
                 if(stream->write(packet) < 0) {
@@ -179,6 +175,10 @@ int _MqCenter::processPublish(MqMessage msg) {
             }
         }
     });
+
+    if(msg->isAcknowledge() && msg->getRetryTimes() == 0) {
+        registWaitAckTask(msg);
+    }
 
     return processStick(msg);
 }
@@ -222,6 +222,10 @@ int _MqCenter::processOneshot(MqMessage msg) {
             result = channels->get(random)->write(packet);
         } else{
             //TODO? Need resend????
+        }
+
+        if(msg->isAcknowledge() && msg->getRetryTimes() == 0) {
+            registWaitAckTask(msg);
         }
     });
 
