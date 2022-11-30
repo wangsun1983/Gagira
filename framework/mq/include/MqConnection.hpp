@@ -17,6 +17,11 @@ namespace gagira {
 
 DECLARE_CLASS(MqConnectionListener) {
 public:
+    enum MessageResponse {
+        AutoAck = 0,
+        NoAck,
+    };
+
     virtual int onMessage(String channel,ByteArray data) = 0;
     virtual void onDisconnect() = 0;
     virtual void onConnect() = 0;
@@ -73,22 +78,22 @@ public:
     int close();
 
     template<typename T>
-    int publish(String channel,T obj,int flags = st(MqMessage)::Publish) {
+    bool publish(String channel,T obj,int flags = st(MqMessage)::Publish) {
         ByteArray data = _connection_helper<T>(obj).toData();
         MqMessage msg = createMqMessage(channel,data,flags);
-        return mOutput->write(msg->generatePacket());
+        return mOutput->write(msg->generatePacket()) > 0;
     }
 
     template<typename T>
-    int stick(String channel,String tag,T obj) {
+    bool stick(String channel,String tag,T obj) {
         ByteArray data = _connection_helper<T>(obj).toData();
         MqMessage msg = createMqMessage(channel,tag,data,st(MqMessage)::Publish|st(MqMessage)::Stick);
-        return mOutput->write(msg->generatePacket());
+        return mOutput->write(msg->generatePacket()) > 0;
     }
 
-    int unStick(String channel,String tag);
-    int subscribe(String channel);
-    int unSubscribe(String channel);
+    bool unStick(String channel,String tag);
+    bool subscribe(String channel);
+    bool unSubscribe(String channel);
 
 private:
     InetAddress mAddress;

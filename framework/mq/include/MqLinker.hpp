@@ -12,7 +12,7 @@ DECLARE_CLASS(MqLinker) {
 public:
     _MqLinker(int buffsize);
 
-    MqParser getParser();
+    ArrayList<ByteArray> doParse(ByteArray);
 
 private:
     MqParser mParser;

@@ -4,7 +4,6 @@
 #include "HttpUrl.hpp"
 #include "SocketBuilder.hpp"
 #include "MqMessage.hpp"
-#include "ByteArrayWriter.hpp"
 #include "NetEvent.hpp"
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
@@ -40,38 +39,25 @@ int _MqConnection::connect() {
     return mSocketMonitor->bind(mSock,AutoClone(this));
 }
 
-int _MqConnection::subscribe(String channel) {
+bool _MqConnection::subscribe(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
     auto packet = msg->generatePacket();
-    if(mOutput->write(packet) > 0) {
-        return 0;
-    }
-
-    return -1;
+    return mOutput->write(packet) > 0;
 }
 
-int _MqConnection::unSubscribe(String channel) {
+bool _MqConnection::unSubscribe(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::UnSubscribe);
-    if(mOutput->write(msg->generatePacket()) > 0) {
-        return 0;
-    }
-
-    return -1;
+    return mOutput->write(msg->generatePacket()) > 0;
 }
 
-int _MqConnection::unStick(String channel,String tag) {
+bool _MqConnection::unStick(String channel,String tag) {
     MqMessage msg = createMqMessage(channel,tag,nullptr,st(MqMessage)::UnStick);
-    if(mOutput->write(msg->generatePacket()) > 0) {
-        return 0;
-    }
-
-    return -1;
+    return mOutput->write(msg->generatePacket()) > 0;
 }
 
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {
-            //mBuffer->push(data);
             mParser->pushData(data);
             auto result = mParser->doParse();
             if(result != nullptr && result->size() != 0) {
@@ -83,10 +69,10 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                             mListener->onDetach(channel);
                         } else {
                             int ret = mListener->onMessage(channel,msg->getData());
-                            if(msg->isAcknowledge() && ret == 0) {
+                            if(msg->isAcknowledge() && ret == st(MqConnectionListener)::AutoAck) {
                                 msg->setFlags(st(MqMessage)::MessageAck);
                                 msg->clearData();
-                                int ret = s->getOutputStream()->write(msg->generatePacket());
+                                s->getOutputStream()->write(msg->generatePacket());
                             }
                         }
                     }
@@ -103,6 +89,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
             if(mListener != nullptr) {
                 mListener->onDisconnect();
             }
+            close();
             break;
         }
 
@@ -113,7 +100,6 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
 
 int _MqConnection::close() {
     if(mSock != nullptr) {
-        //mSocketMonitor->remove(mSock,false);
         mSocketMonitor->unbind(mSock,false);
         mSock->close();
         mSock = nullptr;

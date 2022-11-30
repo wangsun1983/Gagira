@@ -7,8 +7,9 @@ _MqLinker::_MqLinker(int buffsize) {
     mParser = createMqParser(buffsize);
 }
 
-MqParser _MqLinker::getParser() {
-    return mParser;
+ArrayList<ByteArray> _MqLinker::doParse(ByteArray data) {
+    mParser->pushData(data);
+    return mParser->doParse();
 }
 
 }

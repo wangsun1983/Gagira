@@ -1,23 +1,13 @@
-#include <thread>
-#include <atomic>
-#include <mutex>
-
 #include "MqCenter.hpp"
 #include "HttpUrl.hpp"
-#include "ServerSocket.hpp"
 #include "SocketBuilder.hpp"
 #include "NetEvent.hpp"
 #include "MqMessage.hpp"
-#include "ByteArrayReader.hpp"
-#include "ByteArrayWriter.hpp"
-#include "InitializeException.hpp"
-#include "MqDefaultPersistence.hpp"
 #include "ForEveryOne.hpp"
-#include "ArrayList.hpp"
 #include "System.hpp"
 #include "ExecutorBuilder.hpp"
 #include "Log.hpp"
-
+#include "Inspect.hpp"
 
 using namespace obotcha;
 
@@ -34,44 +24,35 @@ _MqCenter::_MqCenter(String url,MqOption option) {
 
     //create server socket
     mServerSock = createSocketBuilder()->setAddress(mAddress)->newServerSocket();
-
     mUuid = createUUID();
-
     mWaitAckThreadPools = createExecutorBuilder()->newScheduledThreadPool();
     mWaitAckMessages = createConcurrentHashMap<String,Future>();
 }
 
 int _MqCenter::start() {
-    if(mServerSock->bind() < 0) {
-        return -errno;
-    }
-
-    if(mSocketMonitor->bind(mServerSock,AutoClone(this)) < 0) {
-        return -1;
-    }
-
+    Inspect(mServerSock->bind() < 0 
+            || mSocketMonitor->bind(mServerSock,AutoClone(this)) < 0,
+            -1);
     return 0;
 }
 
 void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
-    auto client = mClients->get(sock);
     
     switch(event) {
         case st(NetEvent)::Connect: {
-            client = createMqLinker(mOption->getClientRecvBuffSize());
+            auto client = createMqLinker(mOption->getClientRecvBuffSize());
             mClients->put(sock,client);
         }
         break;
 
         case st(NetEvent)::Message: {
+            auto client = mClients->get(sock);
             if(client == nullptr) {
                 LOG(ERROR)<<"Received a message,but can not find it's connection";
                 return;
             }
 
-            auto parser = client->getParser();
-            parser->pushData(data);
-            ArrayList<ByteArray> result = parser->doParse();
+            ArrayList<ByteArray> result = client->doParse(data);
             if(result != nullptr && result->size() != 0) {
                 ForEveryOne(msg,result) {
                     dispatchMessage(sock,msg);
@@ -90,6 +71,11 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
 int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
+    
+    if(msg->isAcknowledge() && msg->getRetryTimes() == 0) {
+        registWaitAckTask(msg);
+    }
+
     if(msg->isSubscribe()) {
         return processSubscribe(msg);
     } else if(msg->isPublish()) {
@@ -107,7 +93,6 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
 
 
 int _MqCenter::close() {
-
     if(mServerSock != nullptr) {
         mServerSock->close();
         mSocketMonitor->unbind(mServerSock);
@@ -176,10 +161,6 @@ int _MqCenter::processPublish(MqMessage msg) {
         }
     });
 
-    if(msg->isAcknowledge() && msg->getRetryTimes() == 0) {
-        registWaitAckTask(msg);
-    }
-
     return processStick(msg);
 }
 
@@ -187,18 +168,18 @@ int _MqCenter::processStick(MqMessage msg) {
     String tag = msg->getStickTag();
     String channel = msg->getChannel();
     if(msg->isStick()) {
-        auto saveMessage = createMqMessage(channel,
-                                           tag,
-                                           msg->getData(),
-                                           st(MqMessage)::Stick);
+        // auto saveMessage = createMqMessage(channel,
+        //                                    tag,
+        //                                    msg->getData(),
+        //                                    st(MqMessage)::Stick);
 
-        mStickyMessages->syncWriteAction([this,&saveMessage,&channel,&tag] {
+        mStickyMessages->syncWriteAction([this,&msg,&channel,&tag] {
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap == nullptr) {
                 stickyMap = createHashMap<String,ByteArray>();
                 mStickyMessages->put(channel,stickyMap);
             }
-            stickyMap->put(tag,saveMessage->generatePacket());
+            stickyMap->put(tag,msg->generatePacket());
         });
     } else if(msg->isUnStick()){
         mStickyMessages->syncWriteAction([this,&channel,&tag] {
@@ -222,10 +203,6 @@ int _MqCenter::processOneshot(MqMessage msg) {
             result = channels->get(random)->write(packet);
         } else{
             //TODO? Need resend????
-        }
-
-        if(msg->isAcknowledge() && msg->getRetryTimes() == 0) {
-            registWaitAckTask(msg);
         }
     });
 
