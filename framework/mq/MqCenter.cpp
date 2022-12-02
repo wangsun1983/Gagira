@@ -72,20 +72,15 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
     
-    if(msg->isAcknowledge() && msg->getRetryTimes() == 0) {
-        registWaitAckTask(msg);
-    }
-
-    if(msg->isSubscribe()) {
-        return processSubscribe(msg);
-    } else if(msg->isPublish()) {
-        return processPublish(msg);
-    } else if(msg->isPublishOneShot()) {
-        return processOneshot(msg);
-    } else if(msg->isUnSubscribe()) {
-        return processUnSubscribe(msg);
-    } else if(msg->isAck()) {
-        return processAck(msg);
+    switch(msg->getType()) {
+        case st(MqMessage)::Subscribe:
+            return processSubscribe(msg);
+        case st(MqMessage)::UnSubscribe:
+            return processUnSubscribe(msg);
+        case st(MqMessage)::Publish:
+            return processPublish(msg);
+        case st(MqMessage)::Ack:
+            return processAck(msg);
     }
 
     return -1;
@@ -117,7 +112,7 @@ void _MqCenter::waitForExit(long interval) {
 
 //process function
 int _MqCenter::processAck(MqMessage msg) {
-    auto fu = mWaitAckMessages->get(msg->getToken());
+    auto fu = mWaitAckMessages->get(msg->getAckToken());
     if(fu != nullptr) {
         fu->cancel();
     }
@@ -126,87 +121,73 @@ int _MqCenter::processAck(MqMessage msg) {
 }
 
 int _MqCenter::registWaitAckTask(MqMessage msg) {
-    msg->setToken(mUuid->generate());
+    msg->setAckToken(mUuid->generate());
     auto fu = mWaitAckThreadPools->schedule(mOption->getAckTimeout(),[this,msg](){
+        printf("resend message!!!!! \n");
         int retryTimes = msg->getRetryTimes();
         if(retryTimes < mOption->getReDeliveryTimes()) {
             msg->setRetryTimes(retryTimes + 1);
-            if(msg->isPublish()) {
-                processPublish(msg);
-            } else if(msg->isPublishOneShot()) {
-                processOneshot(msg);
-            }
+            processPublish(msg);
         }
     });
 
-    mWaitAckMessages->put(msg->getToken(),fu);
+    mWaitAckMessages->put(msg->getAckToken(),fu);
     return 0;
 }
 
 int _MqCenter::processPublish(MqMessage msg) {
+    printf("processPublish \n");
+    if(msg->isUnStick()){
+        mStickyMessages->syncWriteAction([this,&msg] {
+            auto channel = msg->getChannel();
+            auto stickyMap = mStickyMessages->get(channel);
+            if(stickyMap != nullptr) {
+                stickyMap->remove(msg->getStickToken());
+            }
+        });
+        return 0;
+    }
+
+    if(msg->isAcknowledge()) {
+        registWaitAckTask(msg);
+    }
+
     mChannelGroups->syncReadAction([this,&msg]{
         auto channels = mChannelGroups->get(msg->getChannel());
         if(channels != nullptr && channels->size() != 0) {
-            auto ll = createArrayList<OutputStream>();
-            auto packet = msg->generatePacket();
-            ForEveryOne(stream,channels) {
-                if(stream->write(packet) < 0) {
-                    ll->add(stream);
+           auto packet = msg->generatePacket();
+            if(msg->isOneShot()) {
+                int random = st(System)::currentTimeMillis()%channels->size();
+                channels->get(random)->write(packet);
+            } else {
+                auto ll = createArrayList<OutputStream>();
+                ForEveryOne(stream,channels) {
+                    if(stream->write(packet) < 0) {
+                        ll->add(stream);
+                    }
                 }
-            }
+                
 
-            if(ll->size() > 0) {
-                channels->removeAll(ll);
+                if(ll->size() > 0) {
+                    channels->removeAll(ll);
+                }
             }
         }
     });
 
-    return processStick(msg);
-}
-
-int _MqCenter::processStick(MqMessage msg) {
-    String tag = msg->getStickTag();
-    String channel = msg->getChannel();
     if(msg->isStick()) {
-        // auto saveMessage = createMqMessage(channel,
-        //                                    tag,
-        //                                    msg->getData(),
-        //                                    st(MqMessage)::Stick);
-
-        mStickyMessages->syncWriteAction([this,&msg,&channel,&tag] {
+        mStickyMessages->syncWriteAction([this,&msg] {
+            auto channel = msg->getChannel();
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap == nullptr) {
                 stickyMap = createHashMap<String,ByteArray>();
                 mStickyMessages->put(channel,stickyMap);
             }
-            stickyMap->put(tag,msg->generatePacket());
-        });
-    } else if(msg->isUnStick()){
-        mStickyMessages->syncWriteAction([this,&channel,&tag] {
-            auto stickyMap = mStickyMessages->get(channel);
-            if(stickyMap != nullptr) {
-                stickyMap->remove(tag);
-            }
+            stickyMap->put(msg->getStickToken(),msg->generatePacket());
         });
     }
 
     return 0;
-}
-
-int _MqCenter::processOneshot(MqMessage msg) {
-    int result = -1;
-    mChannelGroups->syncReadAction([this,&msg,&result]{
-        auto channels = mChannelGroups->get(msg->getChannel());
-        if(channels != nullptr && channels->size() != 0) {
-            int random = st(System)::currentTimeMillis()%channels->size();
-            auto packet = msg->generatePacket();//TODO? donot generate again??
-            result = channels->get(random)->write(packet);
-        } else{
-            //TODO? Need resend????
-        }
-    });
-
-    return result;
 }
 
 int _MqCenter::processSubscribe(MqMessage msg) {

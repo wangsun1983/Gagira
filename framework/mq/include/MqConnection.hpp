@@ -78,22 +78,24 @@ public:
     int close();
 
     template<typename T>
-    bool publish(String channel,T obj,int flags = st(MqMessage)::Publish) {
+    bool publishMessage(String channel,T obj,uint32_t flags = 0) {
         ByteArray data = _connection_helper<T>(obj).toData();
-        MqMessage msg = createMqMessage(channel,data,flags);
+        MqMessage msg = createMqMessage(channel,data,flags|st(MqMessage)::Publish);
         return mOutput->write(msg->generatePacket()) > 0;
     }
 
     template<typename T>
-    bool stick(String channel,String tag,T obj) {
+    bool publishStickMessage(String channel,String tag,T obj,uint32_t flags = 0) {
         ByteArray data = _connection_helper<T>(obj).toData();
-        MqMessage msg = createMqMessage(channel,tag,data,st(MqMessage)::Publish|st(MqMessage)::Stick);
+        MqMessage msg = createMqMessage(channel,tag,data,st(MqMessage)::Publish|flags);
         return mOutput->write(msg->generatePacket()) > 0;
     }
 
-    bool unStick(String channel,String tag);
-    bool subscribe(String channel);
-    bool unSubscribe(String channel);
+   
+    bool SubscribeChannel(String channel);
+    bool UnSubscribeChannel(String channel);
+
+    bool publisAckMessage(String channel,String ackToken);
 
 private:
     InetAddress mAddress;

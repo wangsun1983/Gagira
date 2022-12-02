@@ -38,10 +38,8 @@ private:
 
     int processSubscribe(MqMessage);
     int processUnSubscribe(MqMessage);
-    int processOneshot(MqMessage);
     int processPublish(MqMessage);
     int processAck(MqMessage);
-    int processStick(MqMessage msg);
 
     int registWaitAckTask(MqMessage msg);
 

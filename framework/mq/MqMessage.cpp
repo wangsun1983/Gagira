@@ -6,26 +6,19 @@
 namespace gagira {
 
 _MqMessage::_MqMessage() {
-    retryTimes = 0;
-    token = nullptr;
-    data = nullptr;
-    flags = 0;
-    channel = nullptr;
+    mRetryTimes = 0;
+    mFlags = 0;
 }
 
 _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {
-    this->data = data;
-    this->channel = channel;
-    this->flags = flags;
+    mData = data;
+    mChannel = channel;
+    mFlags = flags;
 }
 
-_MqMessage::_MqMessage(String channel,String tag,ByteArray data,uint32_t types):
+_MqMessage::_MqMessage(String channel,String acktoken,ByteArray data,uint32_t types):
                       _MqMessage(channel,data,types) {
-    stickTag = tag;
-}
-
-bool _MqMessage::isPersist() {
-    return (flags&Persistent) != 0;
+    mAckToken = acktoken;
 }
 
 ByteArray _MqMessage::generatePacket() {
@@ -46,85 +39,65 @@ MqMessage _MqMessage::generateMessage(ByteArray data) {
     return msg;
 }
 
-bool _MqMessage::isAcknowledge() {
-    return (flags&Acknowledge) != 0;
-}
-
-bool _MqMessage::isShakeHand() {
-    return (flags & ShakeHand) != 0;
-}
-
-bool _MqMessage::isDetach() {
-    return (flags & Detach) != 0;
-}
-
-bool _MqMessage::isSubscribe() {
-    return (flags & Subscribe) != 0;
-}
-
-bool _MqMessage::isUnSubscribe() {
-    return (flags & UnSubscribe) != 0;
-}
-
-bool _MqMessage::isPublish() {
-    return (flags & Publish) != 0;
-}
-
-bool _MqMessage::isPublishOneShot() {
-    return (flags & PublishOneShot) != 0;
-}
-
-bool _MqMessage::isAck() {
-    return (flags & MessageAck) != 0;
-}
-
-bool _MqMessage::isStick() {
-    return (flags & Stick) != 0;
-}
-
-bool _MqMessage::isUnStick() {
-    return (flags & UnStick) != 0;
-}
-
-
 ByteArray _MqMessage::getData() {
-    return data;
+    return mData;
 }
 
 void _MqMessage::clearData() {
-    data = nullptr;
+    mData = nullptr;
 }
 
 String _MqMessage::getChannel() {
-    return channel;
+    return mChannel;
 }
 
 void _MqMessage::setFlags(uint32_t flag) {
-    flags = flag;
+    mFlags = flag;
 }
 
-uint32_t _MqMessage::getFlags() {
-    return flags;
+
+String _MqMessage::getAckToken() {
+    return mAckToken;
 }
 
-String _MqMessage::getToken() {
-    return token;
+void _MqMessage::setAckToken(String token) {
+    mAckToken = token;
 }
 
-void _MqMessage::setToken(String s) {
-    token = s;
+String _MqMessage::getStickToken() {
+    return mStickToken;
+}
+
+void _MqMessage::setStickToken(String token) {
+    mStickToken = token;
 }
 
 int _MqMessage::getRetryTimes() {
-    return retryTimes;
+    return mRetryTimes;
 }
 
-void _MqMessage::setRetryTimes(int s) {
-    retryTimes = s;
+void _MqMessage::setRetryTimes(int times) {
+    mRetryTimes = times;
 }
 
-String _MqMessage::getStickTag() {
-    return stickTag;
+uint32_t _MqMessage::getType() {
+    return mFlags & ~(-MaxMessageType);
+}
+
+bool _MqMessage::isOneShot() {
+    return (mFlags & OneShotFlag) != 0;
+}
+
+bool _MqMessage::isAcknowledge() {
+    return (mFlags & AcknowledgeFlag) != 0;
+}
+
+bool _MqMessage::isStick() {
+    return (mFlags & StickFlag) != 0;
+}
+
+bool _MqMessage::isUnStick() {
+    return (mFlags & UnStickFlag) != 0;
 }
 
 }

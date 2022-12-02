@@ -29,29 +29,25 @@ public:
     friend class _MqCenter;
     friend class _MqStreamGroup;
 
-    enum MessageType {
+    enum MessageSymbol {
         //message type
         ShakeHand = 1<<1,
         Subscribe = 1<<2,
         UnSubscribe = 1<<3,
         Publish = 1<<4,
-        PublishOneShot = 1<<5,
         //Server will remove msg when accept one ack message
         //if no ack return in time,server will resend the message.
-        MessageAck = 1<<6, 
-
-        MaxMessageType = 1<<7,
-
+        Ack = 1<<5,
         //1.Response for unsubscribe.....
         //2.If client was removed from server,send this message.
-        Detach = 1<<8,
+        Detach = 1<<6,
+        MaxMessageType = 1<<16,
 
         //psersist
-        Persistent = 1<<10,
-        Acknowledge = 1<<11,
-
-        Stick = 1<<12,
-        UnStick = 1<<13,
+        OneShotFlag = 1 <<18,
+        AcknowledgeFlag = 1<<19,
+        StickFlag = 1<<20,
+        UnStickFlag = 1<<21,
     };
 
     _MqMessage();
@@ -68,57 +64,35 @@ public:
     void clearData();
 
     String getChannel();
-
-    bool isPersist();
-
+    uint32_t getType();
+    bool isOneShot();
     bool isAcknowledge();
-
-    bool isShakeHand();
-
-    bool isSubscribe();
-
-    bool isUnSubscribe();
-
-    bool isPublish();
-
-    bool isPublishOneShot();
-
-    bool isDetach();
-
-    bool isAck();
-
     bool isStick();
-
     bool isUnStick();
 
-    String getToken();
+    String getAckToken();
+    void setAckToken(String);
 
-    void setToken(String);
+    String getStickToken();
+    void setStickToken(String);
 
     void setFlags(uint32_t);
-
-    uint32_t getFlags();
+    //uint32_t getFlags();
 
     int getRetryTimes();
-
     void setRetryTimes(int);
 
-    String getStickTag();
-
 private:
-    ByteArray data;
-    String channel;
-    String token;
-    uint32_t flags;
-
+    ByteArray mData;
+    String mChannel;
+    String mAckToken;
+    uint32_t mFlags;
     Socket mSocket;
-
-    int retryTimes;
-
-    String stickTag;
+    int mRetryTimes;
+    String mStickToken;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,channel,stickTag,data,token,flags);
+    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mStickToken,mData,mAckToken,mFlags);
 };
 
 

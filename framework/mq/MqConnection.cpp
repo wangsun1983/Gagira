@@ -39,19 +39,14 @@ int _MqConnection::connect() {
     return mSocketMonitor->bind(mSock,AutoClone(this));
 }
 
-bool _MqConnection::subscribe(String channel) {
+bool _MqConnection::SubscribeChannel(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
     auto packet = msg->generatePacket();
     return mOutput->write(packet) > 0;
 }
 
-bool _MqConnection::unSubscribe(String channel) {
+bool _MqConnection::UnSubscribeChannel(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::UnSubscribe);
-    return mOutput->write(msg->generatePacket()) > 0;
-}
-
-bool _MqConnection::unStick(String channel,String tag) {
-    MqMessage msg = createMqMessage(channel,tag,nullptr,st(MqMessage)::UnStick);
     return mOutput->write(msg->generatePacket()) > 0;
 }
 
@@ -65,12 +60,12 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                     auto msg = st(MqMessage)::generateMessage(data);
                     String channel = msg->getChannel();
                     if(mListener != nullptr) {
-                        if(msg->isDetach()) {
+                        if(msg->getType() == st(MqMessage)::Detach) {
                             mListener->onDetach(channel);
                         } else {
                             int ret = mListener->onMessage(channel,msg->getData());
                             if(msg->isAcknowledge() && ret == st(MqConnectionListener)::AutoAck) {
-                                msg->setFlags(st(MqMessage)::MessageAck);
+                                msg->setFlags(st(MqMessage)::Ack);
                                 msg->clearData();
                                 s->getOutputStream()->write(msg->generatePacket());
                             }
