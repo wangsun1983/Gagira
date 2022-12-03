@@ -71,7 +71,6 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
 int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
-    
     switch(msg->getType()) {
         case st(MqMessage)::Subscribe:
             return processSubscribe(msg);
@@ -82,7 +81,6 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         case st(MqMessage)::Ack:
             return processAck(msg);
     }
-
     return -1;
 }
 
@@ -123,7 +121,6 @@ int _MqCenter::processAck(MqMessage msg) {
 int _MqCenter::registWaitAckTask(MqMessage msg) {
     msg->setAckToken(mUuid->generate());
     auto fu = mWaitAckThreadPools->schedule(mOption->getAckTimeout(),[this,msg](){
-        printf("resend message!!!!! \n");
         int retryTimes = msg->getRetryTimes();
         if(retryTimes < mOption->getReDeliveryTimes()) {
             msg->setRetryTimes(retryTimes + 1);
@@ -136,7 +133,6 @@ int _MqCenter::registWaitAckTask(MqMessage msg) {
 }
 
 int _MqCenter::processPublish(MqMessage msg) {
-    printf("processPublish \n");
     if(msg->isUnStick()){
         mStickyMessages->syncWriteAction([this,&msg] {
             auto channel = msg->getChannel();
@@ -147,7 +143,6 @@ int _MqCenter::processPublish(MqMessage msg) {
         });
         return 0;
     }
-
     if(msg->isAcknowledge()) {
         registWaitAckTask(msg);
     }
@@ -174,7 +169,6 @@ int _MqCenter::processPublish(MqMessage msg) {
             }
         }
     });
-
     if(msg->isStick()) {
         mStickyMessages->syncWriteAction([this,&msg] {
             auto channel = msg->getChannel();

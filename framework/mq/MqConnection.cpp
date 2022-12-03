@@ -39,13 +39,13 @@ int _MqConnection::connect() {
     return mSocketMonitor->bind(mSock,AutoClone(this));
 }
 
-bool _MqConnection::SubscribeChannel(String channel) {
+bool _MqConnection::subscribeChannel(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
     auto packet = msg->generatePacket();
     return mOutput->write(packet) > 0;
 }
 
-bool _MqConnection::UnSubscribeChannel(String channel) {
+bool _MqConnection::unSubscribeChannel(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::UnSubscribe);
     return mOutput->write(msg->generatePacket()) > 0;
 }

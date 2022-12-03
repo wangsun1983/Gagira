@@ -54,7 +54,7 @@ public:
 
     _MqMessage(String channel,ByteArray data,uint32_t types);
 
-    _MqMessage(String channel,String stickTag,ByteArray data,uint32_t types);
+    _MqMessage(String channel,String stickToken,ByteArray data,uint32_t types);
 
     ByteArray generatePacket();
 

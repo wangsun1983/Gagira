@@ -85,15 +85,16 @@ public:
     }
 
     template<typename T>
-    bool publishStickMessage(String channel,String tag,T obj,uint32_t flags = 0) {
+    bool publishStickMessage(String channel,String stickToken,T obj,uint32_t flags = 0) {
         ByteArray data = _connection_helper<T>(obj).toData();
-        MqMessage msg = createMqMessage(channel,tag,data,st(MqMessage)::Publish|flags);
+        MqMessage msg = createMqMessage(channel,stickToken,data,
+                        st(MqMessage)::Publish|st(MqMessage)::StickFlag|flags);
         return mOutput->write(msg->generatePacket()) > 0;
     }
 
    
-    bool SubscribeChannel(String channel);
-    bool UnSubscribeChannel(String channel);
+    bool subscribeChannel(String channel);
+    bool unSubscribeChannel(String channel);
 
     bool publisAckMessage(String channel,String ackToken);
 
