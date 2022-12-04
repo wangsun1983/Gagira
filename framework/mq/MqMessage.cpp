@@ -100,4 +100,8 @@ bool _MqMessage::isUnStick() {
     return (mFlags & UnStickFlag) != 0;
 }
 
+bool _MqMessage::isPersist() {
+    return (mFlags & PersistFlag) != 0;
+}
+
 }

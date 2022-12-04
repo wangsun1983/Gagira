@@ -50,6 +50,11 @@ bool _MqConnection::unSubscribeChannel(String channel) {
     return mOutput->write(msg->generatePacket()) > 0;
 }
 
+bool _MqConnection::subscribePersistenceChannel() {
+    MqMessage msg = createMqMessage(nullptr,nullptr,st(MqMessage)::SubscribePersistence);
+    return mOutput->write(msg->generatePacket()) > 0;
+}
+
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {

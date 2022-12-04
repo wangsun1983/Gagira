@@ -27,6 +27,10 @@ _MqCenter::_MqCenter(String url,MqOption option) {
     mUuid = createUUID();
     mWaitAckThreadPools = createExecutorBuilder()->newScheduledThreadPool();
     mWaitAckMessages = createConcurrentHashMap<String,Future>();
+
+    mPersistRwLock = createReadWriteLock();;
+    mPersistRLock = mPersistRwLock->getReadLock();
+    mPersistWLock = mPersistRwLock->getWriteLock();
 }
 
 int _MqCenter::start() {
@@ -63,6 +67,10 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
 
         case st(NetEvent)::Disconnect: {
             mClients->remove(sock);
+            if(sock == mPersistenceClient) {
+                AutoLock l(mPersistWLock);
+                mPersistenceClient = nullptr;
+            }
         }
         break;
     }
@@ -71,6 +79,14 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
 int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
+
+    {
+        AutoLock l(mPersistRLock);
+        if(msg->isPersist() && mPersistenceClient != nullptr) {
+            mPersistenceClient->getOutputStream()->write(data);
+        }
+    }
+
     switch(msg->getType()) {
         case st(MqMessage)::Subscribe:
             return processSubscribe(msg);
@@ -80,6 +96,10 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
             return processPublish(msg);
         case st(MqMessage)::Ack:
             return processAck(msg);
+        case st(MqMessage)::SubscribePersistence:
+            AutoLock l(mPersistWLock);
+            mPersistenceClient = sock;
+            return 0;
     }
     return -1;
 }
@@ -143,6 +163,7 @@ int _MqCenter::processPublish(MqMessage msg) {
         });
         return 0;
     }
+
     if(msg->isAcknowledge()) {
         registWaitAckTask(msg);
     }

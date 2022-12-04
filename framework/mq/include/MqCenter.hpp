@@ -60,6 +60,11 @@ private:
     MqOption mOption;
 
     UUID mUuid;
+
+    ReadWriteLock mPersistRwLock;
+    ReadLock mPersistRLock;
+    WriteLock mPersistWLock;
+    Socket mPersistenceClient;
 };
 
 }

@@ -98,6 +98,8 @@ public:
 
     bool publisAckMessage(String channel,String ackToken);
 
+    bool subscribePersistenceChannel();
+
 private:
     InetAddress mAddress;
     Socket mSock;

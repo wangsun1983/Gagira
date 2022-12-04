@@ -41,6 +41,11 @@ public:
         //1.Response for unsubscribe.....
         //2.If client was removed from server,send this message.
         Detach = 1<<6,
+
+        //send this message to make mq send send persistent 
+        //message to the client to save.
+        SubscribePersistence = 1<<7,
+
         MaxMessageType = 1<<16,
 
         //psersist
@@ -48,6 +53,7 @@ public:
         AcknowledgeFlag = 1<<19,
         StickFlag = 1<<20,
         UnStickFlag = 1<<21,
+        PersistFlag = 1<<22
     };
 
     _MqMessage();
@@ -69,6 +75,7 @@ public:
     bool isAcknowledge();
     bool isStick();
     bool isUnStick();
+    bool isPersist();
 
     String getAckToken();
     void setAckToken(String);
