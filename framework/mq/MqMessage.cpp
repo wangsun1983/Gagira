@@ -104,4 +104,12 @@ bool _MqMessage::isPersist() {
     return (mFlags & PersistFlag) != 0;
 }
 
+bool _MqMessage::isStart() {
+    return (mFlags & StartFalg) != 0;
+}
+
+bool _MqMessage::isComplete() {
+    return (mFlags & CompleteFlag) != 0;
+}
+
 }

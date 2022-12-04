@@ -16,11 +16,13 @@ public:
     _MqOption *setAckTimeout(int);
     _MqOption *setReDeliveryInterval(long);
     _MqOption *setReDeliveryTimes(int);
+    _MqOption *setWaitPostBack(bool);
 
     int getClientRecvBuffSize();
     int getAckTimeout();
     long getReDeliveryInterval();
     int getReDeliveryTimes();
+    bool getWaitPostBack();
 
 private:
     static const int DefaultClientRecvBuffSize;
@@ -34,6 +36,7 @@ private:
     int mAckTimeout;
     long mReDeliveryInterval;
     int mReDeliveryTimes;
+    bool mWaitPostBack;
 };
 
 }

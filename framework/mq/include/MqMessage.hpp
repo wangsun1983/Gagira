@@ -45,6 +45,13 @@ public:
         //send this message to make mq send send persistent 
         //message to the client to save.
         SubscribePersistence = 1<<7,
+        PostBack = 1<<8,
+        
+        //Center send info to client for example:
+        //1.waiting for persist data synchronization
+        //2.too many work,do not send for a moment
+        //and so on
+        Sustain = 1<<15,
 
         MaxMessageType = 1<<16,
 
@@ -53,7 +60,9 @@ public:
         AcknowledgeFlag = 1<<19,
         StickFlag = 1<<20,
         UnStickFlag = 1<<21,
-        PersistFlag = 1<<22
+        PersistFlag = 1<<22,
+        StartFalg = 1<<23,
+        CompleteFlag = 1<<24,
     };
 
     _MqMessage();
@@ -76,6 +85,8 @@ public:
     bool isStick();
     bool isUnStick();
     bool isPersist();
+    bool isStart();
+    bool isComplete();
 
     String getAckToken();
     void setAckToken(String);
@@ -84,7 +95,6 @@ public:
     void setStickToken(String);
 
     void setFlags(uint32_t);
-    //uint32_t getFlags();
 
     int getRetryTimes();
     void setRetryTimes(int);

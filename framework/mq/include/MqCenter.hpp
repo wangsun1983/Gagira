@@ -1,6 +1,8 @@
 #ifndef __GAGRIA_MQ_CENTOR_HPP__
 #define __GAGRIA_MQ_CENTOR_HPP__
 
+#include <atomic>
+
 #include "Object.hpp"
 #include "String.hpp"
 #include "SocketMonitor.hpp"
@@ -40,7 +42,8 @@ private:
     int processUnSubscribe(MqMessage);
     int processPublish(MqMessage);
     int processAck(MqMessage);
-
+    int processPostBack(MqMessage);
+    int processSubscribePersistence(MqMessage);
     int registWaitAckTask(MqMessage msg);
 
     InetAddress mAddress;
@@ -65,6 +68,7 @@ private:
     ReadLock mPersistRLock;
     WriteLock mPersistWLock;
     Socket mPersistenceClient;
+    std::atomic<bool> mPostBackCompleted;
 };
 
 }

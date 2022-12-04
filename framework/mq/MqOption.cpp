@@ -16,6 +16,7 @@ _MqOption::_MqOption() {
     mAckTimeout = DefaultAckTimeout;
     mReDeliveryInterval = DefaultReDeliveryInterval;
     mReDeliveryTimes = DefaultReDeliveryTimes;
+    mWaitPostBack = false;
 }
 
 _MqOption *_MqOption::setClientRecvBuffSize(int size) {
@@ -38,6 +39,11 @@ _MqOption *_MqOption::setReDeliveryTimes(int value) {
     return this;
 }
 
+_MqOption *_MqOption::setWaitPostBack(bool value) {
+    mWaitPostBack = value;
+    return this;
+}
+
 int _MqOption::getClientRecvBuffSize() {
     return mClientRecvBuffSize;
 }
@@ -52,6 +58,10 @@ long _MqOption::getReDeliveryInterval() {
 
 int _MqOption::getReDeliveryTimes() {
     return mReDeliveryTimes;
+}
+
+bool _MqOption::getWaitPostBack() {
+    return mWaitPostBack;
 }
 
 

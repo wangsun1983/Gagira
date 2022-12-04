@@ -8,6 +8,7 @@
 #include "ExecutorBuilder.hpp"
 #include "Log.hpp"
 #include "Inspect.hpp"
+#include "MqSustainMessage.hpp"
 
 using namespace obotcha;
 
@@ -31,6 +32,9 @@ _MqCenter::_MqCenter(String url,MqOption option) {
     mPersistRwLock = createReadWriteLock();;
     mPersistRLock = mPersistRwLock->getReadLock();
     mPersistWLock = mPersistRwLock->getWriteLock();
+
+    mPostBackCompleted = ((option != nullptr && option->getWaitPostBack())
+                            ?false:true);
 }
 
 int _MqCenter::start() {
@@ -82,9 +86,21 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
 
     {
         AutoLock l(mPersistRLock);
-        if(msg->isPersist() && mPersistenceClient != nullptr) {
+        if(sock != mPersistenceClient &&
+           msg->isPersist() && 
+           mPersistenceClient != nullptr) {
             mPersistenceClient->getOutputStream()->write(data);
         }
+    }
+    
+    if(mPersistenceClient != sock 
+        && sock != nullptr 
+        && !mPostBackCompleted) {
+        //send sustain message to client
+        MqSustainMessage sustainMsg = createMqSustainMessage(st(MqSustainMessage)::WaitForPostBack,nullptr);
+        MqMessage sendData = createMqMessage(nullptr,sustainMsg->serialize(),st(MqMessage)::Sustain);
+        sock->getOutputStream()->write(sendData->generatePacket());
+        return -1;
     }
 
     switch(msg->getType()) {
@@ -97,9 +113,9 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         case st(MqMessage)::Ack:
             return processAck(msg);
         case st(MqMessage)::SubscribePersistence:
-            AutoLock l(mPersistWLock);
-            mPersistenceClient = sock;
-            return 0;
+            return processSubscribePersistence(msg);
+        case st(MqMessage)::PostBack:
+            return processPostBack(msg);
     }
     return -1;
 }
@@ -130,6 +146,7 @@ void _MqCenter::waitForExit(long interval) {
 
 //process function
 int _MqCenter::processAck(MqMessage msg) {
+    Inspect(msg->mSocket == nullptr,-1);
     auto fu = mWaitAckMessages->get(msg->getAckToken());
     if(fu != nullptr) {
         fu->cancel();
@@ -137,6 +154,24 @@ int _MqCenter::processAck(MqMessage msg) {
 
     return 0;
 }
+
+int _MqCenter::processPostBack(MqMessage msg) {
+    if(msg->isComplete()) {
+        mPostBackCompleted = true;
+    }
+
+    dispatchMessage(nullptr,msg->getData());
+    return 0;
+}
+
+int _MqCenter::processSubscribePersistence(MqMessage msg) {
+    Inspect(msg->mSocket == nullptr,-1);
+
+    AutoLock l(mPersistWLock);
+    mPersistenceClient = msg->mSocket;
+    return 0;
+}
+
 
 int _MqCenter::registWaitAckTask(MqMessage msg) {
     msg->setAckToken(mUuid->generate());
@@ -168,28 +203,31 @@ int _MqCenter::processPublish(MqMessage msg) {
         registWaitAckTask(msg);
     }
 
-    mChannelGroups->syncReadAction([this,&msg]{
-        auto channels = mChannelGroups->get(msg->getChannel());
-        if(channels != nullptr && channels->size() != 0) {
-           auto packet = msg->generatePacket();
-            if(msg->isOneShot()) {
-                int random = st(System)::currentTimeMillis()%channels->size();
-                channels->get(random)->write(packet);
-            } else {
-                auto ll = createArrayList<OutputStream>();
-                ForEveryOne(stream,channels) {
-                    if(stream->write(packet) < 0) {
-                        ll->add(stream);
+    if(msg->mSocket != nullptr) {
+        mChannelGroups->syncReadAction([this,&msg]{
+            auto channels = mChannelGroups->get(msg->getChannel());
+            if(channels != nullptr && channels->size() != 0) {
+            auto packet = msg->generatePacket();
+                if(msg->isOneShot()) {
+                    int random = st(System)::currentTimeMillis()%channels->size();
+                    channels->get(random)->write(packet);
+                } else {
+                    auto ll = createArrayList<OutputStream>();
+                    ForEveryOne(stream,channels) {
+                        if(stream->write(packet) < 0) {
+                            ll->add(stream);
+                        }
+                    }
+                    
+
+                    if(ll->size() > 0) {
+                        channels->removeAll(ll);
                     }
                 }
-                
-
-                if(ll->size() > 0) {
-                    channels->removeAll(ll);
-                }
             }
-        }
-    });
+        });
+    }
+
     if(msg->isStick()) {
         mStickyMessages->syncWriteAction([this,&msg] {
             auto channel = msg->getChannel();
@@ -206,6 +244,8 @@ int _MqCenter::processPublish(MqMessage msg) {
 }
 
 int _MqCenter::processSubscribe(MqMessage msg) {
+    Inspect(msg->mSocket == nullptr,-1);
+
     mChannelGroups->syncWriteAction([this,&msg]{
         auto channel = msg->getChannel();
         auto channels = mChannelGroups->get(channel);
@@ -239,6 +279,8 @@ int _MqCenter::processSubscribe(MqMessage msg) {
 }
 
 int _MqCenter::processUnSubscribe(MqMessage msg) {
+    Inspect(msg->mSocket == nullptr,-1);
+
     mChannelGroups->syncWriteAction([this,&msg]{
         auto channel = msg->getChannel();
         auto channels = mChannelGroups->get(channel);

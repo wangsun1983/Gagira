@@ -6,8 +6,9 @@ objs += $(outtmp)/mqcenter.o \
 		$(outtmp)/mqconnection.o \
 		$(outtmp)/mqcenterbuilder.o \
 		$(outtmp)/mqparser.o \
-		$(outtmp)/mqlinker.o 
-		
+		$(outtmp)/mqlinker.o \
+		$(outtmp)/mqsustainmessage.o 
+
 
 $(outtmp)/mqcenter.o :$(frameworkDir)/mq/MqCenter.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqCenter.cpp -o $(outtmp)/mqcenter.o
@@ -29,3 +30,6 @@ $(outtmp)/mqmessage.o :$(frameworkDir)/mq/MqMessage.cpp
 
 $(outtmp)/mqconnection.o :$(frameworkDir)/mq/MqConnection.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqConnection.cpp -o $(outtmp)/mqconnection.o
+
+$(outtmp)/mqsustainmessage.o :$(frameworkDir)/mq/MqSustainMessage.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(mqDir)/MqSustainMessage.cpp -o $(outtmp)/mqsustainmessage.o

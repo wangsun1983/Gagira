@@ -8,6 +8,7 @@
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
 #include "Inspect.hpp"
+#include "MqSustainMessage.hpp"
 
 using namespace obotcha;
 
@@ -68,11 +69,18 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                         if(msg->getType() == st(MqMessage)::Detach) {
                             mListener->onDetach(channel);
                         } else {
-                            int ret = mListener->onMessage(channel,msg->getData());
-                            if(msg->isAcknowledge() && ret == st(MqConnectionListener)::AutoAck) {
-                                msg->setFlags(st(MqMessage)::Ack);
-                                msg->clearData();
-                                s->getOutputStream()->write(msg->generatePacket());
+                            if(msg->getType() != st(MqMessage)::Sustain) {
+                                int ret = mListener->onMessage(channel,msg->getData());
+                                if(msg->isAcknowledge() && ret == st(MqConnectionListener)::AutoAck) {
+                                    msg->setFlags(st(MqMessage)::Ack);
+                                    msg->clearData();
+                                    s->getOutputStream()->write(msg->generatePacket());
+                                }
+                            } else {
+                                printf("mqconnection message sustain \n");
+                                MqSustainMessage sustainMsg = createMqSustainMessage();
+                                sustainMsg->deserialize(msg->getData());
+                                mListener->onSustain(sustainMsg->getCode(),sustainMsg->getMessage());
                             }
                         }
                     }

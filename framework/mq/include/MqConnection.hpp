@@ -26,6 +26,7 @@ public:
     virtual void onDisconnect() = 0;
     virtual void onConnect() = 0;
     virtual void onDetach(String channel) = 0;
+    virtual void onSustain(int code,String msg) = 0;
 };
 
 template<typename T>
