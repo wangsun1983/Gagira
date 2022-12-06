@@ -94,8 +94,9 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     }
     
     if(mPersistenceClient != sock 
-        && sock != nullptr 
-        && !mPostBackCompleted) {
+        && sock != nullptr
+        && !mPostBackCompleted
+        && msg->getType() != st(MqMessage)::SubscribePersistence) {
         //send sustain message to client
         MqSustainMessage sustainMsg = createMqSustainMessage(st(MqSustainMessage)::WaitForPostBack,nullptr);
         MqMessage sendData = createMqMessage(nullptr,sustainMsg->serialize(),st(MqMessage)::Sustain);

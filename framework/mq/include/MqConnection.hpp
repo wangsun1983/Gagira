@@ -99,6 +99,8 @@ public:
 
     bool publisAckMessage(String channel,String ackToken);
 
+    bool postBackMessage(ByteArray data,uint32_t flags = st(MqMessage)::StartFalg);
+
     bool subscribePersistenceChannel();
 
 private:

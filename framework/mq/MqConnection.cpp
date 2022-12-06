@@ -56,6 +56,12 @@ bool _MqConnection::subscribePersistenceChannel() {
     return mOutput->write(msg->generatePacket()) > 0;
 }
 
+bool _MqConnection::postBackMessage(ByteArray data,uint32_t flags) {
+    MqMessage msg = createMqMessage(nullptr,data,flags|st(MqMessage)::PostBack);
+    return mOutput->write(msg->generatePacket()) > 0;
+}
+
+
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {
@@ -77,7 +83,6 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                                     s->getOutputStream()->write(msg->generatePacket());
                                 }
                             } else {
-                                printf("mqconnection message sustain \n");
                                 MqSustainMessage sustainMsg = createMqSustainMessage();
                                 sustainMsg->deserialize(msg->getData());
                                 mListener->onSustain(sustainMsg->getCode(),sustainMsg->getMessage());
