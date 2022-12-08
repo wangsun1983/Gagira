@@ -209,18 +209,27 @@ int _MqCenter::processPublish(MqMessage msg) {
             auto channels = mChannelGroups->get(msg->getChannel());
             if(channels != nullptr && channels->size() != 0) {
             auto packet = msg->generatePacket();
+                auto originStream = msg->mSocket->getOutputStream();
                 if(msg->isOneShot()) {
                     int random = st(System)::currentTimeMillis()%channels->size();
+                    auto stream = channels->get(random);
+                    if(originStream == stream) {
+                        int channelSize = channels->size();
+                        if(channelSize == 1) {
+                            return;
+                        } else {
+                            random = (random >= channelSize -1)?random = 0:random++;
+                        }
+                    }
                     channels->get(random)->write(packet);
                 } else {
                     auto ll = createArrayList<OutputStream>();
                     ForEveryOne(stream,channels) {
-                        if(stream->write(packet) < 0) {
+                        if(stream != originStream && stream->write(packet) < 0) {
                             ll->add(stream);
                         }
                     }
                     
-
                     if(ll->size() > 0) {
                         channels->removeAll(ll);
                     }

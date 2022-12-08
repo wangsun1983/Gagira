@@ -10,6 +10,7 @@
 #include "ByteRingArray.hpp"
 #include "ByteRingArrayReader.hpp"
 #include "MqParser.hpp"
+#include "ReadWriteLock.hpp"
 
 using namespace obotcha;
 
@@ -82,7 +83,7 @@ public:
     bool publishMessage(String channel,T obj,uint32_t flags = 0) {
         ByteArray data = _connection_helper<T>(obj).toData();
         MqMessage msg = createMqMessage(channel,data,flags|st(MqMessage)::Publish);
-        return mOutput->write(msg->generatePacket()) > 0;
+        return sendMessage(msg);
     }
 
     template<typename T>
@@ -90,7 +91,7 @@ public:
         ByteArray data = _connection_helper<T>(obj).toData();
         MqMessage msg = createMqMessage(channel,stickToken,data,
                         st(MqMessage)::Publish|st(MqMessage)::StickFlag|flags);
-        return mOutput->write(msg->generatePacket()) > 0;
+        return sendMessage(msg);
     }
 
    
@@ -104,6 +105,7 @@ public:
     bool subscribePersistenceChannel();
 
 private:
+    bool sendMessage(MqMessage);
     InetAddress mAddress;
     Socket mSock;
     InputStream mInput;
@@ -114,6 +116,11 @@ private:
 
     SocketMonitor mSocketMonitor;
     void onSocketMessage(int,Socket,ByteArray);
+
+    ReadWriteLock mStatusReadWriteLock;
+    ReadLock mStatusReadLock;
+    WriteLock mStatusWriteLock;
+    int mIsConnected;
 };
 
 }

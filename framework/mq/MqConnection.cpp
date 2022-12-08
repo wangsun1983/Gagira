@@ -24,6 +24,11 @@ _MqConnection::_MqConnection(String s,MqConnectionListener l) {
     mListener = l;
     mSocketMonitor = createSocketMonitor();
     mParser = createMqParser(1024*4);
+
+    mIsConnected = false;
+    mStatusReadWriteLock = createReadWriteLock();
+    mStatusWriteLock = mStatusReadWriteLock->getWriteLock();
+    mStatusReadLock = mStatusReadWriteLock->getReadLock();
 }
 
 int _MqConnection::connect() {
@@ -37,28 +42,30 @@ int _MqConnection::connect() {
         mListener->onConnect();
     }
 
+    AutoLock l(mStatusWriteLock);
+    mIsConnected = true;
+
     return mSocketMonitor->bind(mSock,AutoClone(this));
 }
 
 bool _MqConnection::subscribeChannel(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::Subscribe);
-    auto packet = msg->generatePacket();
-    return mOutput->write(packet) > 0;
+    return sendMessage(msg);
 }
 
 bool _MqConnection::unSubscribeChannel(String channel) {
     MqMessage msg = createMqMessage(channel,nullptr,st(MqMessage)::UnSubscribe);
-    return mOutput->write(msg->generatePacket()) > 0;
+    return sendMessage(msg);
 }
 
 bool _MqConnection::subscribePersistenceChannel() {
     MqMessage msg = createMqMessage(nullptr,nullptr,st(MqMessage)::SubscribePersistence);
-    return mOutput->write(msg->generatePacket()) > 0;
+    return sendMessage(msg);
 }
 
 bool _MqConnection::postBackMessage(ByteArray data,uint32_t flags) {
     MqMessage msg = createMqMessage(nullptr,data,flags|st(MqMessage)::PostBack);
-    return mOutput->write(msg->generatePacket()) > 0;
+    return sendMessage(msg);
 }
 
 
@@ -99,6 +106,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
         }
 
         case st(NetEvent)::Disconnect:{
+            printf("server disconnect \n");
             if(mListener != nullptr) {
                 mListener->onDisconnect();
             }
@@ -112,32 +120,51 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
 }
 
 int _MqConnection::close() {
+    printf("MqConnection close trace1 \n");
+    AutoLock l(mStatusWriteLock);
+    mIsConnected = false;
+            
     if(mSock != nullptr) {
         mSocketMonitor->unbind(mSock,false);
         mSock->close();
         mSock = nullptr;
     }
-
-    if(mSocketMonitor != nullptr) {
-        mSocketMonitor->close();
-        mSocketMonitor = nullptr;
-    }
-
+    printf("MqConnection close trace2 \n");
+    // if(mSocketMonitor != nullptr) {
+    //     mSocketMonitor->close();
+    //     mSocketMonitor = nullptr;
+    // }
+    printf("MqConnection close trace3 \n");
     if(mOutput != nullptr) {
         mOutput->close();
         mOutput = nullptr;
     }
-
+    printf("MqConnection close trace4 \n");
     if(mInput != nullptr) {
         mInput->close();
         mInput = nullptr;
     }
-
+    printf("MqConnection close trace5 \n");
     return 0;
+}
+
+bool _MqConnection::sendMessage(MqMessage msg) {
+    printf("sendMessage trace1 \n");
+    AutoLock l(mStatusReadLock);
+    printf("sendMessage trace2 \n");
+    Inspect(!mIsConnected,false);
+    printf("sendMessage trace3 \n");
+    auto ret = mOutput->write(msg->generatePacket()) > 0;
+    printf("sendMessage trace4\n");
+    return ret;
 }
 
 _MqConnection::~_MqConnection() {
     close();
+    if(mSocketMonitor != nullptr) {
+        mSocketMonitor->close();
+        mSocketMonitor = nullptr;
+    }
 }
 
 
