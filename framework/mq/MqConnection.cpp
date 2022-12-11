@@ -63,6 +63,11 @@ bool _MqConnection::subscribePersistenceChannel() {
     return sendMessage(msg);
 }
 
+bool _MqConnection::subscribeDLQChannel() {
+    MqMessage msg = createMqMessage(nullptr,nullptr,st(MqMessage)::SubscribeDLQ);
+    return sendMessage(msg);
+}
+
 bool _MqConnection::postBackMessage(ByteArray data,uint32_t flags) {
     MqMessage msg = createMqMessage(nullptr,data,flags|st(MqMessage)::PostBack);
     return sendMessage(msg);
@@ -106,7 +111,6 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
         }
 
         case st(NetEvent)::Disconnect:{
-            printf("server disconnect \n");
             if(mListener != nullptr) {
                 mListener->onDisconnect();
             }
@@ -120,7 +124,6 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
 }
 
 int _MqConnection::close() {
-    printf("MqConnection close trace1 \n");
     AutoLock l(mStatusWriteLock);
     mIsConnected = false;
             
@@ -129,33 +132,23 @@ int _MqConnection::close() {
         mSock->close();
         mSock = nullptr;
     }
-    printf("MqConnection close trace2 \n");
-    // if(mSocketMonitor != nullptr) {
-    //     mSocketMonitor->close();
-    //     mSocketMonitor = nullptr;
-    // }
-    printf("MqConnection close trace3 \n");
+    
     if(mOutput != nullptr) {
         mOutput->close();
         mOutput = nullptr;
     }
-    printf("MqConnection close trace4 \n");
+    
     if(mInput != nullptr) {
         mInput->close();
         mInput = nullptr;
     }
-    printf("MqConnection close trace5 \n");
     return 0;
 }
 
 bool _MqConnection::sendMessage(MqMessage msg) {
-    printf("sendMessage trace1 \n");
     AutoLock l(mStatusReadLock);
-    printf("sendMessage trace2 \n");
     Inspect(!mIsConnected,false);
-    printf("sendMessage trace3 \n");
     auto ret = mOutput->write(msg->generatePacket()) > 0;
-    printf("sendMessage trace4\n");
     return ret;
 }
 

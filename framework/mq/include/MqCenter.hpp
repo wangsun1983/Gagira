@@ -17,6 +17,9 @@
 #include "MqOption.hpp"
 #include "MqLinker.hpp"
 #include "UUID.hpp"
+#include "Sha.hpp"
+#include "MqDLQMessage.hpp"
+#include "Base64.hpp"
 
 using namespace obotcha;
 
@@ -44,8 +47,11 @@ private:
     int processAck(MqMessage);
     int processPostBack(MqMessage);
     int processSubscribePersistence(MqMessage);
+    int processSubscribeDLQ(MqMessage);
+    
     int registWaitAckTask(MqMessage msg);
 
+    String processSendFailMessage(MqDLQMessage msg,bool genToken);
     InetAddress mAddress;
     ServerSocket mServerSock;
 
@@ -64,11 +70,18 @@ private:
 
     UUID mUuid;
 
+    Sha mSha;
+
     ReadWriteLock mPersistRwLock;
     ReadLock mPersistRLock;
     WriteLock mPersistWLock;
     Socket mPersistenceClient;
     std::atomic<bool> mPostBackCompleted;
+
+    Mutex mDlqMutex;
+    Socket mDlqClient;
+
+
 };
 
 }

@@ -46,10 +46,15 @@ public:
         //message to the client to save.
         SubscribePersistence = 1<<7,
         PostBack = 1<<8,
+
+        //regist as dlq,mq center will send message which failed 
+        //to be sent to this client
+        SubscribeDLQ = 1<<9,
         
         //Center send info to client for example:
         //1.waiting for persist data synchronization
         //2.too many work,do not send for a moment
+        //3.DLQ message
         //and so on
         Sustain = 1<<15,
 
@@ -63,6 +68,7 @@ public:
         PersistFlag = 1<<22,
         StartFalg = 1<<23,
         CompleteFlag = 1<<24,
+        DelayFlag = 1<<25,//TODO
     };
 
     _MqMessage();
@@ -99,6 +105,10 @@ public:
     int getRetryTimes();
     void setRetryTimes(int);
 
+    void setTTL(long);
+    long getTTL();
+    long getExpireTime();
+
 private:
     ByteArray mData;
     String mChannel;
@@ -108,8 +118,11 @@ private:
     int mRetryTimes;
     String mStickToken;
 
+    long mTTL;
+    long mExpireTime;
+
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mStickToken,mData,mAckToken,mFlags);
+    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mStickToken,mData,mAckToken,mFlags,mExpireTime);
 };
 
 

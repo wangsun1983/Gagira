@@ -9,6 +9,9 @@
 #include "Log.hpp"
 #include "Inspect.hpp"
 #include "MqSustainMessage.hpp"
+#include "Synchronized.hpp"
+#include "MqDLQMessage.hpp"
+#include "Md.hpp"
 
 using namespace obotcha;
 
@@ -35,6 +38,9 @@ _MqCenter::_MqCenter(String url,MqOption option) {
 
     mPostBackCompleted = ((option != nullptr && option->getWaitPostBack())
                             ?false:true);
+
+    mDlqMutex = createMutex();
+    mSha = createSha(SHA_256);
 }
 
 int _MqCenter::start() {
@@ -117,6 +123,8 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
             return processSubscribePersistence(msg);
         case st(MqMessage)::PostBack:
             return processPostBack(msg);
+        case st(MqMessage)::SubscribeDLQ:
+            return processSubscribeDLQ(msg);
     }
     return -1;
 }
@@ -173,6 +181,12 @@ int _MqCenter::processSubscribePersistence(MqMessage msg) {
     return 0;
 }
 
+int _MqCenter::processSubscribeDLQ(MqMessage msg) {
+    AutoLock l(mDlqMutex);
+    mDlqClient = msg->mSocket;
+    return 0;
+}
+    
 
 int _MqCenter::registWaitAckTask(MqMessage msg) {
     msg->setAckToken(mUuid->generate());
@@ -208,25 +222,41 @@ int _MqCenter::processPublish(MqMessage msg) {
         mChannelGroups->syncReadAction([this,&msg]{
             auto channels = mChannelGroups->get(msg->getChannel());
             if(channels != nullptr && channels->size() != 0) {
-            auto packet = msg->generatePacket();
+                auto packet = msg->generatePacket();
                 auto originStream = msg->mSocket->getOutputStream();
                 if(msg->isOneShot()) {
                     int random = st(System)::currentTimeMillis()%channels->size();
                     auto stream = channels->get(random);
                     if(originStream == stream) {
-                        int channelSize = channels->size();
-                        if(channelSize == 1) {
-                            return;
-                        } else {
-                            random = (random >= channelSize -1)?random = 0:random++;
+                        if(channels->size() > 1) {
+                            random = (random >= channels->size() -1)?random = 0:random++;
+                            stream = channels->get(random);
                         }
                     }
-                    channels->get(random)->write(packet);
+
+                    if(stream == originStream || stream->write(packet) < 0) {
+                        MqDLQMessage dlqMessage = createMqDLQMessage();
+                        dlqMessage->setCode(stream == originStream?st(MqDLQMessage)::NoClient:st(MqDLQMessage)::ClientDisconnect)
+                                  ->setData(packet)
+                                  ->setPointTime(st(System)::currentTimeMillis())
+                                  ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress()); //TODO
+                        processSendFailMessage(dlqMessage,true);
+                    }
                 } else {
                     auto ll = createArrayList<OutputStream>();
                     ForEveryOne(stream,channels) {
+                        String token = nullptr;
                         if(stream != originStream && stream->write(packet) < 0) {
                             ll->add(stream);
+                            MqDLQMessage dlqMessage = createMqDLQMessage();
+                            auto s = Cast<SocketOutputStream>(stream);
+                            dlqMessage->setCode(st(MqDLQMessage)::ClientDisconnect)
+                                    ->setData(token == nullptr?packet:nullptr)
+                                    ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress())
+                                    ->setDestAddress(s->getSocket()->getInetAddress()->getAddress())
+                                    ->setPointTime(st(System)::currentTimeMillis())
+                                    ->setToken(token);
+                            token = processSendFailMessage(dlqMessage,token == nullptr);
                         }
                     }
                     
@@ -234,6 +264,13 @@ int _MqCenter::processPublish(MqMessage msg) {
                         channels->removeAll(ll);
                     }
                 }
+            } else {
+                MqDLQMessage dlqMessage = createMqDLQMessage();
+                dlqMessage->setCode(st(MqDLQMessage)::NoClient)
+                            ->setData(msg->generatePacket())
+                            ->setPointTime(st(System)::currentTimeMillis())
+                            ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress()); //TODO
+                processSendFailMessage(dlqMessage,true);
             }
         });
     }
@@ -307,6 +344,23 @@ int _MqCenter::processUnSubscribe(MqMessage msg) {
     });
 
     return 0;
+}
+
+String _MqCenter::processSendFailMessage(MqDLQMessage msg,bool isNeedGenToken) {
+    String token = msg->getToken();
+    Synchronized(mDlqMutex){
+        Inspect(mDlqClient == nullptr,token);
+        if(isNeedGenToken) {
+            long time = st(System)::currentTimeMillis();
+            token = mSha->encrypt(mUuid->generate()->append(createString(time)));
+            msg->setToken(token);
+        }
+
+        MqMessage resp = createMqMessage(nullptr,msg->serialize(),st(MqMessage)::Publish);
+        mDlqClient->getOutputStream()->write(resp->generatePacket());
+    }
+    
+    return token;
 }
 
 _MqCenter::~_MqCenter() {

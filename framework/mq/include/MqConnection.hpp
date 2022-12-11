@@ -104,6 +104,8 @@ public:
 
     bool subscribePersistenceChannel();
 
+    bool subscribeDLQChannel();
+
 private:
     bool sendMessage(MqMessage);
     InetAddress mAddress;

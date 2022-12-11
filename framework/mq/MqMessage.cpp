@@ -2,6 +2,7 @@
 
 #include "MqMessage.hpp"
 #include "ByteArrayWriter.hpp"
+#include "System.hpp"
 
 namespace gagira {
 
@@ -110,6 +111,19 @@ bool _MqMessage::isStart() {
 
 bool _MqMessage::isComplete() {
     return (mFlags & CompleteFlag) != 0;
+}
+
+void _MqMessage::setTTL(long value) {
+    mTTL = value;
+    mExpireTime = st(System)::currentTimeMillis();
+}
+
+long _MqMessage::getTTL() {
+    return mTTL;
+}
+
+long _MqMessage::getExpireTime() {
+    return mExpireTime;
 }
 
 }
