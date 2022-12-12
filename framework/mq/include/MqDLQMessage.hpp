@@ -17,6 +17,7 @@ public:
         MessageToken = 0,
         NoClient,
         ClientDisconnect,
+        MessageTimeOut,
     };
 
     _MqDLQMessage();

@@ -81,6 +81,14 @@ public:
 
     static MqMessage generateMessage(ByteArray);
 
+    void setData(ByteArray data);
+    void setChannel(String channel);
+    void setAckToken(String);
+    void setFlags(uint32_t flags);
+    void setStickToken(String);
+    void setRetryTimes(int);
+    void setTTL(long);
+
     ByteArray getData();
     void clearData();
 
@@ -93,19 +101,10 @@ public:
     bool isPersist();
     bool isStart();
     bool isComplete();
-
+    
     String getAckToken();
-    void setAckToken(String);
-
     String getStickToken();
-    void setStickToken(String);
-
-    void setFlags(uint32_t);
-
     int getRetryTimes();
-    void setRetryTimes(int);
-
-    void setTTL(long);
     long getTTL();
     long getExpireTime();
 

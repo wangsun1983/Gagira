@@ -98,6 +98,19 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
             mPersistenceClient->getOutputStream()->write(data);
         }
     }
+
+    //check whether this message timed out
+    long expireTime = msg->getExpireTime();
+    if(expireTime != 0 && st(System)::currentTimeMillis() > expireTime) {
+        //message timeout
+        MqDLQMessage dlqMessage = createMqDLQMessage();
+        dlqMessage->setCode(st(MqDLQMessage)::MessageTimeOut)
+                    ->setData(data)
+                    ->setPointTime(st(System)::currentTimeMillis())
+                    ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress());
+        processSendFailMessage(dlqMessage,true);
+        return -1;
+    }
     
     if(mPersistenceClient != sock 
         && sock != nullptr
@@ -355,7 +368,6 @@ String _MqCenter::processSendFailMessage(MqDLQMessage msg,bool isNeedGenToken) {
             token = mSha->encrypt(mUuid->generate()->append(createString(time)));
             msg->setToken(token);
         }
-
         MqMessage resp = createMqMessage(nullptr,msg->serialize(),st(MqMessage)::Publish);
         mDlqClient->getOutputStream()->write(resp->generatePacket());
     }

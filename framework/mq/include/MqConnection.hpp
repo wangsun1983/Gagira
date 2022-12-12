@@ -72,6 +72,21 @@ public:
     ByteArray t;
 };
 
+DECLARE_CLASS(MqMessageParam) {
+public:
+    _MqMessageParam();
+    _MqMessageParam* setFlags(uint32_t);
+    _MqMessageParam* setTTL(uint32_t);
+
+    uint32_t getFlags();
+    uint32_t getTTL();
+
+    sp<_MqMessageParam> build();
+private:
+    uint32_t mFlags;
+    uint32_t mTTL;
+};
+
 DECLARE_CLASS(MqConnection) IMPLEMENTS(SocketListener) {
 public:
     _MqConnection(String,MqConnectionListener l = nullptr);
@@ -80,21 +95,26 @@ public:
     int close();
 
     template<typename T>
-    bool publishMessage(String channel,T obj,uint32_t flags = 0) {
+    bool publishMessage(String channel,T obj,MqMessageParam param = nullptr) {
         ByteArray data = _connection_helper<T>(obj).toData();
+        uint32_t flags = (param == nullptr)?0:param->getFlags();
+        
         MqMessage msg = createMqMessage(channel,data,flags|st(MqMessage)::Publish);
+        msg->setTTL(param->getTTL());
         return sendMessage(msg);
     }
 
     template<typename T>
-    bool publishStickMessage(String channel,String stickToken,T obj,uint32_t flags = 0) {
+    bool publishStickMessage(String channel,String stickToken,T obj,MqMessageParam param = nullptr) {
         ByteArray data = _connection_helper<T>(obj).toData();
+        uint32_t flags = (param == nullptr)?0:param->getFlags();
+
         MqMessage msg = createMqMessage(channel,stickToken,data,
                         st(MqMessage)::Publish|st(MqMessage)::StickFlag|flags);
+        msg->setTTL(param->getTTL());
         return sendMessage(msg);
     }
 
-   
     bool subscribeChannel(String channel);
     bool unSubscribeChannel(String channel);
 

@@ -6,9 +6,13 @@
 
 namespace gagira {
 
+
+//-------- MqMessage 
 _MqMessage::_MqMessage() {
     mRetryTimes = 0;
     mFlags = 0;
+    mExpireTime = 0;
+    mTTL = 0;
 }
 
 _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {
@@ -81,6 +85,14 @@ void _MqMessage::setRetryTimes(int times) {
     mRetryTimes = times;
 }
 
+void _MqMessage::setData(ByteArray data) {
+    mData = data;
+}
+
+void _MqMessage::setChannel(String channel) {
+    mChannel = channel;
+}
+
 uint32_t _MqMessage::getType() {
     return mFlags & ~(-MaxMessageType);
 }
@@ -114,8 +126,10 @@ bool _MqMessage::isComplete() {
 }
 
 void _MqMessage::setTTL(long value) {
-    mTTL = value;
-    mExpireTime = st(System)::currentTimeMillis();
+    if(value != 0) {
+        mTTL = value;
+        mExpireTime = st(System)::currentTimeMillis();
+    }
 }
 
 long _MqMessage::getTTL() {

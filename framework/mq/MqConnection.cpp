@@ -14,6 +14,35 @@ using namespace obotcha;
 
 namespace gagira {
 
+//-------- MqMessageParam 
+_MqMessageParam::_MqMessageParam() {
+    mFlags = 0;
+    mTTL = 0;
+}
+
+_MqMessageParam* _MqMessageParam::setFlags(uint32_t flags) {
+    mFlags = flags;
+    return this;
+}
+
+_MqMessageParam* _MqMessageParam::setTTL(uint32_t ttl) {
+    mTTL = ttl;
+    return this;
+}
+
+uint32_t _MqMessageParam::getFlags() {
+    return mFlags;
+}
+
+uint32_t _MqMessageParam::getTTL() {
+    return mTTL;
+}
+
+sp<_MqMessageParam> _MqMessageParam::build() {
+    return AutoClone(this);
+}
+
+//---------- MqConnection
 _MqConnection::_MqConnection(String s,MqConnectionListener l) {
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);
