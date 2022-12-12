@@ -13,6 +13,7 @@ _MqMessage::_MqMessage() {
     mFlags = 0;
     mExpireTime = 0;
     mTTL = 0;
+    mNextPublishTime = 0;
 }
 
 _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {
@@ -132,12 +133,20 @@ void _MqMessage::setTTL(long value) {
     }
 }
 
+void _MqMessage::setPublishTime(long time) {
+    mNextPublishTime = time;
+}
+
 long _MqMessage::getTTL() {
     return mTTL;
 }
 
 long _MqMessage::getExpireTime() {
     return mExpireTime;
+}
+
+long _MqMessage::getPublishTime() {
+    return mNextPublishTime;
 }
 
 }

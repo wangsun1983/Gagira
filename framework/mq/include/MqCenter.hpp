@@ -20,6 +20,7 @@
 #include "Sha.hpp"
 #include "MqDLQMessage.hpp"
 #include "Base64.hpp"
+#include "ThreadScheduledPoolExecutor.hpp"
 
 using namespace obotcha;
 
@@ -65,6 +66,8 @@ private:
 
     ThreadScheduledPoolExecutor mWaitAckThreadPools;
     ConcurrentHashMap<String,Future> mWaitAckMessages;
+
+    ThreadScheduledPoolExecutor mSchedulePool;
 
     MqOption mOption;
 

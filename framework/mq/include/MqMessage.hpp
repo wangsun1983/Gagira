@@ -88,6 +88,7 @@ public:
     void setStickToken(String);
     void setRetryTimes(int);
     void setTTL(long);
+    void setPublishTime(long);
 
     ByteArray getData();
     void clearData();
@@ -107,6 +108,7 @@ public:
     int getRetryTimes();
     long getTTL();
     long getExpireTime();
+    long getPublishTime();
 
 private:
     ByteArray mData;
@@ -119,9 +121,10 @@ private:
 
     long mTTL;
     long mExpireTime;
+    long mNextPublishTime;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mStickToken,mData,mAckToken,mFlags,mExpireTime);
+    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mStickToken,mData,mAckToken,mFlags,mExpireTime,mNextPublishTime);
 };
 
 

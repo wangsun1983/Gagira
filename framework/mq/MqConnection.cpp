@@ -30,12 +30,22 @@ _MqMessageParam* _MqMessageParam::setTTL(uint32_t ttl) {
     return this;
 }
 
+_MqMessageParam* _MqMessageParam::setDelayInterval(uint32_t delay) {
+    mDelayInterval = delay;
+    return this;
+}
+
+
 uint32_t _MqMessageParam::getFlags() {
     return mFlags;
 }
 
 uint32_t _MqMessageParam::getTTL() {
     return mTTL;
+}
+
+uint32_t _MqMessageParam::getDelayInterval() {
+    return mDelayInterval;
 }
 
 sp<_MqMessageParam> _MqMessageParam::build() {

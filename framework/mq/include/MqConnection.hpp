@@ -11,6 +11,7 @@
 #include "ByteRingArrayReader.hpp"
 #include "MqParser.hpp"
 #include "ReadWriteLock.hpp"
+#include "System.hpp"
 
 using namespace obotcha;
 
@@ -77,14 +78,17 @@ public:
     _MqMessageParam();
     _MqMessageParam* setFlags(uint32_t);
     _MqMessageParam* setTTL(uint32_t);
+    _MqMessageParam* setDelayInterval(uint32_t);
 
     uint32_t getFlags();
     uint32_t getTTL();
+    uint32_t getDelayInterval();
 
     sp<_MqMessageParam> build();
 private:
     uint32_t mFlags;
     uint32_t mTTL;
+    uint32_t mDelayInterval;
 };
 
 DECLARE_CLASS(MqConnection) IMPLEMENTS(SocketListener) {
@@ -101,6 +105,9 @@ public:
         
         MqMessage msg = createMqMessage(channel,data,flags|st(MqMessage)::Publish);
         msg->setTTL(param->getTTL());
+        if(param->getDelayInterval() != 0) {
+            msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+        }
         return sendMessage(msg);
     }
 
@@ -112,6 +119,9 @@ public:
         MqMessage msg = createMqMessage(channel,stickToken,data,
                         st(MqMessage)::Publish|st(MqMessage)::StickFlag|flags);
         msg->setTTL(param->getTTL());
+        if(param->getDelayInterval() != 0) {
+            msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+        }
         return sendMessage(msg);
     }
 

@@ -39,6 +39,7 @@ _MqCenter::_MqCenter(String url,MqOption option) {
     mPostBackCompleted = ((option != nullptr && option->getWaitPostBack())
                             ?false:true);
 
+    mSchedulePool = createThreadScheduledPoolExecutor(-1,1000);
     mDlqMutex = createMutex();
     mSha = createSha(SHA_256);
 }
@@ -90,6 +91,17 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = st(MqMessage)::generateMessage(data);
     msg->mSocket = sock;
 
+    long currentTime = st(System)::currentTimeMillis();
+    long publishTime = msg->getPublishTime();
+    
+    if(publishTime != 0 && publishTime > currentTime ) {
+        mSchedulePool->schedule(publishTime - currentTime ,
+            [this](Socket sock,ByteArray data){
+                dispatchMessage(sock,data);
+        },sock,data);
+        return -1;
+    }
+    
     {
         AutoLock l(mPersistRLock);
         if(sock != mPersistenceClient &&
@@ -230,7 +242,6 @@ int _MqCenter::processPublish(MqMessage msg) {
     if(msg->isAcknowledge()) {
         registWaitAckTask(msg);
     }
-
     if(msg->mSocket != nullptr) {
         mChannelGroups->syncReadAction([this,&msg]{
             auto channels = mChannelGroups->get(msg->getChannel());
