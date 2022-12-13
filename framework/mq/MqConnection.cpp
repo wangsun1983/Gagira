@@ -18,6 +18,7 @@ namespace gagira {
 _MqMessageParam::_MqMessageParam() {
     mFlags = 0;
     mTTL = 0;
+    mDelayInterval = 0;
 }
 
 _MqMessageParam* _MqMessageParam::setFlags(uint32_t flags) {

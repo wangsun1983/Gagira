@@ -104,9 +104,11 @@ public:
         uint32_t flags = (param == nullptr)?0:param->getFlags();
         
         MqMessage msg = createMqMessage(channel,data,flags|st(MqMessage)::Publish);
-        msg->setTTL(param->getTTL());
-        if(param->getDelayInterval() != 0) {
-            msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+        if(param != nullptr) {
+            msg->setTTL(param->getTTL());
+            if(param->getDelayInterval() != 0) {
+                msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+            }
         }
         return sendMessage(msg);
     }
@@ -118,9 +120,11 @@ public:
 
         MqMessage msg = createMqMessage(channel,stickToken,data,
                         st(MqMessage)::Publish|st(MqMessage)::StickFlag|flags);
-        msg->setTTL(param->getTTL());
-        if(param->getDelayInterval() != 0) {
-            msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+        if(param != nullptr) {
+            msg->setTTL(param->getTTL());
+            if(param->getDelayInterval() != 0) {
+                msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+            }
         }
         return sendMessage(msg);
     }

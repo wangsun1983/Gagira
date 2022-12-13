@@ -93,7 +93,6 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
 
     long currentTime = st(System)::currentTimeMillis();
     long publishTime = msg->getPublishTime();
-    
     if(publishTime != 0 && publishTime > currentTime ) {
         mSchedulePool->schedule(publishTime - currentTime ,
             [this](Socket sock,ByteArray data){
@@ -110,7 +109,6 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
             mPersistenceClient->getOutputStream()->write(data);
         }
     }
-
     //check whether this message timed out
     long expireTime = msg->getExpireTime();
     if(expireTime != 0 && st(System)::currentTimeMillis() > expireTime) {
@@ -123,7 +121,6 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         processSendFailMessage(dlqMessage,true);
         return -1;
     }
-    
     if(mPersistenceClient != sock 
         && sock != nullptr
         && !mPostBackCompleted
@@ -134,7 +131,7 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         sock->getOutputStream()->write(sendData->generatePacket());
         return -1;
     }
-
+    
     switch(msg->getType()) {
         case st(MqMessage)::Subscribe:
             return processSubscribe(msg);
@@ -253,7 +250,7 @@ int _MqCenter::processPublish(MqMessage msg) {
                     auto stream = channels->get(random);
                     if(originStream == stream) {
                         if(channels->size() > 1) {
-                            random = (random >= channels->size() -1)?random = 0:random++;
+                            (random >= channels->size() -1)?random = 0:random++;
                             stream = channels->get(random);
                         }
                     }
