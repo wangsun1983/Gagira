@@ -28,7 +28,7 @@ _MqCenter::_MqCenter(String url,MqOption option) {
 
     //create server socket
     mServerSock = createSocketBuilder()->setAddress(mAddress)->newServerSocket();
-    mUuid = createUUID();
+    //mUuid = createUUID();
     mWaitAckThreadPools = createExecutorBuilder()->newScheduledThreadPool();
     mWaitAckMessages = createConcurrentHashMap<String,Future>();
 
@@ -41,7 +41,6 @@ _MqCenter::_MqCenter(String url,MqOption option) {
 
     mSchedulePool = createThreadScheduledPoolExecutor(-1,1000);
     mDlqMutex = createMutex();
-    mSha = createSha(SHA_256);
 }
 
 int _MqCenter::start() {
@@ -118,7 +117,7 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
                     ->setData(data)
                     ->setPointTime(st(System)::currentTimeMillis())
                     ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress());
-        processSendFailMessage(dlqMessage,true);
+        processSendFailMessage(dlqMessage);
         return -1;
     }
     if(mPersistenceClient != sock 
@@ -178,7 +177,7 @@ void _MqCenter::waitForExit(long interval) {
 //process function
 int _MqCenter::processAck(MqMessage msg) {
     Inspect(msg->mSocket == nullptr,-1);
-    auto fu = mWaitAckMessages->get(msg->getAckToken());
+    auto fu = mWaitAckMessages->get(msg->getToken());
     if(fu != nullptr) {
         fu->cancel();
     }
@@ -211,7 +210,7 @@ int _MqCenter::processSubscribeDLQ(MqMessage msg) {
     
 
 int _MqCenter::registWaitAckTask(MqMessage msg) {
-    msg->setAckToken(mUuid->generate());
+    //msg->setAckToken(mUuid->generate());
     auto fu = mWaitAckThreadPools->schedule(mOption->getAckTimeout(),[this,msg](){
         int retryTimes = msg->getRetryTimes();
         if(retryTimes < mOption->getReDeliveryTimes()) {
@@ -220,7 +219,7 @@ int _MqCenter::registWaitAckTask(MqMessage msg) {
         }
     });
 
-    mWaitAckMessages->put(msg->getAckToken(),fu);
+    mWaitAckMessages->put(msg->getToken(),fu);
     return 0;
 }
 
@@ -230,7 +229,7 @@ int _MqCenter::processPublish(MqMessage msg) {
             auto channel = msg->getChannel();
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap != nullptr) {
-                stickyMap->remove(msg->getStickToken());
+                stickyMap->remove(msg->getToken());
             }
         });
         return 0;
@@ -259,25 +258,28 @@ int _MqCenter::processPublish(MqMessage msg) {
                         MqDLQMessage dlqMessage = createMqDLQMessage();
                         dlqMessage->setCode(stream == originStream?st(MqDLQMessage)::NoClient:st(MqDLQMessage)::ClientDisconnect)
                                   ->setData(packet)
+                                  ->setToken(msg->getToken())
                                   ->setPointTime(st(System)::currentTimeMillis())
                                   ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress()); //TODO
-                        processSendFailMessage(dlqMessage,true);
+                        processSendFailMessage(dlqMessage);
                     }
                 } else {
                     auto ll = createArrayList<OutputStream>();
                     ForEveryOne(stream,channels) {
                         String token = nullptr;
+                        bool isFirst = true;
                         if(stream != originStream && stream->write(packet) < 0) {
                             ll->add(stream);
                             MqDLQMessage dlqMessage = createMqDLQMessage();
                             auto s = Cast<SocketOutputStream>(stream);
                             dlqMessage->setCode(st(MqDLQMessage)::ClientDisconnect)
-                                    ->setData(token == nullptr?packet:nullptr)
+                                    ->setData(isFirst?packet:nullptr)
                                     ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress())
                                     ->setDestAddress(s->getSocket()->getInetAddress()->getAddress())
                                     ->setPointTime(st(System)::currentTimeMillis())
-                                    ->setToken(token);
-                            token = processSendFailMessage(dlqMessage,token == nullptr);
+                                    ->setToken(msg->getToken());
+                            processSendFailMessage(dlqMessage);
+                            isFirst = false;
                         }
                     }
                     
@@ -290,8 +292,9 @@ int _MqCenter::processPublish(MqMessage msg) {
                 dlqMessage->setCode(st(MqDLQMessage)::NoClient)
                             ->setData(msg->generatePacket())
                             ->setPointTime(st(System)::currentTimeMillis())
-                            ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress()); //TODO
-                processSendFailMessage(dlqMessage,true);
+                            ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress())
+                            ->setToken(msg->getToken());
+                processSendFailMessage(dlqMessage);
             }
         });
     }
@@ -304,7 +307,7 @@ int _MqCenter::processPublish(MqMessage msg) {
                 stickyMap = createHashMap<String,ByteArray>();
                 mStickyMessages->put(channel,stickyMap);
             }
-            stickyMap->put(msg->getStickToken(),msg->generatePacket());
+            stickyMap->put(msg->getToken(),msg->generatePacket());
         });
     }
 
@@ -367,20 +370,15 @@ int _MqCenter::processUnSubscribe(MqMessage msg) {
     return 0;
 }
 
-String _MqCenter::processSendFailMessage(MqDLQMessage msg,bool isNeedGenToken) {
+bool _MqCenter::processSendFailMessage(MqDLQMessage msg) {
     String token = msg->getToken();
     Synchronized(mDlqMutex){
-        Inspect(mDlqClient == nullptr,token);
-        if(isNeedGenToken) {
-            long time = st(System)::currentTimeMillis();
-            token = mSha->encrypt(mUuid->generate()->append(createString(time)));
-            msg->setToken(token);
-        }
+        Inspect(mDlqClient == nullptr,false);
         MqMessage resp = createMqMessage(nullptr,msg->serialize(),st(MqMessage)::Publish);
-        mDlqClient->getOutputStream()->write(resp->generatePacket());
+        return mDlqClient->getOutputStream()->write(resp->generatePacket()) > 0;
     }
-    
-    return token;
+
+    return false;
 }
 
 _MqCenter::~_MqCenter() {

@@ -9,6 +9,7 @@
 #include "String.hpp"
 #include "Serializable.hpp"
 #include "UUID.hpp"
+#include "Sha.hpp"
 
 using namespace obotcha;
 
@@ -75,8 +76,6 @@ public:
 
     _MqMessage(String channel,ByteArray data,uint32_t types);
 
-    _MqMessage(String channel,String stickToken,ByteArray data,uint32_t types);
-
     ByteArray generatePacket();
 
     static MqMessage generateMessage(ByteArray);
@@ -103,8 +102,9 @@ public:
     bool isStart();
     bool isComplete();
     
-    String getAckToken();
-    String getStickToken();
+    //String getAckToken();
+    //String getStickToken();
+    String getToken();
     int getRetryTimes();
     long getTTL();
     long getExpireTime();
@@ -113,18 +113,20 @@ public:
 private:
     ByteArray mData;
     String mChannel;
-    String mAckToken;
     uint32_t mFlags;
     Socket mSocket;
     int mRetryTimes;
-    String mStickToken;
+    String mToken;
 
     long mTTL;
     long mExpireTime;
     long mNextPublishTime;
 
+    static UUID mUuid;
+    static Sha mSha;
+
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mStickToken,mData,mAckToken,mFlags,mExpireTime,mNextPublishTime);
+    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mToken,mData,mFlags,mExpireTime,mNextPublishTime);
 };
 
 

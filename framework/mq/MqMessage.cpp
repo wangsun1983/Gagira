@@ -6,7 +6,8 @@
 
 namespace gagira {
 
-
+UUID _MqMessage::mUuid = createUUID();
+Sha _MqMessage::mSha = createSha(SHA_256);
 //-------- MqMessage 
 _MqMessage::_MqMessage() {
     mRetryTimes = 0;
@@ -20,11 +21,8 @@ _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage(
     mData = data;
     mChannel = channel;
     mFlags = flags;
-}
-
-_MqMessage::_MqMessage(String channel,String acktoken,ByteArray data,uint32_t types):
-                      _MqMessage(channel,data,types) {
-    mAckToken = acktoken;
+    mToken = mSha->encrypt(mUuid->generate()->append(
+                            createString(st(System)::currentTimeMillis())));
 }
 
 ByteArray _MqMessage::generatePacket() {
@@ -62,20 +60,8 @@ void _MqMessage::setFlags(uint32_t flag) {
 }
 
 
-String _MqMessage::getAckToken() {
-    return mAckToken;
-}
-
-void _MqMessage::setAckToken(String token) {
-    mAckToken = token;
-}
-
-String _MqMessage::getStickToken() {
-    return mStickToken;
-}
-
-void _MqMessage::setStickToken(String token) {
-    mStickToken = token;
+String _MqMessage::getToken() {
+    return mToken;
 }
 
 int _MqMessage::getRetryTimes() {

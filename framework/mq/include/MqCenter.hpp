@@ -52,7 +52,7 @@ private:
     
     int registWaitAckTask(MqMessage msg);
 
-    String processSendFailMessage(MqDLQMessage msg,bool genToken);
+    bool processSendFailMessage(MqDLQMessage msg);
     InetAddress mAddress;
     ServerSocket mServerSock;
 
@@ -71,9 +71,8 @@ private:
 
     MqOption mOption;
 
-    UUID mUuid;
-
-    Sha mSha;
+    //UUID mUuid;
+    //Sha mSha;
 
     ReadWriteLock mPersistRwLock;
     ReadLock mPersistRLock;

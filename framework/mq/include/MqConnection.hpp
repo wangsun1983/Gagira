@@ -114,30 +114,19 @@ public:
     }
 
     template<typename T>
-    bool publishStickMessage(String channel,String stickToken,T obj,MqMessageParam param = nullptr) {
-        ByteArray data = _connection_helper<T>(obj).toData();
-        uint32_t flags = (param == nullptr)?0:param->getFlags();
-
-        MqMessage msg = createMqMessage(channel,stickToken,data,
-                        st(MqMessage)::Publish|st(MqMessage)::StickFlag|flags);
-        if(param != nullptr) {
-            msg->setTTL(param->getTTL());
-            if(param->getDelayInterval() != 0) {
-                msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
-            }
+    bool publishStickMessage(String channel,T obj,MqMessageParam param = nullptr) {
+        if(param == nullptr) {
+            param = createMqMessageParam();
         }
-        return sendMessage(msg);
+        param->setFlags(param->getFlags()|st(MqMessage)::Publish|st(MqMessage)::StickFlag);
+        return publishMessage(channel,obj,param);
     }
 
     bool subscribeChannel(String channel);
     bool unSubscribeChannel(String channel);
-
-    bool publisAckMessage(String channel,String ackToken);
-
+    bool publisAckMessage(String channel,String token);
     bool postBackMessage(ByteArray data,uint32_t flags = st(MqMessage)::StartFalg);
-
     bool subscribePersistenceChannel();
-
     bool subscribeDLQChannel();
 
 private:
