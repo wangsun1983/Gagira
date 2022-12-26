@@ -8,21 +8,22 @@ namespace gagira {
 
 UUID _MqMessage::mUuid = createUUID();
 Sha _MqMessage::mSha = createSha(SHA_256);
+
 //-------- MqMessage 
 _MqMessage::_MqMessage() {
     mRetryTimes = 0;
     mFlags = 0;
     mExpireTime = 0;
     mTTL = 0;
-    mNextPublishTime = 0;
+    mPublishTime = 0;
+    mToken = mSha->encrypt(mUuid->generate()->append(
+                            createString(st(System)::currentTimeMillis())));
 }
 
 _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage() {
     mData = data;
     mChannel = channel;
     mFlags = flags;
-    mToken = mSha->encrypt(mUuid->generate()->append(
-                            createString(st(System)::currentTimeMillis())));
 }
 
 ByteArray _MqMessage::generatePacket() {
@@ -39,7 +40,6 @@ MqMessage _MqMessage::generateMessage(ByteArray data) {
     ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
     MqMessage msg = createMqMessage();
     msg->deserialize(msgData);
-    //msg->mPacketData = data;
     return msg;
 }
 
@@ -78,6 +78,10 @@ void _MqMessage::setData(ByteArray data) {
 
 void _MqMessage::setChannel(String channel) {
     mChannel = channel;
+}
+
+void _MqMessage::setToken(String token) {
+    mToken = token;
 }
 
 uint32_t _MqMessage::getType() {
@@ -120,7 +124,7 @@ void _MqMessage::setTTL(long value) {
 }
 
 void _MqMessage::setPublishTime(long time) {
-    mNextPublishTime = time;
+    mPublishTime = time;
 }
 
 long _MqMessage::getTTL() {
@@ -132,7 +136,7 @@ long _MqMessage::getExpireTime() {
 }
 
 long _MqMessage::getPublishTime() {
-    return mNextPublishTime;
+    return mPublishTime;
 }
 
 }

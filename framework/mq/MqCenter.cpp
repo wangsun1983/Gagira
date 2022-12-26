@@ -76,11 +76,14 @@ void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
         break;
 
         case st(NetEvent)::Disconnect: {
-            mClients->remove(sock);
             if(sock == mPersistenceClient) {
                 AutoLock l(mPersistWLock);
                 mPersistenceClient = nullptr;
-            }
+            } else if(sock == mDlqClient){
+                AutoLock l(mDlqMutex);
+                mDlqClient = nullptr;
+            } 
+            mClients->remove(sock);
         }
         break;
     }
@@ -260,14 +263,13 @@ int _MqCenter::processPublish(MqMessage msg) {
                                   ->setData(packet)
                                   ->setToken(msg->getToken())
                                   ->setPointTime(st(System)::currentTimeMillis())
-                                  ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress()); //TODO
+                                  ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress());
                         processSendFailMessage(dlqMessage);
                     }
                 } else {
                     auto ll = createArrayList<OutputStream>();
+                    bool isFirst = true;
                     ForEveryOne(stream,channels) {
-                        String token = nullptr;
-                        bool isFirst = true;
                         if(stream != originStream && stream->write(packet) < 0) {
                             ll->add(stream);
                             MqDLQMessage dlqMessage = createMqDLQMessage();

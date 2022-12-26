@@ -82,12 +82,11 @@ public:
 
     void setData(ByteArray data);
     void setChannel(String channel);
-    void setAckToken(String);
     void setFlags(uint32_t flags);
-    void setStickToken(String);
     void setRetryTimes(int);
     void setTTL(long);
     void setPublishTime(long);
+    void setToken(String);
 
     ByteArray getData();
     void clearData();
@@ -102,8 +101,6 @@ public:
     bool isStart();
     bool isComplete();
     
-    //String getAckToken();
-    //String getStickToken();
     String getToken();
     int getRetryTimes();
     long getTTL();
@@ -120,13 +117,13 @@ private:
 
     long mTTL;
     long mExpireTime;
-    long mNextPublishTime;
+    long mPublishTime;
 
     static UUID mUuid;
     static Sha mSha;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mToken,mData,mFlags,mExpireTime,mNextPublishTime);
+    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mToken,mData,mFlags,mExpireTime,mPublishTime);
 };
 
 
