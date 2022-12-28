@@ -16,6 +16,8 @@ namespace gagira {
 
 DECLARE_CLASS(ConfigItems) {
 public:
+    _ConfigItems();
+
     ServerConfig serverconfig;
     ArrayList<SqlConfig> sqlconfigs;
     WebSocketServerConfig wsconfigs;
@@ -34,8 +36,17 @@ public:
     String getHttpServerAddress();
     int getHttpServerPort();
 
+    void setHttpServerAddress(String);
+    void setHttpServerPort(int);
+
     String getWebSocketServerAddress();
     int getWebSocketServerPort();
+
+    void setWebSocketServerAddress(String);
+    void setWebSocketServerPort(int);
+
+    ArrayList<SqlConfig> getSqlConfigs();
+    void addSqlConfig(SqlConfig c);
 
     ConfigItems items;
 private:

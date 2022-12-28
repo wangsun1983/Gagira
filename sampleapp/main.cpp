@@ -16,7 +16,7 @@ using namespace gagira;
 
 int main() {
     Server server = createServer();
-    server->setConfigFile("./abc.json");
+    server->loadConfigFile("./abc.json");
 
     LoginController loginController = createLoginController();
     ConversationController chatController = createConversationController();

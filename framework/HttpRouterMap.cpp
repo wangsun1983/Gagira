@@ -1,124 +1,123 @@
 #include "HttpRouterMap.hpp"
-
-using namespace obotcha;
+#include "ForEveryOne.hpp"
 
 namespace gagira {
-_HttpRouterNode::_HttpRouterNode(String segment, HttpRouter router) {
-    mSegment = segment;
-    mRouter = router;
-    mNextNodes = createHashMap<String, HttpRouterNode>();
-    mParamTag = nullptr;
+
+//--------HttpRouterSegment--------
+_HttpRouterSegment::_HttpRouterSegment(int type,String value) {
+    this->type = type;
+    this->value = value;
 }
 
+//---------HttpRouterSegments--------
+_HttpRouterSegments::_HttpRouterSegments(HttpRouter r) {
+    mSegments = createArrayList<HttpRouterSegment> ();
+    mRouter = r;
+}
+
+DefRet(HttpRouter,HashMap<String,String>) _HttpRouterSegments::match(ArrayList<String> items) {
+    if(items->size() != mSegments->size()) {
+        return MakeRet(nullptr,nullptr);
+    }
+
+    HashMap<String,String> params = createHashMap<String,String>();
+    for(int i = 0;i < items->size();i++) {
+        auto segment = mSegments->get(i);
+        if(segment->type == st(HttpRouterSegment)::SegmentPath && !segment->value->equals(items->get(i))) {
+            return MakeRet(nullptr,nullptr);
+        } else if(segment->type == st(HttpRouterSegment)::SegmentParam) {
+            params->put(segment->value,items->get(i));
+        }
+    }
+
+    return MakeRet(mRouter,params);
+}
+
+void _HttpRouterSegments::addSegment(HttpRouterSegment segment) {
+    mSegments->add(segment);
+}
+
+
+//---------HttpRouterSegments--------
 _HttpRouterMap::_HttpRouterMap() {
-    mRoots = createHashMap<String, HttpRouterNode>();
+    mUrls = createHashMap<String,ArrayList<HttpRouterSegments>>();
 }
 
 void _HttpRouterMap::addRouter(HttpRouter r) {
     String path = r->getPath();
-    ArrayList<String> segments = path->split("/");
-    ListIterator<String> iterator = segments->getIterator();
-    HashMap<String, HttpRouterNode> current = mRoots;
-    HttpRouterNode node = nullptr;
-    while (iterator->hasValue()) {
-        String segment = iterator->getValue();
-        node = current->get(segment);
-        if (node == nullptr) {
-            node = createHttpRouterNode(segment, nullptr);
-            current->put(segment, node);
-            node->mParamTag = segment->subString(1, segment->size() - 1);
-        }
-        current = node->mNextNodes;
-        iterator->next();
-    }
+    ArrayList<String> items = path->split("/");
+    String root = items->get(0);
+    HttpRouterSegments segments = createHttpRouterSegments(r);
+    ArrayList<HttpRouterSegments> list = mUrls->get(root);
+    if(list == nullptr) {
+        list = createArrayList<HttpRouterSegments>();
+        mUrls->put(root,list);
+    };
+    list->add(segments);
 
-    if(node->mRouter != nullptr) {
-        node->mRouter->update(r);
+    for(int i = 1;i < items->size();i++) {
+        auto item = items->get(i)->trimAll();
+        HttpRouterSegment segment;
+        if(item->startsWith("{")  && item->endsWith("}")) {
+            segment = createHttpRouterSegment(st(HttpRouterSegment)::SegmentParam,
+                                              item->subString(1,item->size() - 2));
+            printf("i find a param segment: %s \n",segment->value->toChars());
+        } else {
+            segment = createHttpRouterSegment(st(HttpRouterSegment)::SegmentPath,
+                                              item);
+        }
+        segments->addSegment(segment);
+    }
+}
+
+DefRet(HttpRouter,HashMap<String,String>) _HttpRouterMap::findRouter(String path) {
+    ArrayList<String> items = path->split("/");
+    String root = items->get(0);
+    auto segmentList = mUrls->get(root);
+    items->removeAt(0);
+
+    //check last item,whether it contains query
+    String lastQuery = items->get(items->size() - 1);
+    int queryIndex = lastQuery->indexOf("?");
+    if(queryIndex > 0) {
+        String subSegment = lastQuery->subString(0,queryIndex);
+        items->removeAt(items->size() - 1);
+        items->add(subSegment);
+        
+        lastQuery = lastQuery->subString(queryIndex + 1,lastQuery->size() - queryIndex - 1);
+        printf("lastQuery is %s,subSegment is %s \n",lastQuery->toChars(),subSegment->toChars());
+        
     } else {
-        node->mRouter = r;
+        lastQuery = nullptr;
     }
-}
 
-HttpRouter _HttpRouterMap::findRouter(String path,
-                                      HashMap<String, String> params) {
-    ArrayList<String> segments = path->split("/");
-    return _findRouter(segments, 0, this->mRoots, params);
-}
-
-HttpRouter
-_HttpRouterMap::_findRouter(ArrayList<String> &segments, int segmentStartIndex,
-                            HashMap<String, HttpRouterNode> searchNode,
-                            HashMap<String, String> &result) {
-    String segment = segments->get(segmentStartIndex);
-    HttpRouterNode node = searchNode->get(segment);
-    HttpRouter router = nullptr;
-    if (node != nullptr) {
-        segmentStartIndex++;
-        if (segmentStartIndex == segments->size()) {
-            return node->mRouter;
-        }
-        router =
-            _findRouter(segments, segmentStartIndex, node->mNextNodes, result);
-        if (router != nullptr) {
-            return router;
-        }
-    } else {
-        // check whether it is a query
-        ArrayList<String> querySegments = segment->split("?");
-        if (querySegments != nullptr && querySegments->size() == 2) {
-            String queryTag = querySegments->get(0);
-            String queryContent = querySegments->get(1);
-            node = searchNode->get(queryTag);
-            if (node != nullptr) {
-                ArrayList<String> list = queryContent->split("#");
-                
-                if (list != nullptr) {
-                    queryContent = list->get(0);
-                }
-
-                HashMap<String, String> queryResult = _parseQuery(queryContent);
-                result->append(queryResult);
-                return node->mRouter;
-            }
-        }
-
-        MapIterator<String, HttpRouterNode> mapIterator =
-            searchNode->getIterator();
-        while (mapIterator->hasValue()) {
-            String key = mapIterator->getKey();
-            if (key->charAt(0) == ':') {
-                // maybe this is the right node
-                node = mapIterator->getValue();
-                String paramTag = node->mParamTag;
-                String paramValue = segment;
-                HashMap<String, String> tempResult =
-                    createHashMap<String, String>();
-                tempResult->put(paramTag, paramValue);
-                if (segmentStartIndex == segments->size() - 1) {
-                    result->append(tempResult);
-                    return node->mRouter;
-                }
-
-                router = _findRouter(segments, segmentStartIndex + 1,
-                                     node->mNextNodes, tempResult);
-                if (router != nullptr) {
-                    result->append(tempResult);
-                    return router;
-                }
-            }
-            mapIterator->next();
+    printf("findRouter root is %s \n",root->toChars());
+    HttpRouter r;
+    HashMap<String,String> param;
+    ForEveryOne(segments,segmentList) {
+        FetchRet(r,param) = segments->match(items);
+        if(r != nullptr) {
+            break;
         }
     }
-    return nullptr;
+
+    if(lastQuery != nullptr) {
+        if(param == nullptr) {
+            param = parseQuery(lastQuery);
+        } else {
+            param->append(parseQuery(lastQuery));
+        }
+    }
+    return MakeRet(r,param);
 }
 
-HashMap<String, String> _HttpRouterMap::_parseQuery(String content) {
+HashMap<String, String> _HttpRouterMap::parseQuery(String query) {
 
     HashMap<String, String> result = createHashMap<String, String>();
-    const char *p = content->toChars();
+    const char *p = query->toChars();
     int index = 0;
     int start = 0;
-    int size = content->size();
+    int size = query->size();
     int status = 0;
     String value;
     String name;
@@ -150,5 +149,6 @@ HashMap<String, String> _HttpRouterMap::_parseQuery(String content) {
     result->put(name, value);
     return result;
 }
+
 
 }

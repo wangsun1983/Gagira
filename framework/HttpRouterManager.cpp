@@ -24,9 +24,8 @@ void _HttpRouterManager::addRouter(int method, HttpRouter r) {
     mMaps[method]->addRouter(r);
 }
 
-HttpRouter _HttpRouterManager::getRouter(int method, String url,
-                                         HashMap<String, String> &result) {
-    return mMaps[method]->findRouter(url, result);
+DefRet(HttpRouter,HashMap<String,String>) _HttpRouterManager::getRouter(int method, String url) {
+    return mMaps[method]->findRouter(url);
 }
 
 }

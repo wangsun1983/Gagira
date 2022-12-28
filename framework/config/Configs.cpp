@@ -20,6 +20,10 @@ namespace gagira {
 
 sp<_Configs> _Configs::instance = nullptr;
 
+_ConfigItems::_ConfigItems() {
+    sqlconfigs = createArrayList<SqlConfig>();
+}
+
 Configs _Configs::getInstance() {
     static std::once_flag s_flag;
     std::call_once(s_flag, [&]() {
@@ -131,6 +135,14 @@ int _Configs::getHttpServerPort() {
     return items->serverconfig->port;
 }
 
+void _Configs::setHttpServerAddress(String ip) {
+    items->serverconfig->ip = ip;
+}
+
+void _Configs::setHttpServerPort(int port) {
+    items->serverconfig->port = port;
+}
+
 String _Configs::getWebSocketServerAddress() {
     if(items->wsconfigs != nullptr) {
         return items->wsconfigs->ip;
@@ -143,6 +155,22 @@ int _Configs::getWebSocketServerPort() {
         return items->wsconfigs->port;
     }
     return -1;
+}
+
+void _Configs::setWebSocketServerAddress(String ip) {
+    items->wsconfigs->ip = ip;
+}
+
+void _Configs::setWebSocketServerPort(int port) {
+    items->wsconfigs->port = port;
+}
+
+ArrayList<SqlConfig> _Configs::getSqlConfigs() {
+    return items->sqlconfigs;
+}
+
+void _Configs::addSqlConfig(SqlConfig c) {
+    items->sqlconfigs->add(c);
 }
 
 } // namespace gagira

@@ -21,6 +21,7 @@
 #include "WebSocketServer.hpp"
 #include "WebSocketServerBuilder.hpp"
 #include "WebSocketListener.hpp"
+#include "SqlConfig.hpp"
 
 using namespace obotcha;
 
@@ -32,8 +33,11 @@ public:
 
     _Server();
     _Server* setAddress(InetAddress);
+    _Server* setWsAddress(InetAddress);
+    _Server* addSqlConfig(SqlConfig);
     _Server* setOption(HttpOption);
-    _Server* setConfigFile(String);
+
+    _Server* loadConfigFile(String);
 
     int start();
 
@@ -62,9 +66,14 @@ public:
 private:
     static sp<_Server> mInstance;
 
-    HttpServerBuilder mBuilder;
-    WebSocketServerBuilder mWebSocketBuilder;
+    //HttpServerBuilder mBuilder;
+    //WebSocketServerBuilder mWebSocketBuilder;
     
+    // InetAddress mServerAddr;
+    // InetAddress mWsServerAddr;
+    HttpOption mHttpOption;
+    SqlConfig mSqlConfig;
+
     HttpServer mServer;
     WebSocketServer mWsServer;
     HttpRouterManager mRouterManager;

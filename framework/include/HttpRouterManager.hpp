@@ -20,7 +20,7 @@ DECLARE_CLASS(HttpRouterManager) {
   public:
     static sp<_HttpRouterManager> getInstance();
     void addRouter(int method, HttpRouter);
-    HttpRouter getRouter(int method, String, HashMap<String, String> &);
+    DefRet(HttpRouter,HashMap<String,String>) getRouter(int method, String);
 
   private:
     _HttpRouterManager();

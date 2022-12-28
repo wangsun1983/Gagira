@@ -6,12 +6,12 @@
 #include "Object.hpp"
 #include "StrongPointer.hpp"
 
+#include "GlobalCacheManager.hpp"
 #include "HashMap.hpp"
 #include "HttpResponseEntity.hpp"
 #include "HttpRouter.hpp"
 #include "HttpRouterManager.hpp"
 #include "Interceptor.hpp"
-#include "GlobalCacheManager.hpp"
 #include "String.hpp"
 #include "TextContent.hpp"
 #include "WebSocketRouterManager.hpp"
@@ -20,19 +20,19 @@ namespace gagira {
 
 #define GetIntParam(key)                                                       \
     ({                                                                         \
-        auto param = st(GlobalCacheManager)::getInstance()->getParam();     \
+        auto param = st(GlobalCacheManager)::getInstance()->getParam();        \
         param->get<Integer>(#key);                                             \
     })
 
 #define GetBoolParam(key)                                                      \
     ({                                                                         \
-        auto param = st(GlobalCacheManager)::getInstance()->getParam();     \
+        auto param = st(GlobalCacheManager)::getInstance()->getParam();        \
         param->get<Boolean>(#key);                                             \
     })
 
 #define GetStringParam(key)                                                    \
     ({                                                                         \
-        auto param = st(GlobalCacheManager)::getInstance()->getParam();     \
+        auto param = st(GlobalCacheManager)::getInstance()->getParam();        \
         param->get<String>(#key);                                              \
     })
 
@@ -51,10 +51,10 @@ template <typename T> T getClass(sp<T>) {
 
 #define InjectInterceptor(method, url, point, instance)                        \
     {                                                                          \
-        HashMap<String, String>                                                \
-            queries = createHashMap<String, String>();                         \
-        HttpRouter router = st(HttpRouterManager)::getInstance()->getRouter(   \
-            method, url, queries);                                          \
+        HashMap<String, String> queries;                                       \
+        HttpRouter router;                                                     \
+        FetchRet(router, queries) =                                            \
+            st(HttpRouterManager)::getInstance()->getRouter(method, url);      \
         if (point == st(Interceptor)::BeforeExec) {                            \
             router->addBeforeExecInterceptor(instance);                        \
         } else if (point == st(Interceptor)::AfterExec) {                      \
@@ -64,22 +64,21 @@ template <typename T> T getClass(sp<T>) {
 
 #define InjectResInterceptor(path, instance)                                   \
     {                                                                          \
-        st(HttpResourceManager)::getInstance()                                 \
-            ->addResourceInterceptor(path, instance);                          \
+        st(HttpResourceManager)::getInstance()->addResourceInterceptor(        \
+            path, instance);                                                   \
     }
 
-#define InjectGlobalInterceptor(method,instance) \
-    {\
-        st(Server)::addinterceptors(method,instance);\
-    }
+#define InjectGlobalInterceptor(method, instance)                              \
+    { st(Server)::addinterceptors(method, instance); }
 
-#define InjectWebSocketController(path, instance, function) \
+#define InjectWebSocketController(path, instance, function)                    \
     {                                                                          \
         auto func = std::bind(&decltype(getClass(instance))::function,         \
                               instance.get_pointer());                         \
         ControllerRouter r = createControllerRouter(func, instance);           \
-        st(WebSocketRouterManager)::getInstance()->addRouter(path, r);          \
-        st(Server)::getInstance()->getWebSocketServer()->bind(path,st(Server)::getInstance()); \
+        st(WebSocketRouterManager)::getInstance()->addRouter(path, r);         \
+        st(Server)::getInstance()->getWebSocketServer()->bind(                 \
+            path, st(Server)::getInstance());                                  \
     }
 
 } // namespace gagira

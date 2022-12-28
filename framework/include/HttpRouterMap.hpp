@@ -6,34 +6,45 @@
 
 #include "String.hpp"
 #include "HttpRouter.hpp"
+#include "HashMap.hpp"
+#include "OStdReturnValue.hpp"
+
+using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(HttpRouterNode) {
+DECLARE_CLASS(HttpRouterSegment) {
 public:
-    _HttpRouterNode(String segment,HttpRouter router);
-    String mSegment;
+    enum {
+        SegmentPath = 0,
+        SegmentParam,
+    };
+
+    _HttpRouterSegment(int type,String value);
+
+    int type;
+    String value;
+};
+
+DECLARE_CLASS(HttpRouterSegments) {
+public:
+    _HttpRouterSegments(HttpRouter);
+    DefRet(HttpRouter,HashMap<String,String>) match(ArrayList<String> items);
+    void addSegment(HttpRouterSegment);
+private:
+    ArrayList<HttpRouterSegment> mSegments;
     HttpRouter mRouter;
-    HashMap<String,HttpRouterNode> mNextNodes;
-    String mParamTag;//:id
 };
 
 DECLARE_CLASS(HttpRouterMap) {
 public:
     _HttpRouterMap();
     void addRouter(HttpRouter r);
-    HttpRouter findRouter(String path,HashMap<String,String> params);
+    DefRet(HttpRouter,HashMap<String,String>) findRouter(String path);
     
-
 private:
-    HttpRouter _findRouter(ArrayList<String> &segments,
-                                      int segmentStartIndex,
-                                      HashMap<String,HttpRouterNode> searchNode,
-                                      HashMap<String,String> &result);
-    
-    HashMap<String,String> _parseQuery(String);
-    
-    HashMap<String,HttpRouterNode> mRoots;
+    HashMap<String,ArrayList<HttpRouterSegments>> mUrls;
+    HashMap<String, String> parseQuery(String query);
 };
 
 }

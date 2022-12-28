@@ -23,11 +23,10 @@ HashMap<Integer,ArrayList<Interceptor>> _Server::interceptors
             = createHashMap<Integer,ArrayList<Interceptor>>();
 
 _Server::_Server() {
-    mBuilder = createHttpServerBuilder();
+    //mBuilder = createHttpServerBuilder();
     mServer = nullptr;
     mRouterManager = st(HttpRouterManager)::getInstance();
     mResourceManager = st(HttpResourceManager)::getInstance();
-
     mInstance = AutoClone(this);
 }
 
@@ -40,18 +39,36 @@ WebSocketServer _Server::getWebSocketServer() {
 }
 
 _Server* _Server::setAddress(InetAddress addr) {
-    mBuilder->setAddress(addr);
+    //mBuilder->setAddress(addr);
+    //mServerAddr = addr;
+    st(Configs)::getInstance()->setHttpServerAddress(addr->getAddress());
+    st(Configs)::getInstance()->setHttpServerPort(addr->getPort());
     return this;
 }
 
 _Server* _Server::setOption(HttpOption option) {
-    mBuilder->setOption(option);
+    //mBuilder->setOption(option);
+    mHttpOption = option;
     return this;
 }
 
-_Server* _Server::setConfigFile(String path) {
-    st(Configs)::getInstance()->load(createFile(path));
+_Server* _Server::setWsAddress(InetAddress addr) {
+    st(Configs)::getInstance()->setWebSocketServerAddress(addr->getAddress());
+    st(Configs)::getInstance()->setWebSocketServerPort(addr->getPort());
+    return this;
+}
 
+_Server* _Server::addSqlConfig(SqlConfig config) {
+   st(Configs)::getInstance()->addSqlConfig(config);
+   return this;
+}
+
+_Server* _Server::loadConfigFile(String path) {
+    st(Configs)::getInstance()->load(createFile(path));   
+    return this;
+}
+
+int _Server::start() {
     //init http server
     String ip = st(Configs)::getInstance()->getHttpServerAddress();
     int port = st(Configs)::getInstance()->getHttpServerPort();
@@ -62,29 +79,28 @@ _Server* _Server::setConfigFile(String path) {
     } else {
         address = createInet4Address(ip,port);
     }
-    mBuilder->setAddress(address);
-    mBuilder->setListener(AutoClone(this));
-    mServer = mBuilder->build();
+    auto httpBuilder = createHttpServerBuilder();
+    httpBuilder->setAddress(address);
+    httpBuilder->setListener(AutoClone(this));
+    mServer = httpBuilder->build();
 
     //init websocket server
     String ws_ip = st(Configs)::getInstance()->getWebSocketServerAddress();
     int ws_port = st(Configs)::getInstance()->getWebSocketServerPort();
 
     if(ws_ip != nullptr && ws_port != -1) {
-        this->mWebSocketBuilder = createWebSocketServerBuilder();
+        auto webSocketBuilder = createWebSocketServerBuilder();
         InetAddress address;
         if(ws_ip->contains(":")) {
             address = createInet6Address(ws_ip,ws_port);
         } else {
             address = createInet4Address(ws_ip,ws_port);
         }
-        mWebSocketBuilder->setInetAddr(address);
-        mWsServer = mWebSocketBuilder->build();
-    }   
-    return this;
-}
 
-int _Server::start() {
+        webSocketBuilder->setInetAddr(address);
+        mWsServer = webSocketBuilder->build();
+    }
+
     if(mServer != nullptr) {
         mServer->start();
     }
@@ -149,12 +165,8 @@ int _Server::onPing(String,sp<_WebSocketLinker> client) {
 //http
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
     if(event == st(NetEvent)::Message) {
-        HashMap<String,String> map = createHashMap<String,String>();
         ServletRequest req = createServletRequest(msg,client);
         //printf("client is %s \n",client->getInetAddress()->toChars());
-        ServletRequestCache cache = createServletRequestCache(req,map);
-        st(GlobalCacheManager)::getInstance()->add(cache);
-
         int method = msg->getHeader()->getMethod();
         HttpResponse response = createHttpResponse();
         //add interceptor
@@ -183,7 +195,13 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             w->write(response);
             return;
         }
-        HttpRouter router = mRouterManager->getRouter(method,url,map);
+
+        HttpRouter router;
+        HashMap<String,String> map;
+        FetchRet(router,map) = mRouterManager->getRouter(method,url);
+        ServletRequestCache cache = createServletRequestCache(req,map);
+        st(GlobalCacheManager)::getInstance()->add(cache);
+        
         if(router != nullptr) {
             //TODO?
             HttpEntity entity = createHttpEntity();
