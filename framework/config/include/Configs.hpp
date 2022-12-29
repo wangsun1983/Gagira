@@ -48,7 +48,6 @@ public:
     ArrayList<SqlConfig> getSqlConfigs();
     void addSqlConfig(SqlConfig c);
 
-    ConfigItems items;
 private:
     enum ConfigFileType {
         Json = 0,
@@ -56,6 +55,9 @@ private:
         Yaml,
         Ini
     };
+
+    _Configs();
+    ConfigItems items;
     static sp<_Configs> instance;
 };
 

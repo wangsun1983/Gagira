@@ -11,7 +11,7 @@ _MySqlDao::_MySqlDao() {
     connection = createMySqlConnection();
     MySqlConnectParam param = createMySqlConnectParam();
 
-    ArrayList<SqlConfig> confs = st(Configs)::getInstance()->items->sqlconfigs;
+    ArrayList<SqlConfig> confs = st(Configs)::getInstance()->getSqlConfigs();
     auto iterator = confs->getIterator();
     while(iterator->hasValue()) {
         SqlConfig config = iterator->getValue();

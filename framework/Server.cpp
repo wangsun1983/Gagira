@@ -23,7 +23,6 @@ HashMap<Integer,ArrayList<Interceptor>> _Server::interceptors
             = createHashMap<Integer,ArrayList<Interceptor>>();
 
 _Server::_Server() {
-    //mBuilder = createHttpServerBuilder();
     mServer = nullptr;
     mRouterManager = st(HttpRouterManager)::getInstance();
     mResourceManager = st(HttpResourceManager)::getInstance();
@@ -39,15 +38,12 @@ WebSocketServer _Server::getWebSocketServer() {
 }
 
 _Server* _Server::setAddress(InetAddress addr) {
-    //mBuilder->setAddress(addr);
-    //mServerAddr = addr;
     st(Configs)::getInstance()->setHttpServerAddress(addr->getAddress());
     st(Configs)::getInstance()->setHttpServerPort(addr->getPort());
     return this;
 }
 
 _Server* _Server::setOption(HttpOption option) {
-    //mBuilder->setOption(option);
     mHttpOption = option;
     return this;
 }
@@ -74,10 +70,10 @@ int _Server::start() {
     int port = st(Configs)::getInstance()->getHttpServerPort();
 
     InetAddress address;
-    if(ip->contains(":")) {
-        address = createInet6Address(ip,port);
-    } else {
+    if(ip == nullptr || ip->contains(".")) {
         address = createInet4Address(ip,port);
+    } else {
+        address = createInet6Address(ip,port);
     }
     auto httpBuilder = createHttpServerBuilder();
     httpBuilder->setAddress(address);
@@ -199,10 +195,11 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         HttpRouter router;
         HashMap<String,String> map;
         FetchRet(router,map) = mRouterManager->getRouter(method,url);
-        ServletRequestCache cache = createServletRequestCache(req,map);
+        ServletRequestCache cache = createServletRequestCache(req,createControllerParam(map));
         st(GlobalCacheManager)::getInstance()->add(cache);
-        
+        printf("server trace1 \n");
         if(router != nullptr) {
+            printf("server trace2 \n");
             //TODO?
             HttpEntity entity = createHttpEntity();
             //st(GlobalCacheManager)::getInstance()->addRequest(req);

@@ -22,6 +22,12 @@ sp<_Configs> _Configs::instance = nullptr;
 
 _ConfigItems::_ConfigItems() {
     sqlconfigs = createArrayList<SqlConfig>();
+    serverconfig = createServerConfig();
+    wsconfigs = createWebSocketServerConfig();
+}
+
+_Configs::_Configs() {
+    items = createConfigItems();
 }
 
 Configs _Configs::getInstance() {
@@ -35,7 +41,6 @@ Configs _Configs::getInstance() {
 }
 
 void _Configs::load(String content,int type) {
-    items = createConfigItems();
     switch(type) {
         case Json:{
             JsonReader reader = createJsonReader(content);
