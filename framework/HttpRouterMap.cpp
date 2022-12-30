@@ -61,7 +61,6 @@ void _HttpRouterMap::addRouter(HttpRouter r) {
         if(item->startsWith("{")  && item->endsWith("}")) {
             segment = createHttpRouterSegment(st(HttpRouterSegment)::SegmentParam,
                                               item->subString(1,item->size() - 2));
-            printf("i find a param segment: %s \n",segment->value->toChars());
         } else {
             segment = createHttpRouterSegment(st(HttpRouterSegment)::SegmentPath,
                                               item);
@@ -77,21 +76,25 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterMap::findRouter(String path
     items->removeAt(0);
 
     //check last item,whether it contains query
-    String lastQuery = items->get(items->size() - 1);
+    //if url like /login&abc=1,root item is the query too.
+    String lastQuery = (items->size() == 0?root:items->get(items->size() - 1));
     int queryIndex = lastQuery->indexOf("?");
     if(queryIndex > 0) {
         String subSegment = lastQuery->subString(0,queryIndex);
-        items->removeAt(items->size() - 1);
-        items->add(subSegment);
-        
+        //root item is the query,so we should research the segementlist
+        //with subSegment
+        if(items->size() > 0) {
+            items->removeAt(items->size() - 1);
+            items->add(subSegment);
+        } else {
+            segmentList = mUrls->get(subSegment);
+        }
+
         lastQuery = lastQuery->subString(queryIndex + 1,lastQuery->size() - queryIndex - 1);
-        printf("lastQuery is %s,subSegment is %s \n",lastQuery->toChars(),subSegment->toChars());
-        
     } else {
         lastQuery = nullptr;
     }
 
-    printf("findRouter root is %s \n",root->toChars());
     HttpRouter r;
     HashMap<String,String> param;
     ForEveryOne(segments,segmentList) {
