@@ -73,6 +73,10 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterMap::findRouter(String path
     ArrayList<String> items = path->split("/");
     String root = items->get(0);
     auto segmentList = mUrls->get(root);
+    if(segmentList == nullptr || segmentList->size() == 0) {
+        return MakeRet(nullptr,nullptr);
+    }
+
     items->removeAt(0);
 
     //check last item,whether it contains query

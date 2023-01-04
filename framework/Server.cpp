@@ -197,9 +197,7 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         FetchRet(router,map) = mRouterManager->getRouter(method,url);
         ServletRequestCache cache = createServletRequestCache(req,createControllerParam(map));
         st(GlobalCacheManager)::getInstance()->add(cache);
-        printf("server trace1 \n");
         if(router != nullptr) {
-            printf("server trace2 \n");
             //TODO?
             HttpEntity entity = createHttpEntity();
             //st(GlobalCacheManager)::getInstance()->addRequest(req);
