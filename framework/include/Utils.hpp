@@ -36,6 +36,16 @@ namespace gagira {
         param->get<String>(#key);                                              \
     })
 
+#define GetWebsocketRequest()                                                  \
+    ({                                                                         \
+        st(GlobalCacheManager)::getInstance()->getWsRequest();                 \
+    })    
+
+#define GetWebsocketClient()                                                   \
+    ({                                                                         \
+        st(GlobalCacheManager)::getInstance()->getWsClient();                  \
+    })
+
 template <typename T> T getClass(sp<T>) {
     Trigger(MethodNotSupportException, "cannot use this function");
 }
@@ -71,14 +81,19 @@ template <typename T> T getClass(sp<T>) {
 #define InjectGlobalInterceptor(method, instance)                              \
     { st(Server)::addinterceptors(method, instance); }
 
-#define InjectWebSocketController(path, instance, function)                    \
+#define InjectWsController(path, instance, function)                    \
     {                                                                          \
         auto func = std::bind(&decltype(getClass(instance))::function,         \
                               instance.get_pointer());                         \
         ControllerRouter r = createControllerRouter(func, instance);           \
         st(WebSocketRouterManager)::getInstance()->addRouter(path, r);         \
-        st(Server)::getInstance()->getWebSocketServer()->bind(                 \
-            path, st(Server)::getInstance());                                  \
+        auto wsServer = st(Server)::getInstance()->getWebSocketServer();       \
+        if(wsServer != nullptr) {                                              \
+            wsServer->bind(                                                    \
+                path, st(Server)::getInstance());                              \
+        } else {                                                               \
+            st(Server)::getInstance()->addLazyWsRegistPath(path);              \
+        }                                                                      \
     }
 
 } // namespace gagira

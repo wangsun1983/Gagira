@@ -19,4 +19,16 @@ TextContent _HttpResponseEntity::getContent() {
     return mContent; 
 }
 
+// void _HttpResponseEntity::setChunk(File file) {
+//     mChunk = createHttpChunk(file);
+// }
+
+// void _HttpResponseEntity::SetChunk(ByteArray data) {
+//     mChunk = createHttpChunk(data);
+// }
+
+HttpChunk _HttpResponseEntity::getChunk() {
+    return mChunk;
+}
+
 } // namespace gagira

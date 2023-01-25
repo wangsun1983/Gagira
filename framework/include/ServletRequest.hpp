@@ -12,6 +12,7 @@
 #include "JsonValue.hpp"
 #include "JsonReader.hpp"
 #include "OStdInstanceOf.hpp"
+#include "HttpMultiPart.hpp"
 
 using namespace obotcha;
 
@@ -62,6 +63,8 @@ public:
         _ServletContentHelper<T> helper;
         return helper.get(mPacket);
     }
+
+    HttpMultiPart getMultiPart();
 
 private:
     HttpPacket mPacket;

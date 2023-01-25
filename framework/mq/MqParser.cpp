@@ -16,7 +16,7 @@ ArrayList<ByteArray> _MqParser::doParse() {
     ArrayList<ByteArray> result = createArrayList<ByteArray>();
 
     while(1) {
-        int availableDataSize = mBuffer->getAvailDataSize();
+        int availableDataSize = mBuffer->getStoredDataSize();
         if(mCurrentMsgLen != 0) {
             if(mCurrentMsgLen <= availableDataSize) {
                 mReader->move(mCurrentMsgLen);

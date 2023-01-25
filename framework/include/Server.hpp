@@ -35,6 +35,7 @@ public:
     _Server* setAddress(InetAddress);
     _Server* setWsAddress(InetAddress);
     _Server* addSqlConfig(SqlConfig);
+    _Server* setMultiPartFilePath(String);
     _Server* setOption(HttpOption);
 
     _Server* loadConfigFile(String);
@@ -47,6 +48,7 @@ public:
 
     void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
     
+    //Websocket callback function
     int onData(WebSocketFrame frame,sp<_WebSocketLinker> client);
 
     int onConnect(sp<_WebSocketLinker> client);
@@ -62,15 +64,11 @@ public:
     static sp<_Server> getInstance();
 
     WebSocketServer getWebSocketServer();
-
+    
+    void addLazyWsRegistPath(String);
 private:
     static sp<_Server> mInstance;
 
-    //HttpServerBuilder mBuilder;
-    //WebSocketServerBuilder mWebSocketBuilder;
-    
-    // InetAddress mServerAddr;
-    // InetAddress mWsServerAddr;
     HttpOption mHttpOption;
     SqlConfig mSqlConfig;
 
@@ -82,6 +80,7 @@ private:
     String mConfigPath;
 
     static HashMap<Integer,ArrayList<Interceptor>> interceptors;
+    ArrayList<String> mDelayRegWsPath;
 };
 
 }

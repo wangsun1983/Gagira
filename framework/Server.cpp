@@ -12,6 +12,8 @@
 #include "Configs.hpp"
 #include "Inet4Address.hpp"
 #include "Inet6Address.hpp"
+#include "Enviroment.hpp"
+#include "ForEveryOne.hpp"
 
 using namespace obotcha;
 
@@ -27,6 +29,7 @@ _Server::_Server() {
     mRouterManager = st(HttpRouterManager)::getInstance();
     mResourceManager = st(HttpResourceManager)::getInstance();
     mInstance = AutoClone(this);
+    mDelayRegWsPath = createArrayList<String>();
 }
 
 sp<_Server> _Server::getInstance() {
@@ -54,6 +57,11 @@ _Server* _Server::setWsAddress(InetAddress addr) {
     return this;
 }
 
+_Server* _Server::setMultiPartFilePath(String path) {
+    st(Enviroment)::getInstance()->set(st(Enviroment)::gHttpMultiPartFilePath,path);
+    return this;
+}
+
 _Server* _Server::addSqlConfig(SqlConfig config) {
    st(Configs)::getInstance()->addSqlConfig(config);
    return this;
@@ -62,6 +70,10 @@ _Server* _Server::addSqlConfig(SqlConfig config) {
 _Server* _Server::loadConfigFile(String path) {
     st(Configs)::getInstance()->load(createFile(path));   
     return this;
+}
+
+void _Server::addLazyWsRegistPath(String path) {
+    mDelayRegWsPath->add(path);
 }
 
 int _Server::start() {
@@ -83,18 +95,24 @@ int _Server::start() {
     //init websocket server
     String ws_ip = st(Configs)::getInstance()->getWebSocketServerAddress();
     int ws_port = st(Configs)::getInstance()->getWebSocketServerPort();
-
-    if(ws_ip != nullptr && ws_port != -1) {
+    if(ws_port != -1) {
         auto webSocketBuilder = createWebSocketServerBuilder();
         InetAddress address;
-        if(ws_ip->contains(":")) {
+        if(ws_ip != nullptr && ws_ip->contains(":")) {
             address = createInet6Address(ws_ip,ws_port);
         } else {
             address = createInet4Address(ws_ip,ws_port);
         }
+        printf("ws address is %s \n",address->toString()->toChars());
 
         webSocketBuilder->setInetAddr(address);
         mWsServer = webSocketBuilder->build();
+        
+        ForEveryOne(path,mDelayRegWsPath) {
+            printf("ws add path is %s \n",path->toChars());
+            mWsServer->bind(path, st(Server)::getInstance());             
+        }
+        mDelayRegWsPath->clear();
     }
 
     if(mServer != nullptr) {
@@ -130,7 +148,7 @@ void _Server::addinterceptors(int method,Interceptor c) {
 int _Server::onData(WebSocketFrame frame,sp<_WebSocketLinker> client) {
     st(GlobalCacheManager)::getInstance()->add(createWebSocketRequestCache(frame->getData(),client));
     auto router = st(WebSocketRouterManager)::getInstance()->getRouter(client->getPath());
-    HttpResponseEntity result = router->onInvoke();
+    WsResponseEntity result = router->onInvoke();
     if(result != nullptr) {
         client->sendTextMessage(result->getContent()->get());
     }
@@ -162,10 +180,8 @@ int _Server::onPing(String,sp<_WebSocketLinker> client) {
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
     if(event == st(NetEvent)::Message) {
         ServletRequest req = createServletRequest(msg,client);
-        //printf("client is %s \n",client->getInetAddress()->toChars());
         int method = msg->getHeader()->getMethod();
         HttpResponse response = createHttpResponse();
-        //add interceptor
         ArrayList<Interceptor> list = interceptors->get(createInteger(method));
         if(list != nullptr) {
             auto iterator = list->getIterator();
@@ -198,20 +214,22 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         ServletRequestCache cache = createServletRequestCache(req,createControllerParam(map));
         st(GlobalCacheManager)::getInstance()->add(cache);
         if(router != nullptr) {
-            //TODO?
             HttpEntity entity = createHttpEntity();
-            //st(GlobalCacheManager)::getInstance()->addRequest(req);
             HttpResponseEntity obj = router->invoke();
             if(obj != nullptr) {
                 if(obj->getStatus() != st(HttpResponseEntity)::NoResponse) {
-                    entity->setContent(obj->getContent()->get()->toByteArray());
-                    response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
+                    auto content = obj->getContent();
+                    if(content != nullptr) {
+                        entity->setContent(content->get()->toByteArray());
+                    }
+                    entity->setChunk(obj->getChunk());
+
+                    response->getHeader()->setResponseStatus(obj->getStatus());
                     response->setEntity(entity);
                     w->write(response);
                 }
                 return;
             }
-            //st(GlobalCacheManager)::getInstance()->removeRequest();
         }
 
         response->getHeader()->setResponseStatus(st(HttpStatus)::BadRequest);

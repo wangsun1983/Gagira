@@ -1,4 +1,5 @@
 #include "ServletRequest.hpp"
+#include "Inspect.hpp"
 
 using namespace obotcha;
 
@@ -28,6 +29,13 @@ HttpSession _ServletRequest::getSession() {
 
 String _ServletRequest::getUrl() {
     return mPacket->getHeader()->getUrl();
+}
+
+HttpMultiPart _ServletRequest::getMultiPart() {
+    auto entity = mPacket->getEntity();
+    Inspect(entity == nullptr,nullptr);
+    
+    return entity->getMultiPart();
 }
 
 }
