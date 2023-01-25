@@ -21,15 +21,13 @@ namespace gagira  {
 
 sp<_Server> _Server::mInstance = nullptr;
 
-HashMap<Integer,ArrayList<Interceptor>> _Server::interceptors 
-            = createHashMap<Integer,ArrayList<Interceptor>>();
-
 _Server::_Server() {
     mServer = nullptr;
     mRouterManager = st(HttpRouterManager)::getInstance();
     mResourceManager = st(HttpResourceManager)::getInstance();
     mInstance = AutoClone(this);
     mDelayRegWsPath = createArrayList<String>();
+    mGlobalControllers = createHashMap<int,ControllerRouter>();
 }
 
 sp<_Server> _Server::getInstance() {
@@ -103,13 +101,11 @@ int _Server::start() {
         } else {
             address = createInet4Address(ws_ip,ws_port);
         }
-        printf("ws address is %s \n",address->toString()->toChars());
 
         webSocketBuilder->setInetAddr(address);
         mWsServer = webSocketBuilder->build();
         
         ForEveryOne(path,mDelayRegWsPath) {
-            printf("ws add path is %s \n",path->toChars());
             mWsServer->bind(path, st(Server)::getInstance());             
         }
         mDelayRegWsPath->clear();
@@ -134,14 +130,15 @@ void _Server::waitForExit(long interval) {
     mServer->waitForExit(interval);
 }
 
-void _Server::addinterceptors(int method,Interceptor c) {
-    ArrayList<Interceptor> list = interceptors->get(createInteger(method));
+void _Server::addGlobalController(int method,ControllerRouter r) {
+    mGlobalControllers->put(method,r);
+    /*
+    ArrayList<Interceptor> list = mGlobalInterceptors->get(createInteger(method));
     if(list == nullptr) {
         list = createArrayList<Interceptor>();
-        interceptors->put(createInteger(method),list);
+        mGlobalInterceptors->put(createInteger(method),list);
     }
-    list->add(c);
-    interceptors->put(createInteger(method),list);
+    list->add(c); */
 }
 
 //websocket
@@ -182,20 +179,16 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
         ServletRequest req = createServletRequest(msg,client);
         int method = msg->getHeader()->getMethod();
         HttpResponse response = createHttpResponse();
-        ArrayList<Interceptor> list = interceptors->get(createInteger(method));
-        if(list != nullptr) {
-            auto iterator = list->getIterator();
-            while(iterator->hasValue()) {
-                auto c = iterator->getValue();
-                if(!c->onIntercept()) {
-                    response->getHeader()->setResponseStatus(st(HttpStatus)::BadRequest);
-                    w->write(response);
-                    return;
-                }
-                iterator->next();
+
+        auto gController = mGlobalControllers->get(method);
+        if(gController != nullptr) {
+            auto entity = gController->onInvoke();
+            if(entity != nullptr && entity->getStatus() != st(HttpStatus)::Ok) {
+                response->getHeader()->setResponseStatus(entity->getStatus());
+                w->write(response);
+                return;
             }
         }
-        //add interceptor
 
         String url = msg->getHeader()->getUrl()->getRawUrl();
         File file = mResourceManager->findResource(url);

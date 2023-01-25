@@ -59,7 +59,7 @@ public:
 
     int onPing(String,sp<_WebSocketLinker> client);
 
-    static void addinterceptors(int method,Interceptor);
+    void addGlobalController(int method,ControllerRouter);
 
     static sp<_Server> getInstance();
 
@@ -79,7 +79,7 @@ private:
 
     String mConfigPath;
 
-    static HashMap<Integer,ArrayList<Interceptor>> interceptors;
+    HashMap<int,ControllerRouter> mGlobalControllers;
     ArrayList<String> mDelayRegWsPath;
 };
 

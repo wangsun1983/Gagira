@@ -78,10 +78,15 @@ template <typename T> T getClass(sp<T>) {
             path, instance);                                                   \
     }
 
-#define InjectGlobalInterceptor(method, instance)                              \
-    { st(Server)::addinterceptors(method, instance); }
+#define InjectGlobalController(method,instance,function)                       \
+    {                                                                          \
+        auto func = std::bind(&decltype(getClass(instance))::function,         \
+                              instance.get_pointer());                         \
+        ControllerRouter r = createControllerRouter(func, instance);           \
+        st(Server)::getInstance()->addGlobalController(method, r);             \
+    }
 
-#define InjectWsController(path, instance, function)                    \
+#define InjectWsController(path, instance, function)                           \
     {                                                                          \
         auto func = std::bind(&decltype(getClass(instance))::function,         \
                               instance.get_pointer());                         \
