@@ -18,6 +18,11 @@
 
 namespace gagira {
 
+#define GetPacket()                                                            \
+    ({                                                                         \
+        st(GlobalCacheManager)::getInstance()->getPacket();                    \
+    })
+    
 #define GetIntParam(key)                                                       \
     ({                                                                         \
         auto param = st(GlobalCacheManager)::getInstance()->getParam();        \

@@ -38,4 +38,8 @@ HttpMultiPart _ServletRequest::getMultiPart() {
     return entity->getMultiPart();
 }
 
+HttpPacket _ServletRequest::getPacket() {
+    return mPacket;
+}
+
 }

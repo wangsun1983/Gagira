@@ -66,6 +66,7 @@ public:
 
     HttpMultiPart getMultiPart();
 
+    HttpPacket getPacket();
 private:
     HttpPacket mPacket;
     HttpLinker mLinker;

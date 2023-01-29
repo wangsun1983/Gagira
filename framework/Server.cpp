@@ -176,12 +176,16 @@ int _Server::onPing(String,sp<_WebSocketLinker> client) {
 //http
 void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
     if(event == st(NetEvent)::Message) {
+        //remove thread local cache first
+        st(GlobalCacheManager)::getInstance()->remove();
+
         ServletRequest req = createServletRequest(msg,client);
         int method = msg->getHeader()->getMethod();
         HttpResponse response = createHttpResponse();
 
         auto gController = mGlobalControllers->get(method);
         if(gController != nullptr) {
+            st(GlobalCacheManager)::getInstance()->add(createHttpPacketCache(msg));
             auto entity = gController->onInvoke();
             if(entity != nullptr && entity->getStatus() != st(HttpStatus)::Ok) {
                 response->getHeader()->setResponseStatus(entity->getStatus());

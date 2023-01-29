@@ -19,6 +19,11 @@ _WebSocketRequestCache::_WebSocketRequestCache(ByteArray data,WebSocketLinker c)
     client = c;
 }
 
+//HttpPacketCache
+_HttpPacketCache::_HttpPacketCache(HttpPacket p) {
+    mPacket = p;
+}
+
 //
 _GlobalCacheManager::_GlobalCacheManager() {
     mCaches = createThreadLocal<BaseServerCache>();
@@ -38,9 +43,25 @@ void _GlobalCacheManager::add(BaseServerCache c) {
     mCaches->set(c);
 }
 
+HttpPacket _GlobalCacheManager::getPacket() {
+    auto cache = mCaches->get();
+    if(cache == nullptr) {
+        return nullptr;
+    }
+
+    if(IsInstance(HttpPacketCache,cache)) {
+        return Cast<HttpPacketCache>(cache)->mPacket;
+    } else if(IsInstance(ServletRequestCache,cache)) {
+        auto req =  Cast<ServletRequestCache>(cache);
+        return req->r->getPacket();
+    }
+
+    return nullptr;
+}
+
 ServletRequest _GlobalCacheManager::getRequest() {
     ServletRequestCache cache = Cast<ServletRequestCache>(mCaches->get());
-    return cache->r;
+    return cache == nullptr?nullptr:cache->r;
 }
 
 ControllerParam _GlobalCacheManager::getParam() {

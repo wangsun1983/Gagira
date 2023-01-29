@@ -33,12 +33,20 @@ public:
     ByteArray msg;
 };
 
+DECLARE_CLASS(HttpPacketCache) IMPLEMENTS(BaseServerCache){
+public:
+    _HttpPacketCache(HttpPacket);
+    HttpPacket mPacket;
+};
+
 DECLARE_CLASS(GlobalCacheManager) {
 public:
     static sp<_GlobalCacheManager> getInstance();
 
     void add(BaseServerCache);
+
     ServletRequest getRequest();
+    HttpPacket getPacket();
     ControllerParam getParam();
 
     ByteArray getWsRequest();
