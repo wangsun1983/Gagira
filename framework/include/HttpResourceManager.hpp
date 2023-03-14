@@ -20,7 +20,7 @@ namespace gagira {
 DECLARE_CLASS(HttpResourceManager) {
   public:
     static sp<_HttpResourceManager> getInstance();
-    void setResourceDir(String dir);
+    void addSearchPath(String path);
 
     File findResource(String url);
     void setViewRedirect(String segment, String filename);
@@ -33,7 +33,8 @@ DECLARE_CLASS(HttpResourceManager) {
 
     HashMap<String, String> mRedirectMaps;
 
-    String mResourceDir;
+    ArrayList<String> mSearchPaths;
+
     HashMap<String, File> resourceCaches;
 
     ReadLock mReadLock;

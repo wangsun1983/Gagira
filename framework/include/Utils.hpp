@@ -15,6 +15,7 @@
 #include "String.hpp"
 #include "TextContent.hpp"
 #include "WebSocketRouterManager.hpp"
+#include "HttpResourceManager.hpp"
 
 namespace gagira {
 
@@ -63,6 +64,15 @@ template <typename T> T getClass(sp<T>) {
         HttpRouter router = createHttpRouter(url, r);                          \
         st(HttpRouterManager)::getInstance()->addRouter(method, router);       \
     }
+
+#define InjectResource(path) \
+    st(HttpResourceManager)::getInstance()->addSearchPath(path); 
+
+#define InjectViewRedirect(view,path) \
+    st(HttpResourceManager)::getInstance()->setViewRedirect(view,path); 
+
+#define InjectDefaultHomePage(path) \
+    st(HttpResourceManager)::getInstance()->setViewRedirect("/",path);     
 
 #define InjectInterceptor(method, url, point, instance)                        \
     {                                                                          \

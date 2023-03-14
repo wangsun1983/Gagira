@@ -2,6 +2,8 @@
 #include "HttpLinker.hpp"
 #include "HttpPacket.hpp"
 #include "HttpServer.hpp"
+#include "ForEveryOne.hpp"
+#include "Synchronized.hpp"
 
 namespace gagira {
 
@@ -18,18 +20,17 @@ HttpResourceManager _HttpResourceManager::getInstance() {
 }
 
 _HttpResourceManager::_HttpResourceManager() {
-    mResourceDir = createString("./");
     mRedirectMaps = createHashMap<String, String>();
     resourceCaches = createHashMap<String, File>();
     mReadWriteLock = createReadWriteLock();
     mWriteLock = mReadWriteLock->getWriteLock();
     mReadLock = mReadWriteLock->getReadLock();
-
     mInterceptors = createHashMap<String,ArrayList<Interceptor>>();
+    mSearchPaths = createArrayList<String>();
 }
 
-void _HttpResourceManager::setResourceDir(String dir) { 
-    mResourceDir = dir; 
+void _HttpResourceManager::addSearchPath(String path) { 
+    mSearchPaths->add(path);
 }
 
 void _HttpResourceManager::setViewRedirect(String segment, String filename) {
@@ -37,61 +38,51 @@ void _HttpResourceManager::setViewRedirect(String segment, String filename) {
 }
 
 File _HttpResourceManager::findResource(String path) {
-    //add Interceptor
-    ArrayList<Interceptor> list = mInterceptors->get(path);
-    if(list != nullptr) {
-        auto iterator = list->getIterator();
-        while(iterator->hasValue()) {
-            Interceptor c = iterator->getValue();
-            if(!c->onIntercept()) {
-                return nullptr;
-            }
+    File file = nullptr;
+    //check wheteher it is a redirect
+    printf("path is %s \n",path->toChars());
+    if(path->indexOf(".") == -1) {
+        int start = path->lastIndexOf("/");
+        if(start > 1) {
+            path = path->subString(start + 1,path->size() - start - 1);
         }
+        
+        path = mRedirectMaps->get(path);
     }
 
     {
         AutoLock l(mReadLock);
-        File file = resourceCaches->get(path);
-        if (file != nullptr) {
-            return file;
+        file = resourceCaches->get(path);
+    }
+
+    if(file == nullptr) {
+        ForEveryOne(searchPath,mSearchPaths) {
+            file = createFile(searchPath->append("/",path));
+            if(file->exists()) {
+                printf("i find !!!!,file path is %s \n",file->getAbsolutePath()->toChars());
+                AutoLock l(mWriteLock);
+                resourceCaches->put(path, file);
+                break;
+            }
+            file = nullptr;
         }
     }
 
-    // we check file
-    int index = path->lastIndexOf("/");
-    String lastPath = nullptr;
-    String checkFilePath = nullptr;
-    if (index == -1) {
-        lastPath = mRedirectMaps->get(path);
-    } else {
-        String tempPath = path->subString(index + 1, path->size() - index - 1);
-        lastPath = mRedirectMaps->get(tempPath);
-    }
-
-    if (lastPath != nullptr) {
-        if (lastPath->indexOf(".") == -1) {
-            return nullptr;
+    //add Interceptor
+    if(file != nullptr) {
+        ArrayList<Interceptor> list = mInterceptors->get(path);
+        if(list != nullptr) {
+            auto iterator = list->getIterator();
+            while(iterator->hasValue()) {
+                Interceptor c = iterator->getValue();
+                if(!c->onIntercept()) {
+                    return nullptr;
+                }
+            }
         }
-
-        checkFilePath = path->subString(0, index + 1);
-        checkFilePath = checkFilePath->append(lastPath);
-        checkFilePath = mResourceDir->append("/")->append(checkFilePath);
-    } else {
-        if (path->indexOf(".") == -1) {
-            return nullptr;
-        }
-        checkFilePath = mResourceDir->append("/")->append(path);
     }
 
-    File file = createFile(checkFilePath);
-
-    if (file->exists()) {
-        AutoLock l(mWriteLock);
-        resourceCaches->put(path, file);
-        return file;
-    }
-
-    return nullptr;
+    return file;
 }
 
 void _HttpResourceManager::addResourceInterceptor(String path,Interceptor c) {
