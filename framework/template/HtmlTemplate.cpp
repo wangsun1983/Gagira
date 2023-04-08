@@ -61,7 +61,9 @@ int _HtmlTemplate::import(String html,int start,bool onsection) {
             if(tagEndIndex < html->size() - 1) {
                 String text = nullptr;
                 if(tagEndIndex > 0) {
-                    text = html->subString(tagEndIndex + 2,html->size() - tagEndIndex - 2);
+                    if(html->size() - tagEndIndex - 2 > 0) {
+                        text = html->subString(tagEndIndex + 2,html->size() - tagEndIndex - 2);
+                    }
                 } else {
                     text = html->subString(0,html->size());
                 }
@@ -77,7 +79,9 @@ int _HtmlTemplate::import(String html,int start,bool onsection) {
         if(tagStartIndex < html->size() - 1) {
             String text = nullptr;
             if(tagEndIndex == 0) {
-                text = html->subString(tagEndIndex,tagStartIndex - tagEndIndex); //first 
+                if(tagStartIndex - tagEndIndex > 0) {
+                    text = html->subString(tagEndIndex,tagStartIndex - tagEndIndex); //first 
+                }
             } else {
                 text = html->subString(tagEndIndex + 2,tagStartIndex - tagEndIndex - 2); //first
             }

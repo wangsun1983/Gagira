@@ -2,8 +2,8 @@ frameworkDir = ./framework
 
 include ./framework/config/makefile
 include ./framework/dao/makefile
-include ./framework/mq/makefile
 include ./framework/template/makefile
+include ./framework/distribution/makefile
 
 objs += $(outtmp)/controller.o \
 		$(outtmp)/server.o \
@@ -49,3 +49,4 @@ $(outtmp)/servletrequest.o :$(frameworkDir)/ServletRequest.cpp
 
 $(outtmp)/globalcachemanager.o :$(frameworkDir)/GlobalCacheManager.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/GlobalCacheManager.cpp -o $(outtmp)/globalcachemanager.o
+

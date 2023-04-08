@@ -76,9 +76,8 @@ public:
 
     _MqMessage(String channel,ByteArray data,uint32_t types);
 
-    ByteArray generatePacket();
-
-    static MqMessage generateMessage(ByteArray);
+    // ByteArray generatePacket();
+    // static MqMessage generateMessage(ByteArray);
 
     void setData(ByteArray data);
     void setChannel(String channel);

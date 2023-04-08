@@ -26,22 +26,22 @@ _MqMessage::_MqMessage(String channel,ByteArray data,uint32_t flags):_MqMessage(
     mFlags = flags;
 }
 
-ByteArray _MqMessage::generatePacket() {
-    ByteArray serializeData = serialize();
-    ByteArray finalData = createByteArray(serializeData->size() + sizeof(uint32_t));
-    ByteArrayWriter writer = createByteArrayWriter(finalData);
-    writer->write<uint32_t>(serializeData->size());
-    writer->write(serializeData);
+// ByteArray _MqMessage::generatePacket() {
+//     ByteArray serializeData = serialize();
+//     ByteArray finalData = createByteArray(serializeData->size() + sizeof(uint32_t));
+//     ByteArrayWriter writer = createByteArrayWriter(finalData);
+//     writer->write<uint32_t>(serializeData->size());
+//     writer->write(serializeData);
 
-    return finalData;
-}
+//     return finalData;
+// }
 
-MqMessage _MqMessage::generateMessage(ByteArray data) {
-    ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
-    MqMessage msg = createMqMessage();
-    msg->deserialize(msgData);
-    return msg;
-}
+// MqMessage _MqMessage::generateMessage(ByteArray data) {
+//     ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
+//     MqMessage msg = createMqMessage();
+//     msg->deserialize(msgData);
+//     return msg;
+// }
 
 ByteArray _MqMessage::getData() {
     return mData;

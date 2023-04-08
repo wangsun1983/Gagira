@@ -1,18 +1,18 @@
-#include "MqParser.hpp"
+#include "DistributeMessageParser.hpp"
 
 namespace gagira {
 
-_MqParser::_MqParser(int buffsize) {
+_DistributeMessageParser::_DistributeMessageParser(int buffsize) {
     mBuffer = createByteRingArray(buffsize);
     mReader = createByteRingArrayReader(mBuffer);
     mCurrentMsgLen = 0;
 }
 
-void _MqParser::pushData(ByteArray data) {
+void _DistributeMessageParser::pushData(ByteArray data) {
     mBuffer->push(data);
 }
 
-ArrayList<ByteArray> _MqParser::doParse() {
+ArrayList<ByteArray> _DistributeMessageParser::doParse() {
     ArrayList<ByteArray> result = createArrayList<ByteArray>();
 
     while(1) {

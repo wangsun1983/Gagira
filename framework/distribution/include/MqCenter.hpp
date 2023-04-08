@@ -14,34 +14,37 @@
 #include "ConcurrentHashMap.hpp"
 #include "ConcurrentQueue.hpp"
 #include "CountDownLatch.hpp"
-#include "MqOption.hpp"
-#include "MqLinker.hpp"
+#include "DistributeOption.hpp"
+#include "DistributeLinker.hpp"
+#include "DistributeCenter.hpp"
 #include "UUID.hpp"
 #include "Sha.hpp"
 #include "MqDLQMessage.hpp"
 #include "Base64.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
+#include "DistributeMessageConverter.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(MqCenter) IMPLEMENTS(SocketListener) {
+DECLARE_CLASS(MqCenter) IMPLEMENTS(DistributeCenter) {
 public:
     friend class _MqWorker;
-    _MqCenter(String url,MqOption);
-
-    void waitForExit(long interval = 0);
+    _MqCenter(String url,DistributeOption);
     int start();
     int close();
     ~_MqCenter();
 
 private:
     SocketMonitor mSocketMonitor;
+    DistributeMessageConverter mConverter;
 
-    void onSocketMessage(int,Socket,ByteArray);
+    int onMessage(DistributeLinker,ByteArray);
+    int onNewClient(DistributeLinker);
+    int onDisconnectClient(DistributeLinker);
+
     int dispatchMessage(Socket sock,ByteArray);
-
     int processSubscribe(MqMessage);
     int processUnSubscribe(MqMessage);
     int processPublish(MqMessage);
@@ -53,26 +56,11 @@ private:
     int registWaitAckTask(MqMessage msg);
 
     bool processSendFailMessage(MqDLQMessage msg);
-    InetAddress mAddress;
-    ServerSocket mServerSock;
-
     ConcurrentHashMap<String,ArrayList<OutputStream>> mChannelGroups;
-
-    ConcurrentHashMap<Socket,MqLinker> mClients;
-
     ConcurrentHashMap<String,HashMap<String,ByteArray>> mStickyMessages;
-
-    CountDownLatch mExitLatch;
-
     ThreadScheduledPoolExecutor mWaitAckThreadPools;
     ConcurrentHashMap<String,Future> mWaitAckMessages;
-
     ThreadScheduledPoolExecutor mSchedulePool;
-
-    MqOption mOption;
-
-    //UUID mUuid;
-    //Sha mSha;
 
     ReadWriteLock mPersistRwLock;
     ReadLock mPersistRLock;
@@ -82,8 +70,6 @@ private:
 
     Mutex mDlqMutex;
     Socket mDlqClient;
-
-
 };
 
 }

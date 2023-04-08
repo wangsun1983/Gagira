@@ -9,7 +9,8 @@
 #include "Mutex.hpp"
 #include "ByteRingArray.hpp"
 #include "ByteRingArrayReader.hpp"
-#include "MqParser.hpp"
+#include "DistributeMessageParser.hpp"
+#include "DistributeMessageConverter.hpp"
 #include "ReadWriteLock.hpp"
 #include "System.hpp"
 
@@ -135,8 +136,9 @@ private:
     Socket mSock;
     InputStream mInput;
     OutputStream mOutput;
+    DistributeMessageConverter mConverter;
 
-    MqParser mParser;
+    DistributeMessageParser mParser;
     MqConnectionListener mListener;
 
     SocketMonitor mSocketMonitor;

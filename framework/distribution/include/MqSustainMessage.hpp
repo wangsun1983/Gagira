@@ -2,7 +2,7 @@
 #define __GAGRIA_MQ_SUSTAIN_MESSAGE_HPP__
 
 #include "String.hpp"
-#include "MqOption.hpp"
+#include "DistributeOption.hpp"
 #include "MqCenter.hpp"
 
 using namespace obotcha;

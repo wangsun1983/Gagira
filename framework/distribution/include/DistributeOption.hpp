@@ -1,5 +1,5 @@
-#ifndef __GAGRIA_MQ_OPTION_HPP__
-#define __GAGRIA_MQ_OPTION_HPP__
+#ifndef __GAGRIA_DISTRIBUTE_OPTION_HPP__
+#define __GAGRIA_DISTRIBUTE_OPTION_HPP__
 
 #include "Object.hpp"
 #include "SocketOption.hpp"
@@ -8,15 +8,15 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(MqOption) IMPLEMENTS(SocketOption) {
+DECLARE_CLASS(DistributeOption) IMPLEMENTS(SocketOption) {
 public:
-    _MqOption();
+    _DistributeOption();
 
-    _MqOption *setClientRecvBuffSize(int);
-    _MqOption *setAckTimeout(int);
-    _MqOption *setReDeliveryInterval(long);
-    _MqOption *setReDeliveryTimes(int);
-    _MqOption *setWaitPostBack(bool);
+    _DistributeOption *setClientRecvBuffSize(int);
+    _DistributeOption *setAckTimeout(int);
+    _DistributeOption *setReDeliveryInterval(long);
+    _DistributeOption *setReDeliveryTimes(int);
+    _DistributeOption *setWaitPostBack(bool);
 
     int getClientRecvBuffSize();
     int getAckTimeout();

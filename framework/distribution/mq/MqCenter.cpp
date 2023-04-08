@@ -17,80 +17,50 @@ using namespace obotcha;
 
 namespace gagira {
 
-_MqCenter::_MqCenter(String url,MqOption option) {
-    mSocketMonitor = createSocketMonitor();
-    mAddress = createHttpUrl(url)->getInetAddress()->get(0);
+_MqCenter::_MqCenter(String url,DistributeOption option):_DistributeCenter(url,option) {
     mChannelGroups = createConcurrentHashMap<String,ArrayList<OutputStream>>();
-    mClients = createConcurrentHashMap<Socket,MqLinker>();
-    mExitLatch = createCountDownLatch(1);
     mStickyMessages = createConcurrentHashMap<String,HashMap<String,ByteArray>>();
-    mOption = (option == nullptr)?createMqOption():option;
-
-    //create server socket
-    mServerSock = createSocketBuilder()->setAddress(mAddress)->newServerSocket();
-    //mUuid = createUUID();
     mWaitAckThreadPools = createExecutorBuilder()->newScheduledThreadPool();
     mWaitAckMessages = createConcurrentHashMap<String,Future>();
-
     mPersistRwLock = createReadWriteLock();;
     mPersistRLock = mPersistRwLock->getReadLock();
     mPersistWLock = mPersistRwLock->getWriteLock();
-
     mPostBackCompleted = ((option != nullptr && option->getWaitPostBack())
                             ?false:true);
-
     mSchedulePool = createThreadScheduledPoolExecutor(-1,1000);
     mDlqMutex = createMutex();
 }
 
 int _MqCenter::start() {
-    Inspect(mServerSock->bind() < 0 
-            || mSocketMonitor->bind(mServerSock,AutoClone(this)) < 0,
-            -1);
+    return st(DistributeCenter)::start();
+}
+
+int _MqCenter::onMessage(DistributeLinker linker,ByteArray data) {
+    dispatchMessage(linker->getSocket(),data);
     return 0;
 }
 
-void _MqCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
-    
-    switch(event) {
-        case st(NetEvent)::Connect: {
-            auto client = createMqLinker(mOption->getClientRecvBuffSize());
-            mClients->put(sock,client);
-        }
-        break;
+int _MqCenter::onNewClient(DistributeLinker linker) {
+    //doNothing
+    return 0;
+}
 
-        case st(NetEvent)::Message: {
-            auto client = mClients->get(sock);
-            if(client == nullptr) {
-                LOG(ERROR)<<"Received a message,but can not find it's connection";
-                return;
-            }
-
-            ArrayList<ByteArray> result = client->doParse(data);
-            if(result != nullptr && result->size() != 0) {
-                ForEveryOne(msg,result) {
-                    dispatchMessage(sock,msg);
-                }
-            }
-        }
-        break;
-
-        case st(NetEvent)::Disconnect: {
-            if(sock == mPersistenceClient) {
-                AutoLock l(mPersistWLock);
-                mPersistenceClient = nullptr;
-            } else if(sock == mDlqClient){
-                AutoLock l(mDlqMutex);
-                mDlqClient = nullptr;
-            } 
-            mClients->remove(sock);
-        }
-        break;
+int _MqCenter::onDisconnectClient(DistributeLinker linker) {
+    auto sock = linker->getSocket();
+    if(sock == mPersistenceClient) {
+        AutoLock l(mPersistWLock);
+        mPersistenceClient = nullptr;
+    } else if(sock == mDlqClient){
+        AutoLock l(mDlqMutex);
+        mDlqClient = nullptr;
     }
+
+    return 0;
 }
 
 int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
-    auto msg = st(MqMessage)::generateMessage(data);
+    //auto msg = st(MqMessage)::generateMessage(data);
+    auto msg = mConverter->generateMessage<MqMessage>(data);
     msg->mSocket = sock;
 
     long currentTime = st(System)::currentTimeMillis();
@@ -130,7 +100,7 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
         //send sustain message to client
         MqSustainMessage sustainMsg = createMqSustainMessage(st(MqSustainMessage)::WaitForPostBack,nullptr);
         MqMessage sendData = createMqMessage(nullptr,sustainMsg->serialize(),st(MqMessage)::Sustain);
-        sock->getOutputStream()->write(sendData->generatePacket());
+        sock->getOutputStream()->write(mConverter->generatePacket(sendData));
         return -1;
     }
     
@@ -155,26 +125,9 @@ int _MqCenter::dispatchMessage(Socket sock,ByteArray data) {
 
 
 int _MqCenter::close() {
-    if(mServerSock != nullptr) {
-        mServerSock->close();
-        mSocketMonitor->unbind(mServerSock);
-        mServerSock = nullptr;
-    }
-
-    if(mSocketMonitor != nullptr) {
-        mSocketMonitor->close();
-        mSocketMonitor = nullptr;
-    }
-
     mChannelGroups->clear();
-    mClients->clear();
-
-    mExitLatch->countDown();
+    st(DistributeCenter)::close();
     return 0;
-}
-
-void _MqCenter::waitForExit(long interval) {
-    mExitLatch->await(interval);
 }
 
 //process function
@@ -214,9 +167,9 @@ int _MqCenter::processSubscribeDLQ(MqMessage msg) {
 
 int _MqCenter::registWaitAckTask(MqMessage msg) {
     //msg->setAckToken(mUuid->generate());
-    auto fu = mWaitAckThreadPools->schedule(mOption->getAckTimeout(),[this,msg](){
+    auto fu = mWaitAckThreadPools->schedule(getOption()->getAckTimeout(),[this,msg](){
         int retryTimes = msg->getRetryTimes();
-        if(retryTimes < mOption->getReDeliveryTimes()) {
+        if(retryTimes < getOption()->getReDeliveryTimes()) {
             msg->setRetryTimes(retryTimes + 1);
             processPublish(msg);
         }
@@ -245,7 +198,7 @@ int _MqCenter::processPublish(MqMessage msg) {
         mChannelGroups->syncReadAction([this,&msg]{
             auto channels = mChannelGroups->get(msg->getChannel());
             if(channels != nullptr && channels->size() != 0) {
-                auto packet = msg->generatePacket();
+                auto packet = mConverter->generatePacket(msg);
                 auto originStream = msg->mSocket->getOutputStream();
                 if(msg->isOneShot()) {
                     int random = st(System)::currentTimeMillis()%channels->size();
@@ -292,7 +245,7 @@ int _MqCenter::processPublish(MqMessage msg) {
             } else {
                 MqDLQMessage dlqMessage = createMqDLQMessage();
                 dlqMessage->setCode(st(MqDLQMessage)::NoClient)
-                            ->setData(msg->generatePacket())
+                            ->setData(mConverter->generatePacket(msg))
                             ->setPointTime(st(System)::currentTimeMillis())
                             ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress())
                             ->setToken(msg->getToken());
@@ -309,7 +262,7 @@ int _MqCenter::processPublish(MqMessage msg) {
                 stickyMap = createHashMap<String,ByteArray>();
                 mStickyMessages->put(channel,stickyMap);
             }
-            stickyMap->put(msg->getToken(),msg->generatePacket());
+            stickyMap->put(msg->getToken(),mConverter->generatePacket(msg));
         });
     }
 
@@ -361,7 +314,7 @@ int _MqCenter::processUnSubscribe(MqMessage msg) {
             MqMessage resp = createMqMessage(channel,nullptr,st(MqMessage)::Detach);
             auto outputstream = msg->mSocket->getOutputStream();
 
-            outputstream->write(resp->generatePacket());
+            outputstream->write(mConverter->generatePacket(resp));
             channels->remove(outputstream);
             if(channels->size() == 0) {
                 mChannelGroups->remove(channel);
@@ -377,7 +330,7 @@ bool _MqCenter::processSendFailMessage(MqDLQMessage msg) {
     Synchronized(mDlqMutex){
         Inspect(mDlqClient == nullptr,false);
         MqMessage resp = createMqMessage(nullptr,msg->serialize(),st(MqMessage)::Publish);
-        return mDlqClient->getOutputStream()->write(resp->generatePacket()) > 0;
+        return mDlqClient->getOutputStream()->write(mConverter->generatePacket(resp)) > 0;
     }
 
     return false;

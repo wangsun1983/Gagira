@@ -39,8 +39,7 @@ void _HttpResourceManager::setViewRedirect(String segment, String filename) {
 
 File _HttpResourceManager::findResource(String path) {
     File file = nullptr;
-    //check wheteher it is a redirect
-    printf("path is %s \n",path->toChars());
+    //check wheteher it is a redirect    
     if(path->indexOf(".") == -1) {
         int start = path->lastIndexOf("/");
         if(start > 1) {
@@ -48,6 +47,10 @@ File _HttpResourceManager::findResource(String path) {
         }
         
         path = mRedirectMaps->get(path);
+
+        if(path == nullptr) {
+            return nullptr;
+        }
     }
 
     {
@@ -59,7 +62,6 @@ File _HttpResourceManager::findResource(String path) {
         ForEveryOne(searchPath,mSearchPaths) {
             file = createFile(searchPath->append("/",path));
             if(file->exists()) {
-                printf("i find !!!!,file path is %s \n",file->getAbsolutePath()->toChars());
                 AutoLock l(mWriteLock);
                 resourceCaches->put(path, file);
                 break;

@@ -63,7 +63,8 @@ _MqConnection::_MqConnection(String s,MqConnectionListener l) {
 
     mListener = l;
     mSocketMonitor = createSocketMonitor();
-    mParser = createMqParser(1024*4);
+    mParser = createDistributeMessageParser(1024*4);
+    mConverter = createDistributeMessageConverter();
 
     mIsConnected = false;
     mStatusReadWriteLock = createReadWriteLock();
@@ -113,7 +114,6 @@ bool _MqConnection::postBackMessage(ByteArray data,uint32_t flags) {
     return sendMessage(msg);
 }
 
-
 void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
     switch(event) {
         case st(NetEvent)::Message: {
@@ -121,7 +121,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
             auto result = mParser->doParse();
             if(result != nullptr && result->size() != 0) {
                 ForEveryOne(data,result) {
-                    auto msg = st(MqMessage)::generateMessage(data);
+                    auto msg = mConverter->generateMessage<MqMessage>(data);
                     String channel = msg->getChannel();
                     if(mListener != nullptr) {
                         if(msg->getType() == st(MqMessage)::Detach) {
@@ -132,7 +132,7 @@ void _MqConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                                 if(msg->isAcknowledge() && ret == st(MqConnectionListener)::AutoAck) {
                                     msg->setFlags(st(MqMessage)::Ack);
                                     msg->clearData();
-                                    s->getOutputStream()->write(msg->generatePacket());
+                                    s->getOutputStream()->write(mConverter->generatePacket(msg));
                                 }
                             } else {
                                 MqSustainMessage sustainMsg = createMqSustainMessage();
@@ -188,7 +188,7 @@ int _MqConnection::close() {
 bool _MqConnection::sendMessage(MqMessage msg) {
     AutoLock l(mStatusReadLock);
     Inspect(!mIsConnected,false);
-    auto ret = mOutput->write(msg->generatePacket()) > 0;
+    auto ret = mOutput->write(mConverter->generatePacket(msg)) > 0;
     return ret;
 }
 

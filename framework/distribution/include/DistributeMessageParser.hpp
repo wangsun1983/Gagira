@@ -1,5 +1,5 @@
-#ifndef __GAGRIA_MQ_PARSER_HPP__
-#define __GAGRIA_MQ_PARSER_HPP__
+#ifndef __GAGRIA_DISTRIBUTE_MESSAGE_PARSER_HPP__
+#define __GAGRIA_DISTRIBUTE_MESSAGE_PARSER_HPP__
 
 #include "Object.hpp"
 #include "ByteArray.hpp"
@@ -11,9 +11,9 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(MqParser) {
+DECLARE_CLASS(DistributeMessageParser) {
 public:
-    _MqParser(int buffsize);
+    _DistributeMessageParser(int buffsize);
 
     void pushData(ByteArray);
     ArrayList<ByteArray> doParse();
