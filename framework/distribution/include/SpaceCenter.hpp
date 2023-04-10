@@ -9,6 +9,7 @@
 #include "ServerSocket.hpp"
 #include "DistributeCenter.hpp"
 #include "DistributeOption.hpp"
+#include "DistributeMessageConverter.hpp"
 
 using namespace obotcha;
 
@@ -23,7 +24,10 @@ public:
     int onDisconnectClient(DistributeLinker);
 
 private:
-    
+    DistributeMessageConverter mConverter;
+
+    ConcurrentHashMap<String,ByteArray> mDatas;
+    ConcurrentHashMap<String,ArrayList<DistributeLinker>> mListeners;
 };
 
 }

@@ -17,19 +17,85 @@ public:
         Monitor,
         UnMonitor,
         Update,
-        Get,
-        Delete
+        Acquire,
+        Remove,
+        NotifyUpdate,
+        NotifyRemove,
+    };
+
+    enum ResultType {
+        Ok = 0,
+        IlleaglMd5sum,
     };
 
     uint32_t event;
+    String tag;
     ByteArray data;
-    String token;
-    String md5sum;
+    String md5sum; //form data md5sum 
 
-    // static sp<_SpaceMessage> generateMessage(ByteArray);
-    // ByteArray generatePacket();
+    _SpaceMessage();
+    _SpaceMessage(int event,String tag,ByteArray data,String md5sum);
 
-    DECLARE_REFLECT_FIELD(SpaceMessage,event,data,token,md5sum);
+    DECLARE_REFLECT_FIELD(SpaceMessage,event,tag,data,md5sum);
+};
+
+//---SapceMonitorMessage--
+DECLARE_CLASS(SpaceMonitorMessage) IMPLEMENTS(SpaceMessage) {
+public:
+    _SpaceMonitorMessage(ArrayList<String> list);
+    _SpaceMonitorMessage(String);
+};
+
+//---SapceUnMonitorMessage--
+DECLARE_CLASS(SpaceUnMonitorMessage) IMPLEMENTS(SpaceMessage) {
+public:
+    _SpaceUnMonitorMessage(ArrayList<String> list);
+    _SpaceUnMonitorMessage(String);
+};
+
+//---SapceUpdateMessage--
+DECLARE_CLASS(SpaceUpdateMessage) IMPLEMENTS(SpaceMessage) {
+public:
+    _SpaceUpdateMessage(String tag,ByteArray value,String md5sum);
+};
+
+//---SapceAcquireMessage--
+DECLARE_CLASS(SpaceAcquireMessage) IMPLEMENTS(SpaceMessage) {
+public:
+    _SpaceAcquireMessage(String);
+};
+
+//---SpaceRemoveMessage--
+DECLARE_CLASS(SpaceRemoveMessage) IMPLEMENTS(SpaceMessage) {
+public:
+    _SpaceRemoveMessage(String tag,String md5sum);
+};
+
+//---SpaceMessageResult---
+DECLARE_CLASS(SpaceMessageResult) IMPLEMENTS(Serializable) {
+public:
+    int result;
+    ByteArray data;
+    DECLARE_REFLECT_FIELD(SpaceMessageResult,result,data);
+};
+
+//---SpaceAcquireMessageResult---
+DECLARE_CLASS(SpaceAcquireMessageResult) IMPLEMENTS(SpaceMessageResult) {
+public:
+    _SpaceAcquireMessageResult(int result,ByteArray data);
+};
+
+//---SpaceUpdateMessageResult---
+DECLARE_CLASS(SpaceUpdateMessageResult) IMPLEMENTS(SpaceMessageResult) {
+public:
+    _SpaceUpdateMessageResult(int result,ByteArray data);
+};
+
+
+//---SpaceNotifyMessage---
+DECLARE_CLASS(SpaceNotifyMessage) IMPLEMENTS(SpaceMessage) {
+public:
+    _SpaceNotifyMessage(int event,String tag,ByteArray data);
 };
 
 }
