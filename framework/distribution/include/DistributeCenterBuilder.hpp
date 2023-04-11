@@ -3,8 +3,9 @@
 
 #include "String.hpp"
 #include "DistributeOption.hpp"
-#include "MqCenter.hpp"
+#include "BroadcastCenter.hpp"
 #include "SpaceCenter.hpp"
+#include "QueueCenter.hpp"
 
 using namespace obotcha;
 
@@ -18,7 +19,8 @@ public:
     _DistributeCenterBuilder * setOption(DistributeOption option);
     
     SpaceCenter buildSpaceCenter();
-    MqCenter buildMqCenter();
+    BroadcastCenter buildBroadcastCenter();
+    QueueCenter buildQueueCenter();
 
 private:
     String mUrl;

@@ -1,5 +1,5 @@
-#ifndef __GAGRIA_MQ_CENTOR_HPP__
-#define __GAGRIA_MQ_CENTOR_HPP__
+#ifndef __GAGRIA_BROADCAST_CENTOR_HPP__
+#define __GAGRIA_BROADCAST_CENTOR_HPP__
 
 #include <atomic>
 
@@ -8,7 +8,7 @@
 #include "SocketMonitor.hpp"
 #include "SocketListener.hpp"
 #include "InetAddress.hpp"
-#include "MqMessage.hpp"
+#include "BroadcastMessage.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
 #include "Random.hpp"
 #include "ConcurrentHashMap.hpp"
@@ -19,7 +19,7 @@
 #include "DistributeCenter.hpp"
 #include "UUID.hpp"
 #include "Sha.hpp"
-#include "MqDLQMessage.hpp"
+#include "BroadcastDLQMessage.hpp"
 #include "Base64.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
 #include "DistributeMessageConverter.hpp"
@@ -28,13 +28,13 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(MqCenter) IMPLEMENTS(DistributeCenter) {
+DECLARE_CLASS(BroadcastCenter) IMPLEMENTS(DistributeCenter) {
 public:
-    friend class _MqWorker;
-    _MqCenter(String url,DistributeOption);
+    friend class _BroadcastWorker;
+    _BroadcastCenter(String url,DistributeOption);
     int start();
     int close();
-    ~_MqCenter();
+    ~_BroadcastCenter();
 
 private:
     SocketMonitor mSocketMonitor;
@@ -45,17 +45,17 @@ private:
     int onDisconnectClient(DistributeLinker);
 
     int dispatchMessage(Socket sock,ByteArray);
-    int processSubscribe(MqMessage);
-    int processUnSubscribe(MqMessage);
-    int processPublish(MqMessage);
-    int processAck(MqMessage);
-    int processPostBack(MqMessage);
-    int processSubscribePersistence(MqMessage);
-    int processSubscribeDLQ(MqMessage);
+    int processSubscribe(BroadcastMessage);
+    int processUnSubscribe(BroadcastMessage);
+    int processPublish(BroadcastMessage);
+    int processAck(BroadcastMessage);
+    int processPostBack(BroadcastMessage);
+    int processSubscribePersistence(BroadcastMessage);
+    int processSubscribeDLQ(BroadcastMessage);
     
-    int registWaitAckTask(MqMessage msg);
+    int registWaitAckTask(BroadcastMessage msg);
 
-    bool processSendFailMessage(MqDLQMessage msg);
+    bool processSendFailMessage(BroadcastDLQMessage msg);
     ConcurrentHashMap<String,ArrayList<OutputStream>> mChannelGroups;
     ConcurrentHashMap<String,HashMap<String,ByteArray>> mStickyMessages;
     ThreadScheduledPoolExecutor mWaitAckThreadPools;

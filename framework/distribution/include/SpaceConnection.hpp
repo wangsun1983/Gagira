@@ -5,7 +5,6 @@
 #include "InetAddress.hpp"
 #include "Socket.hpp"
 #include "SocketMonitor.hpp"
-#include "MqMessage.hpp"
 #include "Mutex.hpp"
 #include "ByteRingArray.hpp"
 #include "ByteRingArrayReader.hpp"

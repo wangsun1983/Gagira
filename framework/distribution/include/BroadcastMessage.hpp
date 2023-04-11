@@ -1,5 +1,5 @@
-#ifndef __GAGRIA_MQ_MESSAGE_HPP__
-#define __GAGRIA_MQ_MESSAGE_HPP__
+#ifndef __GAGRIA_BROADCAST_MESSAGE_HPP__
+#define __GAGRIA_BROADCAST_MESSAGE_HPP__
 
 #include "String.hpp"
 #include "InetAddress.hpp"
@@ -15,20 +15,20 @@ using namespace obotcha;
 
 namespace gagira {
 
-class _MqWorker;
-class _MqCenter;
+class _BroadcastWorker;
+class _BroadcastCenter;
 
 /**
  *
- * MqMessage Serializable Struct
+ * BroadcastMessage Serializable Struct
  * {totalsize|size1|data1|size2|data2....}
  *
  */
-DECLARE_CLASS(MqMessage) IMPLEMENTS(Serializable){
+DECLARE_CLASS(BroadcastMessage) IMPLEMENTS(Serializable){
 public:
-    friend class _MqWorker;
-    friend class _MqCenter;
-    friend class _MqStreamGroup;
+    friend class _BroadcastWorker;
+    friend class _BroadcastCenter;
+    friend class _BroadcastStreamGroup;
 
     enum MessageSymbol {
         //message type
@@ -43,12 +43,12 @@ public:
         //2.If client was removed from server,send this message.
         Detach = 1<<6,
 
-        //send this message to make mq send send persistent 
+        //send this message to make Broadcast send send persistent 
         //message to the client to save.
         SubscribePersistence = 1<<7,
         PostBack = 1<<8,
 
-        //regist as dlq,mq center will send message which failed 
+        //regist as dlq,Broadcast center will send message which failed 
         //to be sent to this client
         SubscribeDLQ = 1<<9,
         
@@ -72,12 +72,12 @@ public:
         DelayFlag = 1<<25,//TODO
     };
 
-    _MqMessage();
+    _BroadcastMessage();
 
-    _MqMessage(String channel,ByteArray data,uint32_t types);
+    _BroadcastMessage(String channel,ByteArray data,uint32_t types);
 
     // ByteArray generatePacket();
-    // static MqMessage generateMessage(ByteArray);
+    // static BroadcastMessage generateMessage(ByteArray);
 
     void setData(ByteArray data);
     void setChannel(String channel);
@@ -122,7 +122,7 @@ private:
     static Sha mSha;
 
 public:
-    DECLARE_REFLECT_FIELD(MqMessage,mChannel,mToken,mData,mFlags,mExpireTime,mPublishTime);
+    DECLARE_REFLECT_FIELD(BroadcastMessage,mChannel,mToken,mData,mFlags,mExpireTime,mPublishTime);
 };
 
 

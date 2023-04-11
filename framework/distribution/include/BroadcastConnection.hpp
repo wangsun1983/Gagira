@@ -1,11 +1,11 @@
-#ifndef __GAGRIA_MQ_CONNECTION_HPP__
-#define __GAGRIA_MQ_CONNECTION_HPP__
+#ifndef __GAGRIA_BROADCAST_CONNECTION_HPP__
+#define __GAGRIA_BROADCAST_CONNECTION_HPP__
 
 #include "String.hpp"
 #include "InetAddress.hpp"
 #include "Socket.hpp"
 #include "SocketMonitor.hpp"
-#include "MqMessage.hpp"
+#include "BroadcastMessage.hpp"
 #include "Mutex.hpp"
 #include "ByteRingArray.hpp"
 #include "ByteRingArrayReader.hpp"
@@ -18,7 +18,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(MqConnectionListener) {
+DECLARE_CLASS(BroadcastConnectionListener) {
 public:
     enum MessageResponse {
         AutoAck = 0,
@@ -74,37 +74,37 @@ public:
     ByteArray t;
 };
 
-DECLARE_CLASS(MqMessageParam) {
+DECLARE_CLASS(BroadcastMessageParam) {
 public:
-    _MqMessageParam();
-    _MqMessageParam* setFlags(uint32_t);
-    _MqMessageParam* setTTL(uint32_t);
-    _MqMessageParam* setDelayInterval(uint32_t);
+    _BroadcastMessageParam();
+    _BroadcastMessageParam* setFlags(uint32_t);
+    _BroadcastMessageParam* setTTL(uint32_t);
+    _BroadcastMessageParam* setDelayInterval(uint32_t);
 
     uint32_t getFlags();
     uint32_t getTTL();
     uint32_t getDelayInterval();
 
-    sp<_MqMessageParam> build();
+    sp<_BroadcastMessageParam> build();
 private:
     uint32_t mFlags;
     uint32_t mTTL;
     uint32_t mDelayInterval;
 };
 
-DECLARE_CLASS(MqConnection) IMPLEMENTS(SocketListener) {
+DECLARE_CLASS(BroadcastConnection) IMPLEMENTS(SocketListener) {
 public:
-    _MqConnection(String,MqConnectionListener l = nullptr);
-    ~_MqConnection();
+    _BroadcastConnection(String,BroadcastConnectionListener l = nullptr);
+    ~_BroadcastConnection();
     int connect();
     int close();
 
     template<typename T>
-    bool publishMessage(String channel,T obj,MqMessageParam param = nullptr) {
+    bool publishMessage(String channel,T obj,BroadcastMessageParam param = nullptr) {
         ByteArray data = _connection_helper<T>(obj).toData();
         uint32_t flags = (param == nullptr)?0:param->getFlags();
         
-        MqMessage msg = createMqMessage(channel,data,flags|st(MqMessage)::Publish);
+        BroadcastMessage msg = createBroadcastMessage(channel,data,flags|st(BroadcastMessage)::Publish);
         if(param != nullptr) {
             msg->setTTL(param->getTTL());
             if(param->getDelayInterval() != 0) {
@@ -115,23 +115,23 @@ public:
     }
 
     template<typename T>
-    bool publishStickMessage(String channel,T obj,MqMessageParam param = nullptr) {
+    bool publishStickMessage(String channel,T obj,BroadcastMessageParam param = nullptr) {
         if(param == nullptr) {
-            param = createMqMessageParam();
+            param = createBroadcastMessageParam();
         }
-        param->setFlags(param->getFlags()|st(MqMessage)::Publish|st(MqMessage)::StickFlag);
+        param->setFlags(param->getFlags()|st(BroadcastMessage)::Publish|st(BroadcastMessage)::StickFlag);
         return publishMessage(channel,obj,param);
     }
 
     bool subscribeChannel(String channel);
     bool unSubscribeChannel(String channel);
     bool publisAckMessage(String channel,String token);
-    bool postBackMessage(ByteArray data,uint32_t flags = st(MqMessage)::StartFalg);
+    bool postBackMessage(ByteArray data,uint32_t flags = st(BroadcastMessage)::StartFalg);
     bool subscribePersistenceChannel();
     bool subscribeDLQChannel();
 
 private:
-    bool sendMessage(MqMessage);
+    bool sendMessage(BroadcastMessage);
     InetAddress mAddress;
     Socket mSock;
     InputStream mInput;
@@ -139,7 +139,7 @@ private:
     DistributeMessageConverter mConverter;
 
     DistributeMessageParser mParser;
-    MqConnectionListener mListener;
+    BroadcastConnectionListener mListener;
 
     SocketMonitor mSocketMonitor;
     void onSocketMessage(int,Socket,ByteArray);

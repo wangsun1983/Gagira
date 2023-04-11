@@ -13,7 +13,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-//---------- MqConnection
+//---------- SpaceConnection
 _SpaceConnection::_SpaceConnection(String s,SpaceConnectionListener l) {
     HttpUrl url = createHttpUrl(s);
     mAddress = url->getInetAddress()->get(0);

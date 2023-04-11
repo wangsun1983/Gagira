@@ -20,12 +20,16 @@ _DistributeCenterBuilder * _DistributeCenterBuilder::setOption(DistributeOption 
     return this;
 }
 
-MqCenter _DistributeCenterBuilder::buildMqCenter() {
-    return createMqCenter(mUrl,mOption);
+BroadcastCenter _DistributeCenterBuilder::buildBroadcastCenter() {
+    return createBroadcastCenter(mUrl,mOption);
 }
 
 SpaceCenter _DistributeCenterBuilder::buildSpaceCenter() {
     return createSpaceCenter(mUrl,mOption);
+}
+
+QueueCenter _DistributeCenterBuilder::buildQueueCenter() {
+    return createQueueCenter(mUrl,mOption);
 }
 
 }

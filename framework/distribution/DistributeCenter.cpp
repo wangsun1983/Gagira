@@ -2,15 +2,12 @@
 #include "HttpUrl.hpp"
 #include "SocketBuilder.hpp"
 #include "NetEvent.hpp"
-#include "MqMessage.hpp"
 #include "ForEveryOne.hpp"
 #include "System.hpp"
 #include "ExecutorBuilder.hpp"
 #include "Log.hpp"
 #include "Inspect.hpp"
-#include "MqSustainMessage.hpp"
 #include "Synchronized.hpp"
-#include "MqDLQMessage.hpp"
 #include "Md.hpp"
 
 using namespace obotcha;

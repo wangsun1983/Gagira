@@ -1,7 +1,8 @@
 distributionDir = ./framework/distribution
 
-include ./framework/distribution/mq/makefile
+include ./framework/distribution/broadcast/makefile
 include ./framework/distribution/space/makefile
+include ./framework/distribution/queue/makefile
 
 objs += $(outtmp)/distributemessageparser.o \
 		$(outtmp)/distributelinker.o \
