@@ -45,7 +45,7 @@ public:
             return result;
         }
 
-        QueueMessage msg = createQueueMessage(st(QueueMessage)::ClientNoWait,nullptr);
+        msg = createQueueMessage(st(QueueMessage)::ClientNoWait,nullptr);
         mOutput->write(mConverter->generatePacket(msg));    
         return nullptr;
     }

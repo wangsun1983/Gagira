@@ -3,6 +3,7 @@
 
 #include "Object.hpp"
 #include "SocketOption.hpp"
+#include "String.hpp"
 
 using namespace obotcha;
 

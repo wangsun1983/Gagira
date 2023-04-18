@@ -64,6 +64,4 @@ bool _DistributeOption::getWaitPostBack() {
     return mWaitPostBack;
 }
 
-
-
 }

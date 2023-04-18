@@ -32,5 +32,9 @@ QueueCenter _DistributeCenterBuilder::buildQueueCenter() {
     return createQueueCenter(mUrl,mOption);
 }
 
+DocumentCenter _DistributeCenterBuilder::buildDocumentCenter() {
+    return createDocumentCenter(mUrl,Cast<DocumentOption>(mOption));
+}
+
 }
 

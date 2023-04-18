@@ -39,7 +39,7 @@ cflags = -fpic \
 		-I ./3rdparty/Obotcha/include/external/glog/ \
 		-I ./framework/include/ \
 		-I ./framework/template/include/ \
-		-I ./framework/mq/include/ \
+		-I ./framework/distribution/include/ \
 		-I ./framework/config/include \
 		-I ./framework/dao/include \
 		-I ./framework/app/include \

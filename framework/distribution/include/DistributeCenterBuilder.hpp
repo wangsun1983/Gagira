@@ -6,6 +6,7 @@
 #include "BroadcastCenter.hpp"
 #include "SpaceCenter.hpp"
 #include "QueueCenter.hpp"
+#include "DocumentCenter.hpp"
 
 using namespace obotcha;
 
@@ -21,6 +22,7 @@ public:
     SpaceCenter buildSpaceCenter();
     BroadcastCenter buildBroadcastCenter();
     QueueCenter buildQueueCenter();
+    DocumentCenter buildDocumentCenter();
 
 private:
     String mUrl;

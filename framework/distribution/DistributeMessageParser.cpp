@@ -9,7 +9,12 @@ _DistributeMessageParser::_DistributeMessageParser(int buffsize) {
 }
 
 void _DistributeMessageParser::pushData(ByteArray data) {
+    printf("mBuffer capacity is %d,data size is %d \n",mBuffer->getCapacity(),data->size());
     mBuffer->push(data);
+}
+
+int _DistributeMessageParser::getBufferSize() {
+    return mBuffer->getCapacity();
 }
 
 ArrayList<ByteArray> _DistributeMessageParser::doParse() {
@@ -17,6 +22,7 @@ ArrayList<ByteArray> _DistributeMessageParser::doParse() {
 
     while(1) {
         int availableDataSize = mBuffer->getStoredDataSize();
+        printf("DistributeMessageParser availableDataSize is %d,mCurrentMsgLen is %d \n",availableDataSize,mCurrentMsgLen);
         if(mCurrentMsgLen != 0) {
             if(mCurrentMsgLen <= availableDataSize) {
                 mReader->move(mCurrentMsgLen);
@@ -31,7 +37,7 @@ ArrayList<ByteArray> _DistributeMessageParser::doParse() {
         }
         break;
     }
-
+    printf("DistributeMessageParser,result size is %d \n",result->size());
     return result;
 }
 

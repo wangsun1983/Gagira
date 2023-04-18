@@ -35,11 +35,13 @@ public:
     virtual int onMessage(DistributeLinker,ByteArray) = 0;
     virtual int onNewClient(DistributeLinker) = 0;
     virtual int onDisconnectClient(DistributeLinker) = 0;
-    
+
+protected:
+    InetAddress mAddress;
+
 private:
     SocketMonitor mSocketMonitor;
     void onSocketMessage(int,Socket,ByteArray);
-    InetAddress mAddress;
     ServerSocket mServerSock;
     ConcurrentHashMap<Socket,DistributeLinker> mClients;
     CountDownLatch mExitLatch;

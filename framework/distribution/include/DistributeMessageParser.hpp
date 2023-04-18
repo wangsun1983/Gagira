@@ -18,6 +18,8 @@ public:
     void pushData(ByteArray);
     ArrayList<ByteArray> doParse();
 
+    int getBufferSize();
+
 private:
     ByteRingArray mBuffer;
     ByteRingArrayReader mReader;
