@@ -68,6 +68,10 @@ void _DistributeCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
     }
 }
 
+DistributeLinker _DistributeCenter::getLinker(Socket sock) {
+    return mClients->get(sock);
+}
+
 int _DistributeCenter::close() {
     if(mServerSock != nullptr) {
         mServerSock->close();

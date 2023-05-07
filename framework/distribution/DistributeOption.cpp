@@ -1,4 +1,5 @@
 #include "DistributeOption.hpp"
+#include "DistributeHandler.hpp"
 
 using namespace obotcha;
 
@@ -44,6 +45,11 @@ _DistributeOption *_DistributeOption::setWaitPostBack(bool value) {
     return this;
 }
 
+_DistributeOption *_DistributeOption::setHandler(DistributeHandler h) {
+    mHandler = h;
+    return this;
+}
+
 int _DistributeOption::getClientRecvBuffSize() {
     return mClientRecvBuffSize;
 }
@@ -62,6 +68,10 @@ int _DistributeOption::getReDeliveryTimes() {
 
 bool _DistributeOption::getWaitPostBack() {
     return mWaitPostBack;
+}
+
+DistributeHandler _DistributeOption::getHandler() {
+    return mHandler;
 }
 
 }

@@ -1,5 +1,5 @@
-#ifndef __GAGRIA_DOCUMENT_CONNECTION_HPP__
-#define __GAGRIA_DOCUMENT_CONNECTION_HPP__
+#ifndef __GAGRIA_ARCHIVE_CONNECTION_HPP__
+#define __GAGRIA_ARCHIVE_CONNECTION_HPP__
 
 #include "String.hpp"
 #include "SocketListener.hpp"
@@ -13,14 +13,22 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(DocumentConnection) {
+DECLARE_CLASS(ArchiveConnection) {
 public:
-    _DocumentConnection(String);
-    ~_DocumentConnection();
+    _ArchiveConnection(String);
+    ~_ArchiveConnection();
 
     int upload(File);
-
     int download(String filename,String savepath);
+    uint64_t querySize(String filename);
+
+    //ByteArray read(String filename, uint32_t start = 0,uint32_t length = 0);
+    int open(String filename,uint64_t flags);
+    ByteArray read(uint64_t length);
+    int seekTo(uint32_t pos);
+    int write(ByteArray);
+
+    int delFile(String filename);
     
     int connect();
     int close();

@@ -3,6 +3,7 @@
 
 #include "Object.hpp"
 #include "SocketOption.hpp"
+#include "DistributeHandler.hpp"
 #include "String.hpp"
 
 using namespace obotcha;
@@ -18,12 +19,14 @@ public:
     _DistributeOption *setReDeliveryInterval(long);
     _DistributeOption *setReDeliveryTimes(int);
     _DistributeOption *setWaitPostBack(bool);
+    _DistributeOption *setHandler(DistributeHandler);
 
     int getClientRecvBuffSize();
     int getAckTimeout();
     long getReDeliveryInterval();
     int getReDeliveryTimes();
     bool getWaitPostBack();
+    DistributeHandler getHandler();
 
 private:
     static const int DefaultClientRecvBuffSize;
@@ -38,6 +41,7 @@ private:
     long mReDeliveryInterval;
     int mReDeliveryTimes;
     bool mWaitPostBack;
+    DistributeHandler mHandler;
 };
 
 }

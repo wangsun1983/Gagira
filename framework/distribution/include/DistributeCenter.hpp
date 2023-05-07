@@ -38,6 +38,7 @@ public:
 
 protected:
     InetAddress mAddress;
+    DistributeLinker getLinker(Socket);
 
 private:
     SocketMonitor mSocketMonitor;
