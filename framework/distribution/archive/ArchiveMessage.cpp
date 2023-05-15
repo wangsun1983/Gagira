@@ -206,6 +206,22 @@ _ConfirmDelMessage::_ConfirmDelMessage(uint64_t result) {
     this->privateData = result;
 }
 
+_ApplyRenameMessage::_ApplyRenameMessage(String originalname,String newname) {
+    this->event = ApplyRename;
+    this->filename = originalname;
+    this->data = newname->toByteArray();
+}
+
+_ConfirmRenameMessage::_ConfirmRenameMessage() {
+    this->event = ConfirmRename;
+    this->privateData = 0;
+}
+
+_ConfirmRenameMessage::_ConfirmRenameMessage(uint64_t result) {
+    this->event = ConfirmRename;
+    this->privateData = result;
+}
+
 
 }
 

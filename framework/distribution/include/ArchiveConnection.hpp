@@ -21,13 +21,11 @@ public:
     int upload(File);
     int download(String filename,String savepath);
     uint64_t querySize(String filename);
-
-    //ByteArray read(String filename, uint32_t start = 0,uint32_t length = 0);
     int open(String filename,uint64_t flags);
     ByteArray read(uint64_t length);
     int seekTo(uint32_t pos);
     int write(ByteArray);
-
+    int rename(String originalname,String newname);
     int delFile(String filename);
     
     int connect();
@@ -37,7 +35,7 @@ private:
     template<typename T>
     T waitResponse(InputStream input) {
         T resp = nullptr;
-        auto parser = createDistributeMessageParser(1024*4);
+        auto parser = createDistributeMessageParser(1024*16);
         ByteArray data = createByteArray(parser->getBufferSize());
 
         while(1) {

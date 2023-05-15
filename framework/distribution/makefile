@@ -4,12 +4,17 @@ include ./framework/distribution/broadcast/makefile
 include ./framework/distribution/space/makefile
 include ./framework/distribution/queue/makefile
 include ./framework/distribution/archive/makefile
+include ./framework/distribution/fence/makefile
 
 objs += $(outtmp)/distributemessageparser.o \
 		$(outtmp)/distributelinker.o \
 		$(outtmp)/distributecenter.o \
 		$(outtmp)/distributeoption.o \
-		$(outtmp)/distributecenterbuilder.o
+		$(outtmp)/distributecenterbuilder.o \
+		$(outtmp)/distributelock.o 
+
+$(outtmp)/distributelock.o :$(distributionDir)/DistributeLock.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(distributionDir)/DistributeLock.cpp -o $(outtmp)/distributelock.o
 
 $(outtmp)/distributemessageparser.o :$(distributionDir)/DistributeMessageParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(distributionDir)/DistributeMessageParser.cpp -o $(outtmp)/distributemessageparser.o

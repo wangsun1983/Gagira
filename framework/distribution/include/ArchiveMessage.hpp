@@ -42,8 +42,11 @@ public:
         ApplyWrite,
         ConfirmWrite,
 
-        ApplyDel,   //TODO
+        ApplyDel,
         ConfirmDel,
+
+        ApplyRename,
+        ConfirmRename,
     };
 
     int event;
@@ -177,6 +180,17 @@ DECLARE_CLASS(ConfirmDelMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmDelMessage();
     _ConfirmDelMessage(uint64_t result);
+};
+
+DECLARE_CLASS(ApplyRenameMessage) IMPLEMENTS(ArchiveMessage) {
+public:
+    _ApplyRenameMessage(String originalname,String newname);
+};
+
+DECLARE_CLASS(ConfirmRenameMessage) IMPLEMENTS(ArchiveMessage) {
+public:
+    _ConfirmRenameMessage();
+    _ConfirmRenameMessage(uint64_t result);
 };
 
 }

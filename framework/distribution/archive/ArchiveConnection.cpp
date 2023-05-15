@@ -36,7 +36,6 @@ uint64_t _ArchiveConnection::querySize(String filename) {
 }
 
 int _ArchiveConnection::open(String filename,uint64_t flags) {
-    printf("ArchiveConnection open,flags is %lx \n",flags);
     auto req = createApplyOpenMessage(filename,flags);
     if(mOutput->write(mConverter->generatePacket(req)) < 0) {
         return -ENETUNREACH;
@@ -47,15 +46,11 @@ int _ArchiveConnection::open(String filename,uint64_t flags) {
 }
 
 ByteArray _ArchiveConnection::read(uint64_t length) {
-    printf("ArchiveConnection read trace1\n");
     ApplyReadMessage msg = createApplyReadMessage(length);
     if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        printf("ArchiveConnection read trace2\n");
         return nullptr;
     }
-    printf("ArchiveConnection read trace3\n");
     auto response = waitResponse<ConfirmReadMessage>(mInput);
-    printf("ArchiveConnection read trace4\n");
     return response->data;
 }
 
@@ -66,7 +61,17 @@ int _ArchiveConnection::write(ByteArray data) {
     }
 
     auto response = waitResponse<ConfirmWriteMessage>(mInput);
-    return 0;
+    return response->isPermitted()?0:-1;
+}
+
+int _ArchiveConnection::rename(String originalname,String newname) {
+    ApplyRenameMessage msg = createApplyRenameMessage(originalname,newname);
+    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+        return -1;
+    }
+
+    auto response = waitResponse<ConfirmRenameMessage>(mInput);
+    return response->isPermitted()?0:-1;
 }
 
 int _ArchiveConnection::delFile(String filename) {
@@ -137,7 +142,7 @@ int _ArchiveConnection::upload(File file) {
     if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
         return -ENETUNREACH;
     }
-    printf("ArchiveConnection trace1 \n");
+
     ConfirmUploadConnectMessage resp = waitResponse<ConfirmUploadConnectMessage>(mInput);
     int port = resp->port;
     InetAddress uploadAddress = nullptr;
@@ -156,14 +161,14 @@ int _ArchiveConnection::upload(File file) {
         uploadSocket->close();
         return -ENETUNREACH;
     }
-    printf("ArchiveConnection trace2 \n");
+
     auto uploadOutput= uploadSocket->getOutputStream();
     auto uploadInput = uploadSocket->getInputStream();
-    printf("ArchiveConnection trace3 \n");
+
     auto applyInfo = createApplyUploadMessage(file);
     int ret = uploadOutput->write(mConverter->generatePacket(applyInfo));
     ConfirmApplyUploadMessage confirmResp = waitResponse<ConfirmApplyUploadMessage>(uploadInput);
-    printf("ArchiveConnection trace4,ret is%ld \n",ret);
+
     if(confirmResp == nullptr) {
         uploadSocket->close();
         return  -ENETUNREACH;
@@ -171,7 +176,7 @@ int _ArchiveConnection::upload(File file) {
         uploadSocket->close();
         return -EEXIST;
     }
-    printf("ArchiveConnection trace5 \n");
+
     if(confirmResp->data != nullptr && confirmResp->data->toString()->equals(st(ArchiveMessage)::kReject)) {
         uploadSocket->close();
         return -EACCES;
@@ -179,7 +184,7 @@ int _ArchiveConnection::upload(File file) {
 
     FileInputStream inputStream = createFileInputStream(file);
     inputStream->open();
-    printf("ArchiveConnection trace6 \n");
+    
     ByteArray data = createByteArray(32*1024);
     while(1) {
         int len = inputStream->read(data);
@@ -189,13 +194,12 @@ int _ArchiveConnection::upload(File file) {
 
         data->quickShrink(len);
         if(uploadOutput->write(data) <= 0) {
-            printf("uploadOutput failed \n");
             uploadOutput->close();
             return -ENETUNREACH;
         }
         data->quickRestore();
     }
-    printf("ArchiveConnection trace7 \n");
+
     inputStream->close();
     return 0;
 }

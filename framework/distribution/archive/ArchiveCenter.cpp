@@ -54,7 +54,6 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(int event,Socket socket,ByteAr
                     }
 
                     File file = createFile(path);
-                    
                     if(!file->exists()) {
                         file->createNewFile();
                         record->mPath = file->getAbsolutePath();
@@ -63,10 +62,10 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(int event,Socket socket,ByteAr
                         if(!record->mOutputStream->open()) {
                             //TODO
                         }
-                        response = createConfirmApplyUploadMessage(0);
+                        response = createConfirmApplyUploadMessage();
                         record->mStatus = WaitClientMessage;
                     } else {
-                        response = createConfirmApplyUploadMessage();
+                        response = createConfirmApplyUploadMessage(EEXIST);
                     }
                     socket->getOutputStream()->write(mConverter->generatePacket(response));
                 }
@@ -214,20 +213,33 @@ int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {
 
         case st(ArchiveMessage)::ApplyDel: {
             String path = transformFilePath(linker,msg);
-            printf("ApplyDel trace1,path is %s \n",path->toChars());
             ConfirmDelMessage response = nullptr;
             if(path->equals(st(ArchiveMessage)::kReject)) {
                 response = createConfirmDelMessage(EPERM);
-                printf("ApplyDel trace2 \n");
             } else {
                 File file = createFile(path);
                 if(!file->exists()) {
-                    printf("ApplyDel trace3 \n");
                     response = createConfirmDelMessage(ENOENT);
                 } else {
-                    printf("ApplyDel trace4 \n");
                     file->removeAll();
                     response = createConfirmDelMessage();
+                }
+            }
+            linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
+        } break;
+
+        case st(ArchiveMessage)::ApplyRename: {
+            String path = transformFilePath(linker,msg);
+            ConfirmRenameMessage response = nullptr;
+            if(path->equals(st(ArchiveMessage)::kReject)) {
+                response = createConfirmRenameMessage(EPERM);
+            } else {
+                File file = createFile(path);
+                if(!file->exists()) {
+                    response = createConfirmRenameMessage(ENOENT);
+                } else {
+                    String newname = msg->data->toString();
+                    response = createConfirmRenameMessage(file->rename(newname));
                 }
             }
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
@@ -238,9 +250,9 @@ int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {
             ConfirmWriteMessage resp = nullptr;
             if(outputStream != nullptr) {
                 outputStream->write(msg->data);
-                resp = createConfirmWriteMessage(1);
-            } else {
                 resp = createConfirmWriteMessage();
+            } else {
+                resp = createConfirmWriteMessage(EPIPE);
             }
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(resp));
         } break;
