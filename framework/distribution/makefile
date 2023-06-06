@@ -11,7 +11,11 @@ objs += $(outtmp)/distributemessageparser.o \
 		$(outtmp)/distributecenter.o \
 		$(outtmp)/distributeoption.o \
 		$(outtmp)/distributecenterbuilder.o \
-		$(outtmp)/distributelock.o 
+		$(outtmp)/distributelock.o \
+		$(outtmp)/distributereadwritelock.o \
+
+$(outtmp)/distributereadwritelock.o :$(distributionDir)/DistributeReadWriteLock.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(distributionDir)/DistributeReadWriteLock.cpp -o $(outtmp)/distributereadwritelock.o
 
 $(outtmp)/distributelock.o :$(distributionDir)/DistributeLock.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(distributionDir)/DistributeLock.cpp -o $(outtmp)/distributelock.o

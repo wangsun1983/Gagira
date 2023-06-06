@@ -13,6 +13,7 @@
 #include "LinkedList.hpp"
 #include "UUID.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
+#include "FenceMessage.hpp"
 
 using namespace obotcha;
 
@@ -49,9 +50,13 @@ public:
 
 private:
     String genToken(DistributeLinker);
+    int sendResponse(String fencename,DistributeLinker,int result = 0);
+
     int processReleaseOwner(String fencename,String linkertoken);
-    int processReleaseReadOwner(String fencename,String linkertoken);
-    int processReleaseWriteOwner(String fencename,String linkertoken);
+    int processReleaseReadOwner(String fencename,DistributeLinker linker);
+    int processReleaseWriteOwner(String fencename,DistributeLinker linker);
+
+    FenceInfo getIfEmptyCreate(FenceMessage);
 
     DistributeMessageConverter mConverter;
     Mutex mMutex;

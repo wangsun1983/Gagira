@@ -16,10 +16,16 @@ public:
     String getName();
     String getOwner();
     void setOwner(String);
-    
+    void incCount();
+    void decCount();
+    void setCount(int);
+    int getCount();
+    bool isFree();
+    void reset();
 private:
     String mOwner; 
     String mName;
+    std::atomic_int mCount;
 };
 
 DECLARE_CLASS(ReadFence) IMPLEMENTS(Fence) {

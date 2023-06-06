@@ -1,11 +1,13 @@
 #include "Fence.hpp"
 #include "ForEveryOne.hpp"
+#include "Log.hpp"
 
 namespace gagira {
 
 //Fence
 _Fence::_Fence(String name) {
     mName = name;
+    mCount = 0;
 }
 
 String _Fence::getName() {
@@ -18,6 +20,34 @@ String _Fence::getOwner() {
 
 void _Fence::setOwner(String token) {
     mOwner = token;
+}
+
+void _Fence::incCount() {
+    mCount++;
+}
+
+void _Fence::decCount() {
+    mCount--;
+}
+
+int _Fence::getCount() {
+    return mCount;
+}
+
+void _Fence::setCount(int c) {
+    mCount = c;
+}
+
+bool _Fence::isFree() {
+    if(mCount < 0) {
+        LOG(ERROR)<<"Fence:"<<mName->toChars()<<" count is "<<mCount;
+    }
+    return mCount <= 0;
+}
+
+void _Fence::reset() {
+    mOwner = nullptr;
+    mCount = 0;
 }
 
 //ReadFence

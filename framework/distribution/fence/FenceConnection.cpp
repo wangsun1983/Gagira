@@ -18,7 +18,7 @@ _FenceConnection::_FenceConnection(String s) {
 }
 
 _FenceConnection::~_FenceConnection() {
-
+    close();
 }
 
 int _FenceConnection::connect() {
