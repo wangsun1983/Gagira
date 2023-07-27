@@ -30,7 +30,7 @@ ArrayList<ByteArray> _DistributeMessageParser::doParse() {
                 continue;
             }
         } else if(mReader->read<uint32_t>(mCurrentMsgLen)
-                    == st(ByteRingArrayReader)::Continue) {
+                    == ContinueRead) {
             continue;
         }
         break;

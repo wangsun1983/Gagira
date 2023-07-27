@@ -19,7 +19,7 @@ int _ConversationService::addConversation(String groupname,String username,int t
     //save conversation to data
     printf("ConversatonService,addConversation start \n");
     int ret = mConversationDao->addConversation(groupname,
-                                                st(System)::currentTimeMillis(),
+                                                st(System)::CurrentTimeMillis(),
                                                 username,
                                                 type,
                                                 data);

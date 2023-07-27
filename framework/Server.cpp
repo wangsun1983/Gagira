@@ -205,8 +205,6 @@ void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,Htt
             return;
         }
 
-        HttpRouter router;
-        HashMap<String,String> map;
         FetchRet(router,map) = mRouterManager->getRouter(method,url);
         ServletRequestCache cache = createServletRequestCache(req,createControllerParam(map));
         st(GlobalCacheManager)::getInstance()->add(cache);

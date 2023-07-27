@@ -28,7 +28,7 @@ long _ArchiveOutputStream::write(ByteArray buff, int start) {
 
 long _ArchiveOutputStream::write(ByteArray buff, int start, int len) {
     int length = std::min(buff->size() - start,len);
-    ByteArray data = createByteArray((const byte *)(&buff->toValue()[start]),length);
+    ByteArray data = createByteArray(&buff->toValue()[start],length);
     mConnection->write(data);
     return 0;
 }

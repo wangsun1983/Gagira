@@ -18,11 +18,6 @@ _TemplateConditionCmdParser::_TemplateConditionCmdParser() {
     item = createHtmlTemplateConditionItem();
 }
 
-//void _TemplateConditionCmdParser::addPrevContent(String content) {
-//    auto condition =  item->conditions->get(item->conditions->size() - 1);
-//    condition->content = content;
-//}
-
 HtmlTemplateItem _TemplateConditionCmdParser::getTemplateItem() {
     return item;
 }
@@ -44,7 +39,7 @@ void _TemplateConditionCmdParser::doParse(String command) {
     while(iterator->hasValue()) {
         String v = iterator->getValue();
         
-        if(v->size() == 0 || v->equals(" ")) {
+        if(v->size() == 0 || v->sameAs(" ")) {
             iterator->next();
             continue;
         }

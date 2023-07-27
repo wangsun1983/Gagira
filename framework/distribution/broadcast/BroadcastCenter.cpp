@@ -63,7 +63,7 @@ int _BroadcastCenter::dispatchMessage(Socket sock,ByteArray data) {
     auto msg = mConverter->generateMessage<BroadcastMessage>(data);
     msg->mSocket = sock;
 
-    long currentTime = st(System)::currentTimeMillis();
+    long currentTime = st(System)::CurrentTimeMillis();
     long publishTime = msg->getPublishTime();
     if(publishTime != 0 && publishTime > currentTime ) {
         mSchedulePool->schedule(publishTime - currentTime ,
@@ -83,12 +83,12 @@ int _BroadcastCenter::dispatchMessage(Socket sock,ByteArray data) {
     }
     //check whether this message timed out
     long expireTime = msg->getExpireTime();
-    if(expireTime != 0 && st(System)::currentTimeMillis() > expireTime) {
+    if(expireTime != 0 && st(System)::CurrentTimeMillis() > expireTime) {
         //message timeout
         BroadcastDLQMessage dlqMessage = createBroadcastDLQMessage();
         dlqMessage->setCode(st(BroadcastDLQMessage)::MessageTimeOut)
                     ->setData(data)
-                    ->setPointTime(st(System)::currentTimeMillis())
+                    ->setPointTime(st(System)::CurrentTimeMillis())
                     ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress());
         processSendFailMessage(dlqMessage);
         return -1;
@@ -201,7 +201,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                 auto packet = mConverter->generatePacket(msg);
                 auto originStream = msg->mSocket->getOutputStream();
                 if(msg->isOneShot()) {
-                    int random = st(System)::currentTimeMillis()%channels->size();
+                    int random = st(System)::CurrentTimeMillis()%channels->size();
                     auto stream = channels->get(random);
                     if(originStream == stream) {
                         if(channels->size() > 1) {
@@ -215,7 +215,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                         dlqMessage->setCode(stream == originStream?st(BroadcastDLQMessage)::NoClient:st(BroadcastDLQMessage)::ClientDisconnect)
                                   ->setData(packet)
                                   ->setToken(msg->getToken())
-                                  ->setPointTime(st(System)::currentTimeMillis())
+                                  ->setPointTime(st(System)::CurrentTimeMillis())
                                   ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress());
                         processSendFailMessage(dlqMessage);
                     }
@@ -231,7 +231,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                                     ->setData(isFirst?packet:nullptr)
                                     ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress())
                                     ->setDestAddress(s->getSocket()->getInetAddress()->getAddress())
-                                    ->setPointTime(st(System)::currentTimeMillis())
+                                    ->setPointTime(st(System)::CurrentTimeMillis())
                                     ->setToken(msg->getToken());
                             processSendFailMessage(dlqMessage);
                             isFirst = false;
@@ -246,7 +246,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                 BroadcastDLQMessage dlqMessage = createBroadcastDLQMessage();
                 dlqMessage->setCode(st(BroadcastDLQMessage)::NoClient)
                             ->setData(mConverter->generatePacket(msg))
-                            ->setPointTime(st(System)::currentTimeMillis())
+                            ->setPointTime(st(System)::CurrentTimeMillis())
                             ->setSrcAddress(msg->mSocket->getInetAddress()->getAddress())
                             ->setToken(msg->getToken());
                 processSendFailMessage(dlqMessage);

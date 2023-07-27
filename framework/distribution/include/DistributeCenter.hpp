@@ -17,6 +17,7 @@
 #include "Sha.hpp"
 #include "Base64.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
+#include "ServerSocket.hpp"
 
 using namespace obotcha;
 

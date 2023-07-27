@@ -108,7 +108,7 @@ public:
         if(param != nullptr) {
             msg->setTTL(param->getTTL());
             if(param->getDelayInterval() != 0) {
-                msg->setPublishTime(st(System)::currentTimeMillis() + param->getDelayInterval());
+                msg->setPublishTime(st(System)::CurrentTimeMillis() + param->getDelayInterval());
             }
         }
         return sendMessage(msg);

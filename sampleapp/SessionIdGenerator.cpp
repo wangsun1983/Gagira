@@ -5,6 +5,6 @@
 String _SessionIdGenerator::toString(String username,String ip) {
     String content = username->append(ip);
     Md md = createMd();
-    return md->encrypt(content);
+    return md->encodeContent(content->toByteArray());
 }
 

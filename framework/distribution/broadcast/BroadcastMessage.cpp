@@ -16,8 +16,8 @@ _BroadcastMessage::_BroadcastMessage() {
     mExpireTime = 0;
     mTTL = 0;
     mPublishTime = 0;
-    mToken = mSha->encrypt(mUuid->generate()->append(
-                            createString(st(System)::currentTimeMillis())));
+    mToken = mSha->encodeContent(mUuid->generate()->append(
+                            createString(st(System)::CurrentTimeMillis()))->toByteArray());
 }
 
 _BroadcastMessage::_BroadcastMessage(String channel,ByteArray data,uint32_t flags):_BroadcastMessage() {
@@ -119,7 +119,7 @@ bool _BroadcastMessage::isComplete() {
 void _BroadcastMessage::setTTL(long value) {
     if(value != 0) {
         mTTL = value;
-        mExpireTime = st(System)::currentTimeMillis();
+        mExpireTime = st(System)::CurrentTimeMillis();
     }
 }
 
