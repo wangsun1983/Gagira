@@ -62,7 +62,7 @@ template <typename T> T getClass(sp<T>) {
                               instance.get_pointer());                         \
         ControllerRouter r = createControllerRouter(func, instance);           \
         HttpRouter router = createHttpRouter(url, r);                          \
-        st(HttpRouterManager)::getInstance()->addRouter(method, router);       \
+        st(HttpRouterManager)::getInstance()->addRouter(static_cast<int>(method), router);       \
     }
 
 #define InjectResource(path) \

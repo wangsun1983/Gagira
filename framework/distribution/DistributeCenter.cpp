@@ -34,16 +34,16 @@ int _DistributeCenter::start() {
     return 0;
 }
 
-void _DistributeCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
+void _DistributeCenter::onSocketMessage(st(Net)::Event event,Socket sock,ByteArray data) {
     switch(event) {
-        case st(NetEvent)::Connect: {
+        case st(Net)::Event::Connect: {
             auto client = createDistributeLinker(sock,mOption->getClientRecvBuffSize());
             mClients->put(sock,client);
             onNewClient(client);
         }
         break;
 
-        case st(NetEvent)::Message: {
+        case st(Net)::Event::Message: {
             auto client = mClients->get(sock);
             if(client == nullptr) {
                 LOG(ERROR)<<"Received a message,but can not find it's connection";
@@ -59,7 +59,7 @@ void _DistributeCenter::onSocketMessage(int event,Socket sock,ByteArray data) {
         }
         break;
 
-        case st(NetEvent)::Disconnect: {
+        case st(Net)::Event::Disconnect: {
             auto client = mClients->get(sock);
             onDisconnectClient(client);
             mClients->remove(sock);

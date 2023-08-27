@@ -15,7 +15,7 @@ HttpRouterManager _HttpRouterManager::getInstance() {
 }
 
 _HttpRouterManager::_HttpRouterManager() {
-    for (int i = 0; i < st(HttpMethod)::Max; i++) {
+    for (int i = 0; i < static_cast<int>(st(HttpMethod)::Id::Max); i++) {
         mMaps[i] = createHttpRouterMap();
     }
 }

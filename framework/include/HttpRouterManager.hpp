@@ -26,7 +26,7 @@ DECLARE_CLASS(HttpRouterManager) {
     _HttpRouterManager();
     static sp<_HttpRouterManager> mInstance;
 
-    HttpRouterMap mMaps[st(HttpMethod)::Max];
+    HttpRouterMap mMaps[static_cast<int>(st(HttpMethod)::Id::Max)];
 };
 
 } // namespace gagira

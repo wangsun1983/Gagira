@@ -24,7 +24,7 @@ String _HtmlTemplateObjectItem::toString(Object o) {
             break;
         }
 
-        if(field->getType() == st(Field)::FieldTypeObject) {
+        if(field->getType() == st(Field)::Type::Object) {
             o = field->getObjectValue();
         }
         iterator->next();
@@ -32,47 +32,47 @@ String _HtmlTemplateObjectItem::toString(Object o) {
 
     if(field != nullptr) {
         switch(field->getType()) {
-            case st(Field)::FieldTypeLong: {
+            case st(Field)::Type::Long: {
                 return createString(field->getLongValue());
             } break;
 
-            case st(Field)::FieldTypeInt: {
+            case st(Field)::Type::Int: {
                 return createString(field->getIntValue());
             } break;
 
-            case st(Field)::FieldTypeByte: {
+            case st(Field)::Type::Byte: {
                 return createString(field->getByteValue());
             } break;
 
-            case st(Field)::FieldTypeBool: {
+            case st(Field)::Type::Bool: {
                 return createString(field->getBoolValue());
             } break;
 
-            case st(Field)::FieldTypeDouble: {
+            case st(Field)::Type::Double: {
                 return createString(field->getDoubleValue());
             } break;
 
-            case st(Field)::FieldTypeFloat: {
+            case st(Field)::Type::Float: {
                 return createString(field->getFloatValue());
             } break;
 
-            case st(Field)::FieldTypeString: {
+            case st(Field)::Type::String: {
                 return createString(field->getStringValue());
             } break;
 
-            case st(Field)::FieldTypeUint16: {
+            case st(Field)::Type::Uint16: {
                 return createString(field->getUint16Value());
             } break;
 
-            case st(Field)::FieldTypeUint32: {
+            case st(Field)::Type::Uint32: {
                 return createString(field->getUint32Value());
             } break;
 
-            case st(Field)::FieldTypeUint64: {
+            case st(Field)::Type::Uint64: {
                 return createString(field->getUint64Value());
             } break;
 
-            case st(Field)::FieldTypeObject: {
+            case st(Field)::Type::Object: {
                 return _objectToString(field->getObjectValue());
             } break;
         }

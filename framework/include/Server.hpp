@@ -46,7 +46,7 @@ public:
 
     void waitForExit(long interval = 0);
 
-    void onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
+    void onHttpMessage(st(Net)::Event event,HttpLinker client,HttpResponseWriter w,HttpPacket msg);
     
     //Websocket callback function
     int onData(WebSocketFrame frame,sp<_WebSocketLinker> client);
@@ -57,9 +57,9 @@ public:
 
     void onPong(String,sp<_WebSocketLinker> client);
 
-    int onPing(String,sp<_WebSocketLinker> client);
+    st(WebSocket)::Response onPing(String,sp<_WebSocketLinker> client);
 
-    void addGlobalController(int method,ControllerRouter);
+    void addGlobalController(st(HttpMethod)::Id method,ControllerRouter);
 
     static sp<_Server> getInstance();
 

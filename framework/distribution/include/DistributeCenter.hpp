@@ -43,7 +43,7 @@ protected:
 
 private:
     SocketMonitor mSocketMonitor;
-    void onSocketMessage(int,Socket,ByteArray);
+    void onSocketMessage(st(Net)::Event,Socket,ByteArray);
     ServerSocket mServerSock;
     ConcurrentHashMap<Socket,DistributeLinker> mClients;
     CountDownLatch mExitLatch;

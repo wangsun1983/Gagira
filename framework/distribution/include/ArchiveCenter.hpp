@@ -18,7 +18,7 @@
 #include "ConcurrentQueue.hpp"
 #include "ArchiveOption.hpp"
 #include "InetAddress.hpp"
-#include "AtomicUint32.hpp"
+#include "AtomicNumber.hpp"
 #include "DistributeMessageConverter.hpp"
 #include "FileInputStream.hpp"
 #include "FileOutputStream.hpp"
@@ -52,7 +52,7 @@ public:
     uint32_t getPort();
 private:
     static const int kBusyLevel;
-    void onSocketMessage(int,Socket,ByteArray);
+    void onSocketMessage(st(Net)::Event,Socket,ByteArray);
 
     ServerSocket mServer;
     //ConcurrentHashMap<Socket,ArchiveLinker> mLinkers;

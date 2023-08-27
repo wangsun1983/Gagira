@@ -29,9 +29,9 @@ _ArchiveCenterUploadMonitor::_ArchiveCenterUploadMonitor(ServerSocket socket,Str
     mCenter = c;
 }
 
-void _ArchiveCenterUploadMonitor::onSocketMessage(int event,Socket socket,ByteArray array) {
+void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket socket,ByteArray array) {
     switch(event) {
-        case st(NetEvent)::Message: {
+        case st(Net)::Event::Message: {
             auto record = mRecords->get(socket);
             if(record == nullptr) {
                 record = createArchiveCenterUploadRecord();
@@ -81,7 +81,7 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(int event,Socket socket,ByteAr
             }
         } break;
 
-        case st(NetEvent)::Disconnect: {
+        case st(Net)::Event::Disconnect: {
             auto record = mRecords->remove(socket);
             if(record->mOutputStream != nullptr) {
                 record->mOutputStream->close();
@@ -174,9 +174,9 @@ int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {
                 } else {
                     output = createFileOutputStream(path);
                     if(flags & O_APPEND) {
-                        output->open(st(OutputStream)::Append);
+                        output->open(st(IO)::FileControlFlags::Append);
                     } else {
-                        output->open(st(OutputStream)::Trunc);
+                        output->open(st(IO)::FileControlFlags::Trunc);
                     }
                     mWriteLinks->put(linker,output);
                 }
@@ -339,15 +339,15 @@ ArchiveCenterUploadMonitor _ArchiveCenter::createUploadMonitor() {
         String addrStr = mAddress->getAddress();
         InetAddress addr = nullptr;
         switch(mAddress->getFamily()) {
-            case st(InetAddress)::IPV4: {
+            case st(Net)::Family::Ipv4: {
                 addr = createInet4Address(addrStr,port);
             } break;
 
-            case st(InetAddress)::IPV6: {
+            case st(Net)::Family::Ipv6: {
                 addr = createInet6Address(addrStr,port);
             } break;
 
-            case st(InetAddress)::LOCAL: {
+            case st(Net)::Family::Local: {
                 //TODO
             } break;
         }

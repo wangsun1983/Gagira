@@ -41,11 +41,11 @@ bool _ArchiveOutputStream::open() {
 bool _ArchiveOutputStream::open(int type) {
     Inspect(mConnection->connect() < 0,false) ;
     switch(type) {
-        case st(OutputStream)::Append:
+        case st(IO)::FileControlFlags::Append:
             return mConnection->open(mArchiveFile->getFileName(),O_WRONLY|O_APPEND) == 0;
         break;
 
-        case st(OutputStream)::Trunc:
+        case st(IO)::FileControlFlags::Trunc:
             return mConnection->open(mArchiveFile->getFileName(),O_WRONLY|O_TRUNC) == 0;
         break;
     }

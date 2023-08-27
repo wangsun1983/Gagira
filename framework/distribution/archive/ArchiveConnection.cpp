@@ -147,11 +147,11 @@ int _ArchiveConnection::upload(File file) {
     int port = resp->port;
     InetAddress uploadAddress = nullptr;
     switch(mAddress->getFamily()) {
-        case st(InetAddress)::IPV4:
+        case st(Net)::Family::Ipv4:
             uploadAddress = createInet4Address(mAddress->getAddress(),port);
         break;
 
-        case st(InetAddress)::IPV6:
+        case st(Net)::Family::Ipv6:
             uploadAddress = createInet6Address(mAddress->getAddress(),port);
         break;
     }

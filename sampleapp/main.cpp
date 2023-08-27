@@ -25,14 +25,14 @@ int main() {
 
     TestController testController = createTestController();
     printf("main trace1 \n");
-    InjectController(st(HttpMethod)::Get,"/login",loginController,login);
-    InjectController(st(HttpMethod)::Post,"/regist",regController,registUser);
+    InjectController(st(HttpMethod)::Id::Get,"/login",loginController,login);
+    InjectController(st(HttpMethod)::Id::Post,"/regist",regController,registUser);
 
     //InjectController(st(HttpMethod)::Get,"/testnewgroup",testController,testNewGroup);
 
-    InjectController(st(HttpMethod)::Post,"/chat",chatController,onNewConversation);
+    InjectController(st(HttpMethod)::Id::Post,"/chat",chatController,onNewConversation);
 
-    InjectController(st(HttpMethod)::Post,"/group/add",groupController,addNewGroup);
+    InjectController(st(HttpMethod)::Id::Post,"/group/add",groupController,addNewGroup);
     
     printf("main trace2 \n");
 

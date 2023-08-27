@@ -130,8 +130,8 @@ void _Server::waitForExit(long interval) {
     mServer->waitForExit(interval);
 }
 
-void _Server::addGlobalController(int method,ControllerRouter r) {
-    mGlobalControllers->put(method,r);
+void _Server::addGlobalController(st(HttpMethod)::Id method,ControllerRouter r) {
+    mGlobalControllers->put(static_cast<int>(method),r);
     /*
     ArrayList<Interceptor> list = mGlobalInterceptors->get(createInteger(method));
     if(list == nullptr) {
@@ -168,19 +168,19 @@ void _Server::onPong(String,sp<_WebSocketLinker> client) {
     //return true;
 }
 
-int _Server::onPing(String,sp<_WebSocketLinker> client) {
+st(WebSocket)::Response _Server::onPing(String,sp<_WebSocketLinker> client) {
     //TODO
-    return AutoResponse;
+    return st(WebSocket)::Response::Auto;
 }
 
 //http
-void _Server::onHttpMessage(int event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
-    if(event == st(NetEvent)::Message) {
+void _Server::onHttpMessage(st(Net)::Event event,HttpLinker client,HttpResponseWriter w,HttpPacket msg) {
+    if(event == st(Net)::Event::Message) {
         //remove thread local cache first
         st(GlobalCacheManager)::getInstance()->remove();
 
         ServletRequest req = createServletRequest(msg,client);
-        int method = msg->getHeader()->getMethod();
+        int method = static_cast<int>(msg->getHeader()->getMethod());
         HttpResponse response = createHttpResponse();
 
         auto gController = mGlobalControllers->get(method);
