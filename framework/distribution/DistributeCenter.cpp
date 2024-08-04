@@ -15,12 +15,12 @@ using namespace obotcha;
 namespace gagira {
 
 _DistributeCenter::_DistributeCenter(String url,DistributeOption option) {
-    mSocketMonitor = createSocketMonitor();
-    mAddress = createHttpUrl(url)->getInetAddress()->get(0);
-    mClients = createConcurrentHashMap<Socket,DistributeLinker>();
-    mExitLatch = createCountDownLatch(1);
-    mOption = (option == nullptr)?createDistributeOption():option;
-    mServerSock = createSocketBuilder()->setAddress(mAddress)->newServerSocket();
+    mSocketMonitor = SocketMonitor::New();
+    mAddress = HttpUrl::New(url)->getInetAddress()->get(0);
+    mClients = ConcurrentHashMap<Socket,DistributeLinker>::New();
+    mExitLatch = CountDownLatch::New(1);
+    mOption = (option == nullptr)?DistributeOption::New():option;
+    mServerSock = SocketBuilder::New()->setAddress(mAddress)->newServerSocket();
 }
 
 DistributeOption _DistributeCenter::getOption() {
@@ -37,7 +37,7 @@ int _DistributeCenter::start() {
 void _DistributeCenter::onSocketMessage(st(Net)::Event event,Socket sock,ByteArray data) {
     switch(event) {
         case st(Net)::Event::Connect: {
-            auto client = createDistributeLinker(sock,mOption->getClientRecvBuffSize());
+            auto client = DistributeLinker::New(sock,mOption->getClientRecvBuffSize());
             mClients->put(sock,client);
             onNewClient(client);
         }
@@ -74,8 +74,8 @@ DistributeLinker _DistributeCenter::getLinker(Socket sock) {
 
 int _DistributeCenter::close() {
     if(mServerSock != nullptr) {
-        mServerSock->close();
         mSocketMonitor->unbind(mServerSock);
+        mServerSock->close();
         mServerSock = nullptr;
     }
 

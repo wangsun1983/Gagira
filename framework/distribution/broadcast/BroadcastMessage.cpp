@@ -6,8 +6,8 @@
 
 namespace gagira {
 
-UUID _BroadcastMessage::mUuid = createUUID();
-Sha _BroadcastMessage::mSha = createSha(SHA_256);
+UUID _BroadcastMessage::mUuid = UUID::New();
+Sha _BroadcastMessage::mSha = Sha::New(st(Sha)::Type::Sha256);
 
 //-------- BroadcastMessage 
 _BroadcastMessage::_BroadcastMessage() {
@@ -17,7 +17,7 @@ _BroadcastMessage::_BroadcastMessage() {
     mTTL = 0;
     mPublishTime = 0;
     mToken = mSha->encodeContent(mUuid->generate()->append(
-                            createString(st(System)::CurrentTimeMillis()))->toByteArray());
+                            String::New(st(System)::CurrentTimeMillis()))->toByteArray());
 }
 
 _BroadcastMessage::_BroadcastMessage(String channel,ByteArray data,uint32_t flags):_BroadcastMessage() {
@@ -28,8 +28,8 @@ _BroadcastMessage::_BroadcastMessage(String channel,ByteArray data,uint32_t flag
 
 // ByteArray _BroadcastMessage::generatePacket() {
 //     ByteArray serializeData = serialize();
-//     ByteArray finalData = createByteArray(serializeData->size() + sizeof(uint32_t));
-//     ByteArrayWriter writer = createByteArrayWriter(finalData);
+//     ByteArray finalData = ByteArray::New(serializeData->size() + sizeof(uint32_t));
+//     ByteArrayWriter writer = ByteArray::NewWriter(finalData);
 //     writer->write<uint32_t>(serializeData->size());
 //     writer->write(serializeData);
 
@@ -37,8 +37,8 @@ _BroadcastMessage::_BroadcastMessage(String channel,ByteArray data,uint32_t flag
 // }
 
 // BroadcastMessage _BroadcastMessage::generateMessage(ByteArray data) {
-//     ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
-//     BroadcastMessage msg = createBroadcastMessage();
+//     ByteArray msgData = ByteArray::New(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
+//     BroadcastMessage msg = BroadcastMessage::New();
 //     msg->deserialize(msgData);
 //     return msg;
 // }

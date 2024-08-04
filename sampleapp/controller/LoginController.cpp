@@ -7,7 +7,7 @@ using namespace obotcha;
 using namespace gagira;
 
 _LoginController::_LoginController() {
-    mUserService = createUserService();
+    mUserService = UserService::New();
 }
 
 HttpResponseEntity _LoginController::login() {
@@ -16,6 +16,6 @@ HttpResponseEntity _LoginController::login() {
     String password = GetStringParam(password);
 
     UserInfo info = mUserService->logIn(username,password);
-    return createHttpResponseEntity(info);
+    return HttpResponseEntity::New(info);
 }
 

@@ -4,7 +4,7 @@
 #include "WebSocketLinker.hpp"
 
 _ConversationService::_ConversationService() {
-    mConversationDao = createConversationDao();
+    mConversationDao = ConversationDao::New();
 }
 
 ArrayList<Conversation> _ConversationService::getConversation(String groupname) {

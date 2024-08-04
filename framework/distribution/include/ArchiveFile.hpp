@@ -22,7 +22,6 @@ public:
     String getRemoteUrl();
 
 private:
-    ArchiveConnection mConnection;
     String mFileName;
     String mRemoteUrl;
 };

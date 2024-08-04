@@ -6,14 +6,14 @@
 namespace gagira {
 
 _DistributeLock::_DistributeLock(String name,String url) {
-    mConnection = createFenceConnection(url);
+    mConnection = FenceConnection::New(url);
     Panic(mConnection->connect() != 0,InitializeException,"Fail to connect server");
-    mMutex = createMutex(name);
+    mMutex = Mutex::New(name);
     mName = name;
 }
 
 int _DistributeLock::lock(long interval) {
-    TimeWatcher watcher = createTimeWatcher();
+    TimeWatcher watcher = TimeWatcher::New();
     watcher->start();
     int result = mMutex->lock(interval);
     auto cost = watcher->stop();

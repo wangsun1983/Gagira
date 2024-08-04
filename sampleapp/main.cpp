@@ -15,15 +15,15 @@ using namespace gagira;
 
 
 int main() {
-    Server server = createServer();
+    Server server = Server::New();
     server->loadConfigFile("./abc.json");
 
-    LoginController loginController = createLoginController();
-    ConversationController chatController = createConversationController();
-    RegisterController regController = createRegisterController();
-    GroupController groupController = createGroupController();
+    LoginController loginController = LoginController::New();
+    ConversationController chatController = ConversationController::New();
+    RegisterController regController = RegisterController::New();
+    GroupController groupController = GroupController::New();
 
-    TestController testController = createTestController();
+    TestController testController = TestController::New();
     printf("main trace1 \n");
     InjectController(st(HttpMethod)::Id::Get,"/login",loginController,login);
     InjectController(st(HttpMethod)::Id::Post,"/regist",regController,registUser);

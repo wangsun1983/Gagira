@@ -10,13 +10,13 @@ _TemplateDotCmdParser::_TemplateDotCmdParser() {
 }
 
 void _TemplateDotCmdParser::doParse(String command) {
-    HtmlTemplateObjectItem objItem = createHtmlTemplateObjectItem();
+    HtmlTemplateObjectItem objItem = HtmlTemplateObjectItem::New();
     if(command != nullptr) {
         command = command->trimAll();
         if(command->size() > 1) {
             objItem->fieldNames = command->split(".");
             if(objItem->fieldNames == nullptr) {
-                objItem->fieldNames = createArrayList<String>();
+                objItem->fieldNames = ArrayList<String>::New();
                 objItem->fieldNames->add(command);
             }
         }

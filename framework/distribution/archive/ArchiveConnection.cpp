@@ -7,18 +7,23 @@
 #include "InitializeException.hpp"
 #include "ArchiveMessage.hpp"
 #include "FileOutputStream.hpp"
+#include "ArchiveFileManager.hpp"
+#include "Md.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
 _ArchiveConnection::_ArchiveConnection(String s) {
-    HttpUrl url = createHttpUrl(s);
+    HttpUrl url = HttpUrl::New(s);
+    mMutex = Mutex::New();
+
     mAddress = url->getInetAddress()->get(0);
     if(mAddress == nullptr) {
         Trigger(InitializeException,"Failed to find ArchiveCenter");
     }
-    mConverter = createDistributeMessageConverter();
+    mConverter = DistributeMessageConverter::New();
+    mErrno = 0;
 }
 
 _ArchiveConnection::~_ArchiveConnection() {
@@ -26,194 +31,362 @@ _ArchiveConnection::~_ArchiveConnection() {
 }
 
 uint64_t _ArchiveConnection::querySize(String filename) {
-    QueryInfoMessage msg = createQueryInfoMessage(filename);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -ENETUNREACH;
-    }
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
+    uint64_t fileSize = 0;
 
-    ConfirmQueryInfoMessage resp = waitResponse<ConfirmQueryInfoMessage>(mInput);
-    return resp->getQueryFileSize();
+    do {
+        mErrno = 0;
+        QueryInfoMessage msg = QueryInfoMessage::New(filename);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+
+        ConfirmQueryInfoMessage response = waitResponse<ConfirmQueryInfoMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        } else {
+            fileSize = response->getQueryFileSize();
+        }
+    } while(0);
+
+    return fileSize;
 }
 
-int _ArchiveConnection::open(String filename,uint64_t flags) {
-    auto req = createApplyOpenMessage(filename,flags);
-    if(mOutput->write(mConverter->generatePacket(req)) < 0) {
-        return -ENETUNREACH;
-    }
+/*
+ * @param (FileNo,Result)
+ *         FileNo:open file idResult:open result.
+ */
+DefRet(uint64_t,int) _ArchiveConnection::openStream(String filename,uint64_t flags) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
 
-    auto response = waitResponse<ConfirmOpenMessage>(mInput);
-    return response->isPermitted()?0:-1;
+    Inspect(mOutput == nullptr,MakeRet(0,mErrno));
+    ConfirmOpenMessage response = nullptr;
+    
+    do {
+        mErrno = 0;
+        auto req = ApplyOpenMessage::New(filename,flags);
+        if(mOutput->write(mConverter->generatePacket(req)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+        
+        response = waitResponse<ConfirmOpenMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        }
+    } while(0);
+
+    return MakeRet(response->getFileNo(),mErrno);
 }
 
-ByteArray _ArchiveConnection::read(uint64_t length) {
-    ApplyReadMessage msg = createApplyReadMessage(length);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return nullptr;
-    }
-    auto response = waitResponse<ConfirmReadMessage>(mInput);
-    return response->data;
+int _ArchiveConnection::closeStream(uint64_t fileno) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
+
+    do {
+        mErrno = 0;
+        auto req = ApplyCloseStreamMessage::New(fileno);
+        if(mOutput->write(mConverter->generatePacket(req)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+
+        auto response = waitResponse<ConfirmCloseStreamMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        }
+    } while(0);
+
+    return 0;
 }
 
-int _ArchiveConnection::write(ByteArray data) {
-    ApplyWriteMessage msg = createApplyWriteMessage(data);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -1;
-    }
+ByteArray _ArchiveConnection::read(uint64_t fileno,uint64_t length) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,nullptr);
+    ByteArray data = nullptr;
 
-    auto response = waitResponse<ConfirmWriteMessage>(mInput);
-    return response->isPermitted()?0:-1;
+    do {
+        mErrno = 0;
+        ApplyReadMessage msg = ApplyReadMessage::New(fileno,length);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+        
+        auto response = waitResponse<ConfirmReadMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        } else {
+            data = response->getData();
+        }
+
+    } while(0);
+
+    return data;
+}
+
+int _ArchiveConnection::write(uint64_t fileno,ByteArray data) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
+
+    do {
+        mErrno = 0;
+        ApplyWriteMessage msg = ApplyWriteMessage::New(fileno,data);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+
+        auto response = waitResponse<ConfirmWriteMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        }
+    } while(0);
+
+    return mErrno;
 }
 
 int _ArchiveConnection::rename(String originalname,String newname) {
-    ApplyRenameMessage msg = createApplyRenameMessage(originalname,newname);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -1;
-    }
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
 
-    auto response = waitResponse<ConfirmRenameMessage>(mInput);
-    return response->isPermitted()?0:-1;
+    do {
+        mErrno = 0;
+        ApplyRenameMessage msg = ApplyRenameMessage::New(originalname,newname);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+
+        auto response = waitResponse<ConfirmRenameMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        }
+    } while(0);
+
+    return mErrno;
 }
 
-int _ArchiveConnection::delFile(String filename) {
-    ApplyDelMessage msg = createApplyDelMessage(filename);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -1;
-    }
+int _ArchiveConnection::remove(String filename) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
+    
+    do {
+        mErrno = 0;
+        ApplyDelMessage msg = ApplyDelMessage::New(filename);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
 
-    auto response = waitResponse<ConfirmDelMessage>(mInput);
-    return response->isPermitted()?0:-1;
+        auto response = waitResponse<ConfirmDelMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        }
+    } while(0);
+
+    return mErrno;
 }
 
-int _ArchiveConnection::seekTo(uint32_t pos) {
-    ApplySeekToMessage msg = createApplySeekToMessage(pos);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -1;
-    }
+int _ArchiveConnection::seekTo(uint64_t fileno,uint32_t pos,st(ApplySeekToMessage)::Type type) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
+    do {
+        mErrno = 0;
+        ApplySeekToMessage msg = ApplySeekToMessage::New(fileno,pos,type);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
 
-    auto response = waitResponse<ConfirmSeekToMessage>(mInput);
-    return response->isPermitted()?0:-1;
+        auto response = waitResponse<ConfirmSeekToMessage>(mInput);
+        if(!response->isPermitted()) {
+            mErrno = -response->getPermitFlag();
+        }
+    } while(0);
+
+    return mErrno;
 }
 
 int _ArchiveConnection::download(String filename,String savepath) {
-    ApplyDownloadMessage msg = createApplyDownloadMessage(filename);
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -ENETUNREACH;
-    }
-
-    ConfirmDownloadMessage resp = waitResponse<ConfirmDownloadMessage>(mInput);
-    if(resp->data != nullptr && !resp->isPermitted()) {
-        return -EACCES;
-    }
-
-    if(resp->getDownloadFileSize() == 0) {
-        return -ENOENT;
-    }
-
-    uint64_t filesize = resp->getDownloadFileSize();
-    ProcessDownloadMessage processReq = createProcessDownloadMessage();
-    if(mOutput->write(mConverter->generatePacket(processReq)) < 0) {
-        return -ENETUNREACH;
-    }
-
-    File file = createFile(savepath);
-    if(!file->exists()) {
-        file->createNewFile();
-    }
-
-    ByteArray data = createByteArray(32*1024);
-    FileOutputStream outPut = createFileOutputStream(file);
-    outPut->open();
-    while(filesize != 0) {
-        int len = mInput->read(data);
-        if(len <= 0) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,mErrno);
+    do {
+        mErrno = 0;
+        ApplyDownloadMessage msg = ApplyDownloadMessage::New(filename);
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
             break;
         }
-        data->quickShrink(len);
-        outPut->write(data);
-        data->quickRestore();
-        filesize -= len;
-    }
-    outPut->close();
-    return (filesize == 0)?0:-1;
+        ConfirmDownloadMessage resp = waitResponse<ConfirmDownloadMessage>(mInput);
+        if(!resp->isPermitted()) {
+            mErrno = -resp->getPermitFlag();
+            break;
+        }
+        if(resp->getDownloadFileSize() == 0) {
+            mErrno = -ENOENT;
+            break;
+        }
+        auto verifyData = resp->getVerifyData();
+
+        uint64_t filesize = resp->getDownloadFileSize();
+        ProcessDownloadMessage processReq = ProcessDownloadMessage::New(resp->getFileNo());
+        if(mOutput->write(mConverter->generatePacket(processReq)) < 0) {
+            mErrno = -ENETUNREACH;
+            break;
+        }
+        
+        File file = File::New(savepath);
+        if(!file->exists()) {
+            file->createNewFile();
+        }
+
+        ByteArray data = ByteArray::New(32*1024);
+        FileOutputStream outPut = FileOutputStream::New(file);
+        outPut->open();
+        
+        while(filesize != 0) {
+            int len = mInput->read(data);
+            if(len <= 0) {
+                break;
+            }
+            data->quickShrink(len);
+            outPut->write(data);
+            data->quickRestore();
+            filesize -= len;
+        }
+        outPut->close();
+        
+        if(filesize != 0) {
+            mErrno = -EBADF;
+            break;
+        }
+        //check verify data
+        Md md5sum = Md::New();
+        auto md5value = md5sum->encodeFile(file);
+        if(md5value->sameAs(verifyData->toString())) {
+            mErrno = -EBADF;
+            break;
+        }
+    } while(0);
+
+    return mErrno;
 }
 
-int _ArchiveConnection::upload(File file) {
-    auto msg = createApplyUploadConnectMessage();
-    if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
-        return -ENETUNREACH;
-    }
-
-    ConfirmUploadConnectMessage resp = waitResponse<ConfirmUploadConnectMessage>(mInput);
-    int port = resp->port;
-    InetAddress uploadAddress = nullptr;
-    switch(mAddress->getFamily()) {
-        case st(Net)::Family::Ipv4:
-            uploadAddress = createInet4Address(mAddress->getAddress(),port);
-        break;
-
-        case st(Net)::Family::Ipv6:
-            uploadAddress = createInet6Address(mAddress->getAddress(),port);
-        break;
-    }
-
-    Socket uploadSocket = createSocketBuilder()->setAddress(uploadAddress)->newSocket();
-    if(uploadSocket->connect() < 0) {
-        uploadSocket->close();
-        return -ENETUNREACH;
-    }
-
-    auto uploadOutput= uploadSocket->getOutputStream();
-    auto uploadInput = uploadSocket->getInputStream();
-
-    auto applyInfo = createApplyUploadMessage(file);
-    int ret = uploadOutput->write(mConverter->generatePacket(applyInfo));
-    ConfirmApplyUploadMessage confirmResp = waitResponse<ConfirmApplyUploadMessage>(uploadInput);
-
-    if(confirmResp == nullptr) {
-        uploadSocket->close();
-        return  -ENETUNREACH;
-    } else if(!confirmResp->isPermitted()) {
-        uploadSocket->close();
-        return -EEXIST;
-    }
-
-    if(confirmResp->data != nullptr && confirmResp->data->toString()->equals(st(ArchiveMessage)::kReject)) {
-        uploadSocket->close();
-        return -EACCES;
-    }
-
-    FileInputStream inputStream = createFileInputStream(file);
-    inputStream->open();
-    
-    ByteArray data = createByteArray(32*1024);
-    while(1) {
-        int len = inputStream->read(data);
-        if(len <= 0) {
+int _ArchiveConnection::upload(File file,onUploadStatus func) {
+    AutoLock l(mMutex);
+    mErrno = -EINVAL;
+    Inspect(mOutput == nullptr,-1);
+    do {
+        mErrno = 0;
+        auto msg = ApplyUploadConnectMessage::New();
+        if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
+            mErrno = -ENETUNREACH;
             break;
         }
 
-        data->quickShrink(len);
-        if(uploadOutput->write(data) <= 0) {
-            uploadOutput->close();
-            return -ENETUNREACH;
-        }
-        data->quickRestore();
-    }
+        ConfirmUploadConnectMessage resp = waitResponse<ConfirmUploadConnectMessage>(mInput);
+        int port = resp->getPort();
+        InetAddress uploadAddress = nullptr;
+        switch(mAddress->getFamily()) {
+            case st(Net)::Family::Ipv4:
+                uploadAddress = Inet4Address::New(mAddress->getAddress(),port);
+            break;
 
-    inputStream->close();
-    return 0;
+            case st(Net)::Family::Ipv6:
+                uploadAddress = Inet6Address::New(mAddress->getAddress(),port);
+            break;
+        }
+
+        Socket uploadSocket = SocketBuilder::New()->setAddress(uploadAddress)->newSocket();
+        if(uploadSocket->connect() < 0) {
+            uploadSocket->close();
+            mErrno = -ENETUNREACH;
+            break;
+        }
+
+        auto uploadOutput= uploadSocket->getOutputStream();
+        auto uploadInput = uploadSocket->getInputStream();
+
+        auto applyInfo = ApplyUploadMessage::New(file);
+        int ret = uploadOutput->write(mConverter->generatePacket(applyInfo));
+        if(func != nullptr) {
+            func(FinishSendReq);
+        }
+
+        ConfirmApplyUploadMessage confirmResp = waitResponse<ConfirmApplyUploadMessage>(uploadInput);
+        if(confirmResp == nullptr) {
+            uploadSocket->close();
+            mErrno = -ENETUNREACH;
+            break;
+        } else if(!confirmResp->isPermitted()) {
+            uploadSocket->close();
+            mErrno = -confirmResp->getPermitFlag();
+            break;
+        }
+
+        if(func != nullptr) {
+            func(StartUploading);
+        }
+
+        FileInputStream inputStream = FileInputStream::New(file);
+        inputStream->open();
+        
+        ByteArray data = ByteArray::New(32*1024);
+        while(1) {
+            int len = inputStream->read(data);
+            if(len <= 0) {
+                break;
+            }
+
+            data->quickShrink(len);
+            if(uploadOutput->write(data) <= 0) {
+                uploadOutput->close();
+                mErrno = -ENETUNREACH;
+                break;
+            }
+            data->quickRestore();
+        }
+
+        if(mErrno == 0) {
+            if(func != nullptr) {
+                func(WaitResponse);
+            }
+            CompleteUploadMessage completeResponse = waitResponse<CompleteUploadMessage>(uploadInput);
+            
+            inputStream->close();
+            uploadSocket->close();
+            mErrno = -completeResponse->getPermitFlag();
+        }
+    } while(0);
+
+    return mErrno;
 }
 
 int _ArchiveConnection::connect() {
-    mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
-    Inspect(mSock->connect() < 0,-1);
+    mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
+    mErrno = -ENETUNREACH;
+    Inspect(mSock->connect() < 0,mErrno);
 
+    mErrno = 0;
     mInput = mSock->getInputStream();
     mOutput = mSock->getOutputStream();
-    return 0;
+    return mErrno;
 }
 
 int _ArchiveConnection::close() {
+    AutoLock l(mMutex);
     if(mInput != nullptr) {
         mInput->close();
         mOutput->close();
@@ -225,7 +398,12 @@ int _ArchiveConnection::close() {
         mSock->close();
         mSock = nullptr;
     }
-    return 0;
+    mErrno = 0;
+    return mErrno;
+}
+
+int _ArchiveConnection::getErr() {
+    return mErrno;
 }
 
 }

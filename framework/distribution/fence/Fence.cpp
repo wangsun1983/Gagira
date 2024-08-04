@@ -52,7 +52,7 @@ void _Fence::reset() {
 
 //ReadFence
 _ReadFence::_ReadFence(String name):_Fence(name) {
-    owners = createConcurrentQueue<DistributeLinker>();
+    owners = ConcurrentQueue<DistributeLinker>::New();
 }
 
 uint64_t _ReadFence::getCount() {
@@ -79,8 +79,8 @@ bool _ReadFence::removeOwner(DistributeLinker linker) {
 
 //ReadWriteFence
 _ReadWriteFence::_ReadWriteFence(String name):_Fence(name) {
-    mReadFence = createReadFence(name);
-    mWriteFence = createWriteFence(name);
+    mReadFence = ReadFence::New(name);
+    mWriteFence = WriteFence::New(name);
 }
 
 ReadFence _ReadWriteFence::getReadFence() {

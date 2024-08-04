@@ -15,20 +15,20 @@ namespace gagira {
 
 //---------- SpaceConnection
 _SpaceConnection::_SpaceConnection(String s,SpaceConnectionListener l) {
-    HttpUrl url = createHttpUrl(s);
+    HttpUrl url = HttpUrl::New(s);
     mAddress = url->getInetAddress()->get(0);
     if(mAddress == nullptr) {
         Trigger(InitializeException,"Failed to find MqCenter");
     }
 
     mListener = l;
-    mSocketMonitor = createSocketMonitor(1);
-    mParser = createDistributeMessageParser(1024*4);
-    mConverter = createDistributeMessageConverter();
+    mSocketMonitor = SocketMonitor::New(1);
+    mParser = DistributeMessageParser::New(1024*4);
+    mConverter = DistributeMessageConverter::New();
 }
 
 int _SpaceConnection::connect() {
-    mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
+    mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
     Inspect(mSock->connect() < 0,-1);
 
     mInput = mSock->getInputStream();
@@ -101,27 +101,27 @@ int _SpaceConnection::close() {
 }
 
 int _SpaceConnection::monitor(ArrayList<String> list) {
-    auto message = createSpaceMonitorMessage(list);
+    auto message = SpaceMonitorMessage::New(list);
     return mOutput->write(mConverter->generatePacket(message));
 }
 
 int _SpaceConnection::monitor(String tag) {
-    auto message = createSpaceMonitorMessage(tag);
+    auto message = SpaceMonitorMessage::New(tag);
     return mOutput->write(mConverter->generatePacket(message));
 }
 
 int _SpaceConnection::unMonitor(ArrayList<String> list) {
-    auto message = createSpaceUnMonitorMessage(list);
+    auto message = SpaceUnMonitorMessage::New(list);
     return mOutput->write(mConverter->generatePacket(message));
 }
 
 int _SpaceConnection::unMonitor(String tag) {
-    auto message = createSpaceUnMonitorMessage(tag);
+    auto message = SpaceUnMonitorMessage::New(tag);
     return mOutput->write(mConverter->generatePacket(message));
 }
 
 int _SpaceConnection::remove(String tag) {
-    auto message = createSpaceRemoveMessage(tag,nullptr);
+    auto message = SpaceRemoveMessage::New(tag,nullptr);
     return mOutput->write(mConverter->generatePacket(message));
 }
 

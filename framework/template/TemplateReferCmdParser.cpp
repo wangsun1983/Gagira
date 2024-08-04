@@ -9,7 +9,7 @@ _TemplateReferCmdParser::_TemplateReferCmdParser() {
 }
 
 void _TemplateReferCmdParser::doParse(String cmd) {
-    item = createHtmlTemplateReferItem(cmd);
+    item = HtmlTemplateReferItem::New(cmd);
 }
 
 HtmlTemplateItem _TemplateReferCmdParser::getTemplateItem() {

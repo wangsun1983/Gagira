@@ -26,6 +26,7 @@ public:
         ConfirmUploadConnect,
         ApplyUpload,
         ConfirmUpload,
+        CompleteUpload,
         ProcessUpload,
         QueryInfo,
         ConfirmQueryInfo,
@@ -47,33 +48,42 @@ public:
 
         ApplyRename,
         ConfirmRename,
+
+        ApplyCloseStream,
+        ConfirmCloseStream,
     };
 
-    int event;
-    String filename;
-    ByteArray data;
-    uint32_t port;
-    // union {
-    //     uint64_t length;
-    //     uint64_t result; 0:success; >0:fail reason
-    //     uint64_t flags;
-    //     uint64_t readfrom;
-    //     uint64_t readlen;
-    // } privateData;
-    uint64_t privateData;
-
+    _ArchiveMessage();
+    int getEvent();
+    uint64_t getPort();
     uint64_t getUploadFileLength();
     uint64_t getDownloadFileSize();
     uint64_t getQueryFileSize();
     bool isPermitted();
-    uint64_t getStartPos();
+    uint32_t getStartPos();
     uint64_t getReadLength();
     uint64_t getDataSize();
     uint64_t getWriteLength();
     uint64_t getFlags();
-    
-    _ArchiveMessage();
-    DECLARE_REFLECT_FIELD(ArchiveMessage,event,filename,privateData,data,port);
+    uint32_t getPermitFlag();
+    uint64_t getFileNo();
+    uint64_t getSeekType(); //read or write
+    String getFileName();
+    String getRenameOriginalName();
+    String getRenameNewName();
+    ByteArray getData();
+    ByteArray getVerifyData();
+
+protected:
+    int event;
+    String filename;
+    ByteArray data;
+    ByteArray verifyData; //save crc/md5 checkdata?
+    uint64_t privateData;
+    uint64_t privateData2;
+    uint32_t permitFlag;
+
+    DECLARE_REFLECT_FIELD(ArchiveMessage,event,filename,privateData,privateData2,data,permitFlag,verifyData);
 };
 
 DECLARE_CLASS(ApplyUploadConnectMessage) IMPLEMENTS(ArchiveMessage) {
@@ -84,7 +94,7 @@ public:
 DECLARE_CLASS(ConfirmUploadConnectMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmUploadConnectMessage();
-    _ConfirmUploadConnectMessage(uint32_t);
+    _ConfirmUploadConnectMessage(uint32_t port);
 };
 
 DECLARE_CLASS(ApplyUploadMessage) IMPLEMENTS(ArchiveMessage) {
@@ -99,21 +109,28 @@ public:
     _ConfirmApplyUploadMessage(uint32_t result);
 };
 
+DECLARE_CLASS(CompleteUploadMessage) IMPLEMENTS(ArchiveMessage) {
+public:
+    _CompleteUploadMessage();
+    _CompleteUploadMessage(uint32_t result);
+};
+
 DECLARE_CLASS(ApplyDownloadMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ApplyDownloadMessage();
-    _ApplyDownloadMessage(String);
+    _ApplyDownloadMessage(String filename);
 };
 
 DECLARE_CLASS(ConfirmDownloadMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmDownloadMessage();
-    _ConfirmDownloadMessage(File);   
+    _ConfirmDownloadMessage(File,uint64_t id);   
+    _ConfirmDownloadMessage(uint32_t result);
 };
 
 DECLARE_CLASS(ProcessDownloadMessage) IMPLEMENTS(ArchiveMessage) {
 public:
-    _ProcessDownloadMessage();   
+    _ProcessDownloadMessage(uint64_t);   
 };
 
 DECLARE_CLASS(QueryInfoMessage) IMPLEMENTS(ArchiveMessage) {
@@ -125,6 +142,7 @@ DECLARE_CLASS(ConfirmQueryInfoMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmQueryInfoMessage();
     _ConfirmQueryInfoMessage(File);
+    _ConfirmQueryInfoMessage(uint32_t result);
 };
 
 DECLARE_CLASS(ApplyOpenMessage) IMPLEMENTS(ArchiveMessage) {
@@ -135,12 +153,17 @@ public:
 DECLARE_CLASS(ConfirmOpenMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmOpenMessage();
-    _ConfirmOpenMessage(File);
+    _ConfirmOpenMessage(uint64_t fileno,uint32_t result);
+    //_ConfirmOpenMessage(uint64_t result);
 };
 
 DECLARE_CLASS(ApplySeekToMessage) IMPLEMENTS(ArchiveMessage) {
 public:
-    _ApplySeekToMessage(uint32_t start);
+    enum Type {
+        Read = 0,
+        Write
+    };
+    _ApplySeekToMessage(uint64_t fileno,uint32_t start,Type);
 };
 
 DECLARE_CLASS(ConfirmSeekToMessage) IMPLEMENTS(ArchiveMessage) {
@@ -151,18 +174,19 @@ public:
 
 DECLARE_CLASS(ApplyReadMessage) IMPLEMENTS(ArchiveMessage) {
 public:
-    _ApplyReadMessage(uint64_t readlen);
+    _ApplyReadMessage(uint64_t fileno,uint64_t readlen);
 };
 
 DECLARE_CLASS(ConfirmReadMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmReadMessage();
     _ConfirmReadMessage(ByteArray);
+    _ConfirmReadMessage(uint64_t result);
 };
 
 DECLARE_CLASS(ApplyWriteMessage) IMPLEMENTS(ArchiveMessage) {
 public:
-    _ApplyWriteMessage(ByteArray);
+    _ApplyWriteMessage(uint64_t fileno,ByteArray);
 };
 
 DECLARE_CLASS(ConfirmWriteMessage) IMPLEMENTS(ArchiveMessage) {
@@ -190,7 +214,19 @@ public:
 DECLARE_CLASS(ConfirmRenameMessage) IMPLEMENTS(ArchiveMessage) {
 public:
     _ConfirmRenameMessage();
-    _ConfirmRenameMessage(uint64_t result);
+    _ConfirmRenameMessage(uint32_t result);
+};
+
+
+DECLARE_CLASS(ApplyCloseStreamMessage) IMPLEMENTS(ArchiveMessage) {
+public:
+    _ApplyCloseStreamMessage(uint64_t fileno);
+};
+
+DECLARE_CLASS(ConfirmCloseStreamMessage) IMPLEMENTS(ArchiveMessage) {
+public:
+    _ConfirmCloseStreamMessage();
+    _ConfirmCloseStreamMessage(uint32_t result);
 };
 
 }

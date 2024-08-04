@@ -8,6 +8,8 @@ objs += $(outtmp)/archivecenter.o \
 		$(outtmp)/archivefile.o \
 		$(outtmp)/archiveinputstream.o \
 		$(outtmp)/archiveoutputstream.o \
+		$(outtmp)/archivefilemanager.o \
+		$(outtmp)/archiveclient.o 
 
 #$(outtmp)/archivelinker.o :$(archiveDir)/ArchiveLinker.cpp
 #	$(cppcompiler) $(gagiracppflags) -c $(archiveDir)/ArchiveLinker.cpp -o $(outtmp)/archivelinker.o
@@ -35,3 +37,9 @@ $(outtmp)/archiveinputstream.o :$(archiveDir)/ArchiveInputStream.cpp
 
 $(outtmp)/archiveoutputstream.o :$(archiveDir)/ArchiveOutputStream.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(archiveDir)/ArchiveOutputStream.cpp -o $(outtmp)/archiveoutputstream.o
+
+$(outtmp)/archivefilemanager.o :$(archiveDir)/ArchiveFileManager.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(archiveDir)/ArchiveFileManager.cpp -o $(outtmp)/archivefilemanager.o
+
+$(outtmp)/archiveclient.o :$(archiveDir)/ArchiveClient.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(archiveDir)/ArchiveClient.cpp -o $(outtmp)/archiveclient.o

@@ -8,6 +8,8 @@
 #include "Inet6Address.hpp"
 #include "InetLocalAddress.hpp"
 #include "ArchiveMessage.hpp"
+#include "ArchiveHandleResult.hpp"
+#include "Md.hpp"
 
 namespace gagira {
 
@@ -15,16 +17,17 @@ namespace gagira {
 const int _ArchiveCenterUploadMonitor::kBusyLevel = 32;
 
 _ArchiveCenterUploadRecord::_ArchiveCenterUploadRecord() {
-    mParser = createDistributeMessageParser(1024*32);
+    mParser = DistributeMessageParser::New(1024*32);
+    mFileSize = 0;
 }
 
 _ArchiveCenterUploadMonitor::_ArchiveCenterUploadMonitor(ServerSocket socket,String savedPath,_ArchiveCenter *c) {
     mServer = socket;
-    mMonitor = createSocketMonitor();
+    mMonitor = SocketMonitor::New();
     mMonitor->bind(mServer,AutoClone(this));
-    mRecords = createConcurrentHashMap<Socket,ArchiveCenterUploadRecord>();
+    mRecords = ConcurrentHashMap<Socket,ArchiveCenterUploadRecord>::New();
 
-    mConverter = createDistributeMessageConverter();
+    mConverter = DistributeMessageConverter::New();
     mSavedPath = savedPath;
     mCenter = c;
 }
@@ -34,7 +37,7 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
         case st(Net)::Event::Message: {
             auto record = mRecords->get(socket);
             if(record == nullptr) {
-                record = createArchiveCenterUploadRecord();
+                record = ArchiveCenterUploadRecord::New();
                 mRecords->put(socket,record);
                 record->mStatus = WaitClientApplyInfo;
             }
@@ -44,49 +47,72 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                 if(response != nullptr && response->size() != 0) {
                     ByteArray applyInfoData = response->get(0);
                     auto msg = mConverter->generateMessage<ApplyUploadMessage>(applyInfoData);
-                    String path = mCenter->transformFilePath(createDistributeLinker(socket),msg);
+                    FetchRet(ret,path) = mCenter->transformFilePath(DistributeLinker::New(socket),msg);
                     ConfirmApplyUploadMessage response = nullptr;
-                    if(path->equals(st(ArchiveMessage)::kReject)) {
-                        response = createConfirmApplyUploadMessage(EPERM);
-                        //response->data = st(ArchiveMessage)::kReject->toByteArray();
+                    if(ret == st(ArchiveHandleResult)::Reject) {
+                        response = ConfirmApplyUploadMessage::New(EPERM);
                         socket->getOutputStream()->write(mConverter->generatePacket(response));
+                        socket->getOutputStream()->flush();
+                        mRecords->remove(socket);
+                        mMonitor->unbind(socket);
+                        if(record->mOutputStream != nullptr) {
+                            record->mOutputStream->close();
+                        }
                         break;
                     }
-
-                    File file = createFile(path);
+                    File file = File::New(path);
                     if(!file->exists()) {
                         file->createNewFile();
                         record->mPath = file->getAbsolutePath();
                         record->mFileSize = msg->getUploadFileLength();
-                        record->mOutputStream = createFileOutputStream(file);
+                        record->mOutputStream = FileOutputStream::New(file);
                         if(!record->mOutputStream->open()) {
                             //TODO
                         }
-                        response = createConfirmApplyUploadMessage();
+                        response = ConfirmApplyUploadMessage::New();
                         record->mStatus = WaitClientMessage;
+                        record->mVerifyData = msg->getVerifyData();
                     } else {
-                        response = createConfirmApplyUploadMessage(EEXIST);
+                        response = ConfirmApplyUploadMessage::New(EEXIST);
                     }
                     socket->getOutputStream()->write(mConverter->generatePacket(response));
                 }
             } else if(record->mStatus == WaitClientMessage) {
                 int ret = record->mOutputStream->write(array);
-                //TODO
                 record->mFileSize -= array->size();
                 if(record->mFileSize == 0) {
-                    mRecords->remove(socket);
-                    mMonitor->unbind(socket);
-                    record->mOutputStream->close();
+                    //mRecords->remove(socket);
+                    //mMonitor->unbind(socket);
+                    //check current file md5sum
+                    Md md5sum = Md::New();
+                    auto mdValue = md5sum->encodeFile(File::New(record->mPath));
+                    CompleteUploadMessage response = nullptr;
+                    if(mdValue->sameAs(record->mVerifyData->toString())) {
+                        response = CompleteUploadMessage::New();
+                    } else {
+                        response = CompleteUploadMessage::New(EBADF);
+                        //remove corrupted file
+                        File file = File::New(record->mPath);
+                        file->removeAll();
+                    }
+                    socket->getOutputStream()->write(mConverter->generatePacket(response));
                 }
             }
         } break;
 
         case st(Net)::Event::Disconnect: {
             auto record = mRecords->remove(socket);
+            mMonitor->unbind(socket);
             if(record->mOutputStream != nullptr) {
                 record->mOutputStream->close();
             }
-            mMonitor->unbind(socket);
+            //check whether file finish uploading
+            if(record->mFileSize != 0 && record->mPath != nullptr) {
+                File file = File::New(record->mPath);
+                if(file->exists()) {
+                    file->removeAll();
+                }
+            }
         } break;
     }
 }
@@ -101,18 +127,22 @@ bool _ArchiveCenterUploadMonitor::isBusy() {
 
 //--- ArchiveCenter ---
 _ArchiveCenter::_ArchiveCenter(String url,ArchiveOption option):_DistributeCenter(url,Cast<DistributeOption>(option)) {
-    mConverter = createDistributeMessageConverter();
-    mDownloadPool = createExecutorBuilder()->setMinThreadNum(2)->newCachedThreadPool();
+    mConverter = DistributeMessageConverter::New();
+    mDownloadPool = ExecutorBuilder::New()->setMinThreadNum(2)->newCachedThreadPool();
     mSavedPath = option->getSavedPath();
-    mThreads = createConcurrentQueue<ArchiveCenterUploadMonitor>();
-    mDownloadRequests = createConcurrentHashMap<DistributeLinker,File>();
-    mReadLinks = createConcurrentHashMap<DistributeLinker,FileInputStream>();
-    mWriteLinks = createConcurrentHashMap<DistributeLinker,FileOutputStream>();
+    mThreads = ConcurrentQueue<ArchiveCenterUploadMonitor>::New();
+    //mDownloadRequests = ConcurrentHashMap<DistributeLinker,File>::New();
+    mReadLinks = ConcurrentHashMap<DistributeLinker,FileInputStream>::New();
+    mWriteLinks = ConcurrentHashMap<DistributeLinker,FileOutputStream>::New();
 
     mOption = option;
-    mCurrentPort = createAtomicUint32(mOption->getMonitorStartPort());
+    mCurrentPort = AtomicUint32::New(mOption->getMonitorStartPort());
     mHandler = mOption->getHandler();
-    
+
+    //mFileNoGenerator = AtomicUint64::New(0);
+    //mDownloadIdMap = ConcurrentHashMap<Integer,File>::New();
+
+    mFileManager = ArchiveFileManager::New();
 }
 
 _ArchiveCenter::~_ArchiveCenter() {
@@ -121,10 +151,16 @@ _ArchiveCenter::~_ArchiveCenter() {
 
 int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {
     auto msg = mConverter->generateMessage<ArchiveMessage>(data);
-    switch(msg->event) {
+    switch(msg->getEvent()) {
         case st(ArchiveMessage)::ApplyUploadConnect: {
-            ArchiveCenterUploadMonitor selected = nullptr;
+            FetchRet(ret,path) = transformFilePath(linker,msg);
+            if(ret == st(ArchiveHandleResult)::Reject) {
+                auto response = ConfirmReadMessage::New(EPERM);
+                linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
+                break;
+            }
 
+            ArchiveCenterUploadMonitor selected = nullptr;
             ForEveryOne(m,mThreads) {
                 if(!m->isBusy()) {
                     selected = m;
@@ -135,153 +171,196 @@ int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {
                 selected = createUploadMonitor();
                 mThreads->add(selected);
             }
-            ConfirmUploadConnectMessage response = createConfirmUploadConnectMessage(selected->getPort());
+            ConfirmUploadConnectMessage response = ConfirmUploadConnectMessage::New(selected->getPort());
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
         } break;
 
         case st(ArchiveMessage)::ApplyOpen: {
-            String path = transformFilePath(linker,msg);
-            if(path->equals(st(ArchiveMessage)::kReject)) {
-                auto response = createConfirmReadMessage();
-                response->data = st(ArchiveMessage)::kReject->toByteArray();
+            FetchRet(ret,path) = transformFilePath(linker,msg);
+            if(ret == st(ArchiveHandleResult)::Reject) {
+                auto response = ConfirmOpenMessage::New(0,EPERM);
                 linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
                 break;
             }
             
-            uint64_t flags = msg->getFlags();
-            FileInputStream input = nullptr;
-            FileOutputStream output = nullptr;
-            if(flags == O_RDONLY) {
-                input = mReadLinks->get(linker);
-                if(input != nullptr) {
-                    input->close();
-                    mReadLinks->remove(linker);
-                }
+            File file = File::New(path);
+            ConfirmOpenMessage resp = nullptr;
+            if(!file->exists()) {
+                resp = ConfirmOpenMessage::New(0,ENOENT);
             } else {
-                output = mWriteLinks->get(linker);
-                if(output != nullptr) {
-                    output->close();
-                    mWriteLinks->remove(linker);
-                }
-            }
-
-            auto resp = createConfirmOpenMessage(createFile(path));
-            if(resp->isPermitted()) {
+                path = file->getAbsolutePath();
+                //update status
+                uint64_t flags = msg->getFlags();
                 if(flags == O_RDONLY) {
-                    input = createFileInputStream(path);
-                    input->open();
-                    mReadLinks->put(linker,input);
-                } else {
-                    output = createFileOutputStream(path);
-                    if(flags & O_APPEND) {
-                        output->open(st(IO)::FileControlFlags::Append);
+                    auto permitFlag = mFileManager->updateFileStatus(path,linker,st(ArchiveFileManager)::Action::Read);
+                    if(permitFlag == 0) {
+                        auto input = FileInputStream::New(path);
+                        input->open(); //TODO? open result check
+                        auto fileno = mFileManager->addReadLink(linker,input);
+                        resp = ConfirmOpenMessage::New(fileno,0);
+                        mFileManager->addOpenFileLink(fileno,file);
                     } else {
-                        output->open(st(IO)::FileControlFlags::Trunc);
+                        resp = ConfirmOpenMessage::New(0,EACCES);
                     }
-                    mWriteLinks->put(linker,output);
+                } else {
+                    auto permitFlag = mFileManager->updateFileStatus(path,linker,st(ArchiveFileManager)::Action::Write);
+                    if(permitFlag == 0) {
+                        auto output = FileOutputStream::New(path);
+                        if(flags & O_APPEND) {
+                            output->open(st(IO)::FileControlFlags::Append);
+                        } else {
+                            output->open(st(IO)::FileControlFlags::Trunc);
+                        }
+                        auto fileno = mFileManager->addWriteLink(linker,output);
+                        resp = ConfirmOpenMessage::New(fileno,0);
+                        mFileManager->addOpenFileLink(fileno,file);
+                    } else {
+                        resp = ConfirmOpenMessage::New(0,EACCES);
+                    }
                 }
             }
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(resp));
         } break;
 
         case st(ArchiveMessage)::ApplySeekTo: {
-            auto input = mReadLinks->get(linker);
-            int ret = -1;
-            if(input != nullptr) {
-                ret = input->seekTo(msg->getStartPos());
+            ConfirmSeekToMessage response = nullptr;
+            if(msg->getSeekType() == st(ApplySeekToMessage)::Read) {
+                auto input = mFileManager->getInputStream(linker,msg->getFileNo());
+                if(input != nullptr) {
+                    int ret = input->seekTo(msg->getStartPos());
+                    response = ConfirmSeekToMessage::New(ret > 0?0:EIO);
+                }
+            } else {
+                //TODO outputstream does not support seek to.....
+                // auto output = mFileManager->getOutputStream(linker,msg->getFileNo());
+                // if(output != nullptr) {
+                //     int ret = output->seekTo(msg->getStartPos());
+                //     response = ConfirmSeekToMessage::New(ret > 0?0:EIO);
+                // }
             }
-
-            auto response = createConfirmSeekToMessage(ret > 0?0:EIO);
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
         } break;
 
         case st(ArchiveMessage)::ProcessRead: {
-            auto inputStream = mReadLinks->get(linker);
+            auto input = mFileManager->getInputStream(linker,msg->getFileNo());
             uint64_t length = msg->getReadLength();
-            if(inputStream == nullptr) {
-                auto resp = createConfirmReadMessage();
+            if(input == nullptr) {
+                auto resp = ConfirmReadMessage::New(ENOENT);
                 linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(resp));
             } else {
                 mDownloadPool->submit([&](DistributeLinker mylinker,FileInputStream input,uint64_t length){
-                    ByteArray data = createByteArray(length);
+                    ByteArray data = ByteArray::New(length);
                     int ret = input->read(data);
-                    auto resp = createConfirmReadMessage(data);
+                    auto resp = ConfirmReadMessage::New(data);
                     mylinker->getSocket()->getOutputStream()->write(mConverter->generatePacket(resp));
-                },linker,inputStream,length);
+                },linker,input,length);
             }
         } break;
 
         case st(ArchiveMessage)::ApplyDel: {
-            String path = transformFilePath(linker,msg);
+            FetchRet(ret,path) = transformFilePath(linker,msg);
             ConfirmDelMessage response = nullptr;
-            if(path->equals(st(ArchiveMessage)::kReject)) {
-                response = createConfirmDelMessage(EPERM);
-            } else {
-                File file = createFile(path);
-                if(!file->exists()) {
-                    response = createConfirmDelMessage(ENOENT);
-                } else {
-                    file->removeAll();
-                    response = createConfirmDelMessage();
+            do {
+                if(ret == st(ArchiveHandleResult)::Reject) {
+                    response = ConfirmDelMessage::New(EPERM);
+                    break;
                 }
-            }
+
+                File file = File::New(path);
+                if(!file->exists()) {
+                    response = ConfirmDelMessage::New(ENOENT);
+                } else {
+                    path = file->getAbsolutePath();
+                    auto permitFlag = mFileManager->updateFileStatus(path,linker,st(ArchiveFileManager)::Action::Delete);
+                    if(permitFlag == -1) {
+                        response = ConfirmDelMessage::New(EACCES);
+                    } else {
+                        file->removeAll();
+                        response = ConfirmDelMessage::New();
+                        mFileManager->removeFileStatus(path,linker,st(ArchiveFileManager)::Action::Delete);
+                    }
+                }
+            } while(0);
+
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
         } break;
 
         case st(ArchiveMessage)::ApplyRename: {
-            String path = transformFilePath(linker,msg);
+            FetchRet(ret,path) = transformFilePath(linker,msg);
             ConfirmRenameMessage response = nullptr;
-            if(path->equals(st(ArchiveMessage)::kReject)) {
-                response = createConfirmRenameMessage(EPERM);
-            } else {
-                File file = createFile(path);
-                if(!file->exists()) {
-                    response = createConfirmRenameMessage(ENOENT);
-                } else {
-                    String newname = msg->data->toString();
-                    response = createConfirmRenameMessage(file->rename(newname));
+            do {
+                if(ret == st(ArchiveHandleResult)::Reject) {
+                    response = ConfirmRenameMessage::New(EPERM);
+                    break;
                 }
-            }
+
+                File file = File::New(path);
+                
+                if(!file->exists()) {
+                    response = ConfirmRenameMessage::New(ENOENT);
+                } else {
+                    path = file->getAbsolutePath();
+                    auto permitFlag = mFileManager->updateFileStatus(path,linker,st(ArchiveFileManager)::Action::Rename);
+                    if(permitFlag == -1) {
+                        response = ConfirmRenameMessage::New(EACCES);
+                    } else {
+                        String newname = msg->getData()->toString();
+                        response = ConfirmRenameMessage::New(file->rename(newname));
+                        mFileManager->removeFileStatus(path,linker,st(ArchiveFileManager)::Action::Rename);
+                    }
+                }
+            } while(0);
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
         } break;
 
         case st(ArchiveMessage)::ApplyWrite: {
-            auto outputStream = mWriteLinks->get(linker);
-            ConfirmWriteMessage resp = nullptr;
+            //auto outputStream = mWriteLinks->get(linker);
+            auto outputStream = mFileManager->getOutputStream(linker,msg->getFileNo());
+            ConfirmWriteMessage resp = ConfirmWriteMessage::New();
             if(outputStream != nullptr) {
-                outputStream->write(msg->data);
-                resp = createConfirmWriteMessage();
+                outputStream->write(msg->getData());
             } else {
-                resp = createConfirmWriteMessage(EPIPE);
+                resp = ConfirmWriteMessage::New(EPIPE);
             }
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(resp));
         } break;
 
         case st(ArchiveMessage)::ApplyDownload: {
-            String path = transformFilePath(linker,msg);//getDownloadFilePath(msg->filename);
-            if(path->equals(st(ArchiveMessage)::kReject)) {
-                auto response = createConfirmDownloadMessage();
-                response->data = st(ArchiveMessage)::kReject->toByteArray();
+            FetchRet(ret,path) = transformFilePath(linker,msg);//getDownloadFilePath(msg->filename);
+            if(ret == st(ArchiveHandleResult)::Reject) {
+                auto response = ConfirmDownloadMessage::New(EPERM);
                 linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(response));
                 break;
             }
 
-            File file = createFile(path);
+            File file = File::New(path);
             ConfirmDownloadMessage msg = nullptr;
             if(file->exists()) {
-                mDownloadRequests->put(linker,file);
-                msg = createConfirmDownloadMessage(file);
+                if(mFileManager->updateFileStatus(file->getAbsolutePath(),
+                                                  linker,
+                                                  st(ArchiveFileManager)::Action::Download) != -1) {
+                    path = file->getAbsolutePath();
+                    auto fileno = mFileManager->addDownloadLink(file);
+                    msg = ConfirmDownloadMessage::New(file,fileno);
+                } else {
+                    msg = ConfirmDownloadMessage::New(EPERM);
+                }
             } else {
-                msg = createConfirmDownloadMessage();
+                msg = ConfirmDownloadMessage::New(ENOENT);
             }
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(msg));
         } break;
 
         case st(ArchiveMessage)::ProcessDownload: {
-            mDownloadPool->submit([&](DistributeLinker mylinker){
-                ByteArray buff = createByteArray(32*1024);
-                File file = mDownloadRequests->remove(mylinker);
-                FileInputStream stream = createFileInputStream(file);
+            auto fileno = msg->getFileNo();
+            mDownloadPool->submit([&](DistributeLinker mylinker,uint64_t fileno){
+                ByteArray buff = ByteArray::New(32*1024);
+                File file = mFileManager->getDownloadFile(fileno);
+                if(file == nullptr) {
+                    return;
+                }
+
+                FileInputStream stream = FileInputStream::New(file);
                 stream->open();
                 OutputStream output = mylinker->getSocket()->getOutputStream();
                 while(1) {
@@ -294,16 +373,42 @@ int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {
                     buff->quickRestore();
                 }
                 stream->close();
-            },linker);
+                mFileManager->removeDownloadFile(fileno);
+                mFileManager->removeFileStatus(file->getAbsolutePath(),mylinker,st(ArchiveFileManager)::Action::Download);
+            },linker,fileno);
         } break;
 
         case st(ArchiveMessage)::QueryInfo: {
-            String path = transformFilePath(linker,msg);
+            FetchRet(ret,path) = transformFilePath(linker,msg);
+            ConfirmQueryInfoMessage msg = nullptr;
+            if(ret != st(ArchiveHandleResult)::Type::Reject) {
+                File file = File::New(path);
+                msg = ConfirmQueryInfoMessage::New(file);
+            } else {
+                msg = ConfirmQueryInfoMessage::New(EPERM);
+            }
+            linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(msg));
+        } break;
 
-            auto msg = createConfirmQueryInfoMessage();
-            if(!path->equals(st(ArchiveMessage)::kReject)) {
-                File file = createFile(path);
-                msg = createConfirmQueryInfoMessage(file);
+        case st(ArchiveMessage)::ApplyCloseStream: {
+            auto outputStream = mFileManager->getOutputStream(linker,msg->getFileNo());
+            auto response = ConfirmCloseStreamMessage::New();
+            auto file = mFileManager->getOpenFile(msg->getFileNo());
+            auto fileno = msg->getFileNo();
+            if(outputStream != nullptr) {
+                mFileManager->removeWriteLink(linker,fileno);
+                mFileManager->removeFileStatus(file->getAbsolutePath(),linker,st(ArchiveFileManager)::Action::Write);
+                mFileManager->removeOpenFile(fileno);
+                outputStream->close();
+            } else {
+                auto inputstream = mFileManager->getInputStream(linker,fileno);
+                if(inputstream != nullptr) {
+                    mFileManager->removeFileStatus(file->getAbsolutePath(),linker,st(ArchiveFileManager)::Action::Read);
+                    mFileManager->removeOpenFile(fileno);
+                    inputstream->close();
+                } else {
+                    response = ConfirmCloseStreamMessage::New(ENOENT);
+                }   
             }
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(msg));
         } break;
@@ -340,11 +445,11 @@ ArchiveCenterUploadMonitor _ArchiveCenter::createUploadMonitor() {
         InetAddress addr = nullptr;
         switch(mAddress->getFamily()) {
             case st(Net)::Family::Ipv4: {
-                addr = createInet4Address(addrStr,port);
+                addr = Inet4Address::New(addrStr,port);
             } break;
 
             case st(Net)::Family::Ipv6: {
-                addr = createInet6Address(addrStr,port);
+                addr = Inet6Address::New(addrStr,port);
             } break;
 
             case st(Net)::Family::Local: {
@@ -352,30 +457,32 @@ ArchiveCenterUploadMonitor _ArchiveCenter::createUploadMonitor() {
             } break;
         }
         
-        ServerSocket sock = createSocketBuilder()->setAddress(addr)->newServerSocket();
+        ServerSocket sock = SocketBuilder::New()->setAddress(addr)->newServerSocket();
         if(sock->bind() < 0) {
             continue;
         }
 
-        return createArchiveCenterUploadMonitor(sock,mOption->getSavedPath(),this);
+        return ArchiveCenterUploadMonitor::New(sock,mOption->getSavedPath(),this);
     }
 
     return nullptr;
 }
 
-String _ArchiveCenter::transformFilePath(DistributeLinker link,ArchiveMessage msg) {
+DefRet(st(ArchiveHandleResult)::Type,String) _ArchiveCenter::transformFilePath(DistributeLinker link,ArchiveMessage msg) {
     String path = nullptr;
+    st(ArchiveHandleResult)::Type type = st(ArchiveHandleResult)::Type::Deal;
     if(mHandler != nullptr) {
         ArchiveHandleResult ret = mHandler->onRequest(link,msg);
         if(ret != nullptr) {
             path = ret->path;
+            type = ret->result;
         }
     }
 
-    if(path == nullptr) {
-        path = mSavedPath->append("/",msg->filename);
+    if(path == nullptr && type == st(ArchiveHandleResult)::Type::Deal) {
+        path = mSavedPath->append("/",msg->getFileName());
     }
-    return path;
+    return MakeRet(type,path);
 }
 
 }

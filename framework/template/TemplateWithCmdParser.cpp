@@ -11,13 +11,13 @@ _TemplateWithCmdParser::_TemplateWithCmdParser() {
 }
 
 void _TemplateWithCmdParser::doParse(String cmd) {
-    item = createHtmlTemplateWithItem();
+    item = HtmlTemplateWithItem::New();
 
     cmd = cmd->trim();
     if(cmd->startsWithIgnoreCase(st(HtmlTemplate)::IndexCommand)) {
         cmd = cmd->subString(st(HtmlTemplate)::IndexCommand->size(),cmd->size() 
                 - st(HtmlTemplate)::IndexCommand->size());
-        TemplateIndexCmdParser parser = createTemplateIndexCmdParser();
+        TemplateIndexCmdParser parser = TemplateIndexCmdParser::New();
         parser->doParse(cmd);
         item->pipline = parser->getTemplateItem();
     }

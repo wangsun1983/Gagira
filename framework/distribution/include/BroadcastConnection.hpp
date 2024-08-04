@@ -104,7 +104,7 @@ public:
         ByteArray data = _connection_helper<T>(obj).toData();
         uint32_t flags = (param == nullptr)?0:param->getFlags();
         
-        BroadcastMessage msg = createBroadcastMessage(channel,data,flags|st(BroadcastMessage)::Publish);
+        BroadcastMessage msg = BroadcastMessage::New(channel,data,flags|st(BroadcastMessage)::Publish);
         if(param != nullptr) {
             msg->setTTL(param->getTTL());
             if(param->getDelayInterval() != 0) {
@@ -117,7 +117,7 @@ public:
     template<typename T>
     bool publishStickMessage(String channel,T obj,BroadcastMessageParam param = nullptr) {
         if(param == nullptr) {
-            param = createBroadcastMessageParam();
+            param = BroadcastMessageParam::New();
         }
         param->setFlags(param->getFlags()|st(BroadcastMessage)::Publish|st(BroadcastMessage)::StickFlag);
         return publishMessage(channel,obj,param);

@@ -15,7 +15,7 @@ _DistributeReadLock::_DistributeReadLock(String name,ReadLock rdlock,FenceConnec
 }
     
 int _DistributeReadLock::lock(long interval) {
-    TimeWatcher watcher = createTimeWatcher();
+    TimeWatcher watcher = TimeWatcher::New();
     int result = mReadLock->lock(interval);
     auto cost = watcher->stop();
 
@@ -39,7 +39,7 @@ _DistributeWriteLock::_DistributeWriteLock(String name,WriteLock wrlock,FenceCon
 }
 
 int _DistributeWriteLock::_DistributeWriteLock::lock(long interval) {
-    TimeWatcher watcher = createTimeWatcher();
+    TimeWatcher watcher = TimeWatcher::New();
     int result = mWriteLock->lock(interval);
     auto cost = watcher->stop();
 
@@ -57,17 +57,17 @@ int _DistributeWriteLock::unlock() {
 
 //DistributeReadWriteLock
 _DistributeReadWriteLock::_DistributeReadWriteLock(String name,String url) {
-    mReadWriteLock = createReadWriteLock();
-    mConnection = createFenceConnection(url);
+    mReadWriteLock = ReadWriteLock::New();
+    mConnection = FenceConnection::New(url);
     Panic(mConnection->connect() < 0,InitializeException,"connect failed");
 }
 
 DistributeReadLock _DistributeReadWriteLock::getReadLock() {
-    return createDistributeReadLock(mName,mReadWriteLock->getReadLock(),mConnection);
+    return DistributeReadLock::New(mName,mReadWriteLock->getReadLock(),mConnection);
 }
 
 DistributeWriteLock _DistributeReadWriteLock::getWriteLock() {
-    return createDistributeWriteLock(mName,mReadWriteLock->getWriteLock(),mConnection);
+    return DistributeWriteLock::New(mName,mReadWriteLock->getWriteLock(),mConnection);
 }
 
 }

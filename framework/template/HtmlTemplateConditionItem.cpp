@@ -21,11 +21,11 @@ _HtmlTemplateCondition::~_HtmlTemplateCondition() {
 }
 
 _HtmlTemplateConditionItem::_HtmlTemplateConditionItem() {
-    conditions = createArrayList<HtmlTemplateCondition>();
+    conditions = ArrayList<HtmlTemplateCondition>::New();
 }
 
 String _HtmlTemplateConditionItem::toString(Object o) {
-    StringBuffer content = createStringBuffer();
+    StringBuffer content = StringBuffer::New();
     auto iterator = conditions->getIterator();
     while(iterator->hasValue()) {
         HtmlTemplateCondition condition = iterator->getValue();

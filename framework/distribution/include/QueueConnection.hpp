@@ -28,13 +28,13 @@ public:
 
     template<typename T>
     int submitTask(T task) {
-        QueueMessage msg = createQueueMessage(st(QueueMessage)::Submit,task->serialize());
+        QueueMessage msg = QueueMessage::New(st(QueueMessage)::Submit,task->serialize());
         return mOutput->write(mConverter->generatePacket(msg));
     }
 
     template<typename T>
     T acquireTask(int interval = 0) {
-        QueueMessage msg = createQueueMessage(st(QueueMessage)::Acquire,nullptr);
+        QueueMessage msg = QueueMessage::New(st(QueueMessage)::Acquire,nullptr);
         if(mOutput == nullptr || mOutput->write(mConverter->generatePacket(msg)) < 0) {
             return nullptr;
         }
@@ -45,7 +45,7 @@ public:
             return result;
         }
 
-        msg = createQueueMessage(st(QueueMessage)::ClientNoWait,nullptr);
+        msg = QueueMessage::New(st(QueueMessage)::ClientNoWait,nullptr);
         mOutput->write(mConverter->generatePacket(msg));    
         return nullptr;
     }

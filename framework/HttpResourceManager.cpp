@@ -20,13 +20,13 @@ HttpResourceManager _HttpResourceManager::getInstance() {
 }
 
 _HttpResourceManager::_HttpResourceManager() {
-    mRedirectMaps = createHashMap<String, String>();
-    resourceCaches = createHashMap<String, File>();
-    mReadWriteLock = createReadWriteLock();
+    mRedirectMaps = HashMap<String, String>::New();
+    resourceCaches = HashMap<String, File>::New();
+    mReadWriteLock = ReadWriteLock::New();
     mWriteLock = mReadWriteLock->getWriteLock();
     mReadLock = mReadWriteLock->getReadLock();
-    mInterceptors = createHashMap<String,ArrayList<Interceptor>>();
-    mSearchPaths = createArrayList<String>();
+    mInterceptors = HashMap<String,ArrayList<Interceptor>>::New();
+    mSearchPaths = ArrayList<String>::New();
 }
 
 void _HttpResourceManager::addSearchPath(String path) { 
@@ -60,7 +60,7 @@ File _HttpResourceManager::findResource(String path) {
 
     if(file == nullptr) {
         ForEveryOne(searchPath,mSearchPaths) {
-            file = createFile(searchPath->append("/",path));
+            file = File::New(searchPath->append("/",path));
             if(file->exists()) {
                 AutoLock l(mWriteLock);
                 resourceCaches->put(path, file);
@@ -90,7 +90,7 @@ File _HttpResourceManager::findResource(String path) {
 void _HttpResourceManager::addResourceInterceptor(String path,Interceptor c) {
     ArrayList<Interceptor> list = mInterceptors->get(path);
     if(list == nullptr) {
-        list = createArrayList<Interceptor>();
+        list = ArrayList<Interceptor>::New();
         mInterceptors->put(path,list);
     }
 

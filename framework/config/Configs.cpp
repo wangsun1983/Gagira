@@ -21,13 +21,13 @@ namespace gagira {
 sp<_Configs> _Configs::instance = nullptr;
 
 _ConfigItems::_ConfigItems() {
-    sqlconfigs = createArrayList<SqlConfig>();
-    serverconfig = createServerConfig();
-    wsconfigs = createWebSocketServerConfig();
+    sqlconfigs = ArrayList<SqlConfig>::New();
+    serverconfig = ServerConfig::New();
+    wsconfigs = WebSocketServerConfig::New();
 }
 
 _Configs::_Configs() {
-    items = createConfigItems();
+    items = ConfigItems::New();
 }
 
 Configs _Configs::getInstance() {
@@ -43,29 +43,32 @@ Configs _Configs::getInstance() {
 void _Configs::load(String content,int type) {
     switch(type) {
         case Json:{
-            JsonReader reader = createJsonReader(content);
+            JsonReader reader = JsonReader::New();
+            reader->loadContent(content);
             JsonValue value = reader->get();
             value->reflectTo(items);
         }
         break;
 
         case Xml:{
-            XmlDocument doc = createXmlDocument(content);
+            XmlDocument doc = XmlDocument::New(content);
             XmlValue value = doc->getRootNode();
             value->reflectTo(items);
         }
         break;
 
         case Yaml: {
-            YamlReader reader = createYamlReader(content);
+            YamlReader reader = YamlReader::New();
+            reader->loadContent(content);
             YamlValue value = reader->parse();
             value->reflectTo(items);
         }
         break;
 
         case Ini: {
-            IniReader reader = createIniReader(content);
-            IniValue value = reader->parse();
+            IniReader reader = IniReader::New();
+            reader->loadContent(content);
+            IniValue value = reader->get();
             value->reflectTo(items);
         }
         break;
@@ -73,7 +76,7 @@ void _Configs::load(String content,int type) {
 }
 
 void _Configs::load(File file) {
-    FileInputStream input = createFileInputStream(file);
+    FileInputStream input = FileInputStream::New(file);
     input->open();
     String content = input->readAll()->toString();
     input->close();
@@ -101,26 +104,26 @@ void _Configs::load(File file) {
 void _Configs::save(File file,int type) {
     switch(type) {
         case Json:{
-            JsonWriter writer = createJsonWriter(file);
-            JsonValue value = createJsonValue();
+            JsonWriter writer = JsonWriter::New(file);
+            JsonValue value = JsonValue::New();
             value->importFrom(items);
             writer->write(value);
         }
         break;
 
         case Xml: {
-            XmlDocument doc = createXmlDocument();
+            XmlDocument doc = XmlDocument::New();
             doc->importFrom(items);
-            XmlWriter writer = createXmlWriter(doc);
+            XmlWriter writer = XmlWriter::New(doc);
             writer->write(file);
         }
         break;
 
         case Yaml: {
-            YamlValue value = createYamlValue();
+            YamlValue value = YamlValue::New();
             value->importFrom(items);
 
-            YamlWriter w = createYamlWriter(file);
+            YamlWriter w = YamlWriter::New(file);
             w->write(value);
         }
         break;

@@ -15,19 +15,19 @@ namespace gagira {
 
 //---------- SpaceConnection
 _QueueConnection::_QueueConnection(String s) {
-    HttpUrl url = createHttpUrl(s);
+    HttpUrl url = HttpUrl::New(s);
     mAddress = url->getInetAddress()->get(0);
     if(mAddress == nullptr) {
         Trigger(InitializeException,"Failed to find MqCenter");
     }
-    mParser = createDistributeMessageParser(1024*4);
-    mConverter = createDistributeMessageConverter();
-    mSocketMonitor = createSocketMonitor(1);
-    mTasks = createBlockingLinkedList<ByteArray>();
+    mParser = DistributeMessageParser::New(1024*4);
+    mConverter = DistributeMessageConverter::New();
+    mSocketMonitor = SocketMonitor::New(1);
+    mTasks = BlockingLinkedList<ByteArray>::New();
 }
 
 int _QueueConnection::connect() {
-    mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
+    mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
     Inspect(mSock->connect() < 0,-1);
 
     mInput = mSock->getInputStream();

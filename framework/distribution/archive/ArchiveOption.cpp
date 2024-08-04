@@ -4,7 +4,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-const String _ArchiveOption::DefaultSavedPath = createString("./");
+const String _ArchiveOption::DefaultSavedPath = String::New("./");
 const uint32_t _ArchiveOption::DefaultStartPort = 1200;
 const uint32_t _ArchiveOption::DefaultEndPort = 1300;
 

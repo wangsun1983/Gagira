@@ -1,7 +1,7 @@
 #include "RegisterController.hpp"
 
 _RegisterController::_RegisterController() {
-    mUserService = createUserService();
+    mUserService = UserService::New();
 }
 
 HttpResponseEntity _RegisterController::registUser() {
@@ -10,6 +10,6 @@ HttpResponseEntity _RegisterController::registUser() {
     UserInfo info = req->getContent<UserInfo>();
     int result = mUserService->addNewUser(info);
 
-    return createHttpResponseEntity(result);
+    return HttpResponseEntity::New(result);
 }
 

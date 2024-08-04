@@ -1,8 +1,8 @@
 #include "GroupService.hpp"
 
 _GroupService::_GroupService() {
-    groupInfoDaoInstance = createGroupInfoDao();
-    conversationDaoInstance = createConversationDao();
+    groupInfoDaoInstance = GroupInfoDao::New();
+    conversationDaoInstance = ConversationDao::New();
 }
 
 GroupInfo _GroupService::getGroupInfo(String groupname) {

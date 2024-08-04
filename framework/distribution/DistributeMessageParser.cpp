@@ -3,8 +3,8 @@
 namespace gagira {
 
 _DistributeMessageParser::_DistributeMessageParser(int buffsize) {
-    mBuffer = createByteRingArray(buffsize);
-    mReader = createByteRingArrayReader(mBuffer);
+    mBuffer = ByteRingArray::New(buffsize);
+    mReader = ByteRingArrayReader::New(mBuffer);
     mCurrentMsgLen = 0;
 }
 
@@ -17,7 +17,7 @@ int _DistributeMessageParser::getBufferSize() {
 }
 
 ArrayList<ByteArray> _DistributeMessageParser::doParse() {
-    ArrayList<ByteArray> result = createArrayList<ByteArray>();
+    ArrayList<ByteArray> result = ArrayList<ByteArray>::New();
 
     while(1) {
         int availableDataSize = mBuffer->getStoredDataSize();
@@ -30,7 +30,7 @@ ArrayList<ByteArray> _DistributeMessageParser::doParse() {
                 continue;
             }
         } else if(mReader->read<uint32_t>(mCurrentMsgLen)
-                    == st(Defination)::ContinueRead) {
+                    == st(IO)::Reader::Result::HasContent) {
             continue;
         }
         break;

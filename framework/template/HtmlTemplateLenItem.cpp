@@ -13,7 +13,7 @@ _HtmlTemplateLenItem::_HtmlTemplateLenItem() {
 
 String _HtmlTemplateLenItem::toString(Object o) {
     int size = o->__getContainerSize("");
-    return createString(size);
+    return String::New(size);
 }
 
 }

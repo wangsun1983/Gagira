@@ -8,35 +8,47 @@
 #include "DistributeMessageConverter.hpp"
 #include "InputStream.hpp"
 #include "OutputStream.hpp"
+#include "ArchiveMessage.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
+typedef void (*onUploadStatus)(int status);
+
 DECLARE_CLASS(ArchiveConnection) {
 public:
+    enum UploadStatus {
+        FinishSendReq = 0,
+        StartUploading = 1,
+        WaitResponse = 2,
+    };
+
     _ArchiveConnection(String);
     ~_ArchiveConnection();
 
-    int upload(File);
+    int upload(File,onUploadStatus func = nullptr);
     int download(String filename,String savepath);
-    uint64_t querySize(String filename);
-    int open(String filename,uint64_t flags);
-    ByteArray read(uint64_t length);
-    int seekTo(uint32_t pos);
-    int write(ByteArray);
+    int remove(String filename);
     int rename(String originalname,String newname);
-    int delFile(String filename);
+    uint64_t querySize(String filename);
     
     int connect();
     int close();
+    int getErr();
 
+    //return value(fileno,result)
+    DefRet(uint64_t,int) openStream(String filename,uint64_t flags);
+    ByteArray read(uint64_t fileno,uint64_t length);
+    int seekTo(uint64_t fileno,uint32_t pos,st(ApplySeekToMessage)::Type type);
+    int write(uint64_t fileno,ByteArray);
+    int closeStream(uint64_t fileno);
 private:
     template<typename T>
     T waitResponse(InputStream input) {
         T resp = nullptr;
-        auto parser = createDistributeMessageParser(1024*16);
-        ByteArray data = createByteArray(parser->getBufferSize());
+        auto parser = DistributeMessageParser::New(1024*32);
+        ByteArray data = ByteArray::New(parser->getBufferSize());
 
         while(1) {
             int ret = input->read(data);
@@ -50,7 +62,6 @@ private:
             }
             data->quickRestore();
         }
-
         return resp;
     }
 
@@ -59,6 +70,8 @@ private:
     InputStream mInput;
     OutputStream mOutput;
     DistributeMessageConverter mConverter;
+    Mutex mMutex;
+    int mErrno;
 };
 
 }

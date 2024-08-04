@@ -19,7 +19,7 @@ _SpaceMessage::_SpaceMessage(int event,String tag,ByteArray data,String md5sum) 
 //----SapceMonitorMessage----
 _SpaceMonitorMessage::_SpaceMonitorMessage(ArrayList<String> list) {
     this->event = Monitor;
-    StringBuffer buffer = createStringBuffer();
+    StringBuffer buffer = StringBuffer::New();
     ForEveryOne(l,list) {
         buffer->append(l);
         buffer->append(",");
@@ -35,7 +35,7 @@ _SpaceMonitorMessage::_SpaceMonitorMessage(String tag) {
 //----SapceMonitorMessage----
 _SpaceUnMonitorMessage::_SpaceUnMonitorMessage(ArrayList<String> list) {
     this->event = UnMonitor;
-    StringBuffer buffer = createStringBuffer();
+    StringBuffer buffer = StringBuffer::New();
     ForEveryOne(l,list) {
         buffer->append(l);
         buffer->append(",");

@@ -8,9 +8,9 @@
 namespace gagira {
 
 _QueueCenter::_QueueCenter(String url,DistributeOption option):_DistributeCenter(url,option) {
-    mConverter = createDistributeMessageConverter();
-    mClients = createBlockingLinkedList<DistributeLinker>();
-    mTasks = createBlockingLinkedList<QueueMessage>();
+    mConverter = DistributeMessageConverter::New();
+    mClients = BlockingLinkedList<DistributeLinker>::New();
+    mTasks = BlockingLinkedList<QueueMessage>::New();
     isRunning = 1;
 }
 

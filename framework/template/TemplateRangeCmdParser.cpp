@@ -20,7 +20,7 @@ _TemplateRangeCmdParser::_TemplateRangeCmdParser() {
 {{end}}
 */
 void _TemplateRangeCmdParser::doParse(String cmd) {
-    item = createHtmlTemplateRangeItem();
+    item = HtmlTemplateRangeItem::New();
     int index = cmd->indexOf(",");
     if(index > 0) {
         String param = cmd->subString(0,index)->trim();

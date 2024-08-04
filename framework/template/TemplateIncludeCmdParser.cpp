@@ -12,16 +12,16 @@ _TemplateIncludeCmdParser::_TemplateIncludeCmdParser() {
 
 void _TemplateIncludeCmdParser::doParse(String cmd) {
     cmd = cmd->trim();
-    File includeFile = createFile(cmd);
+    File includeFile = File::New(cmd);
     if(!includeFile->exists()) {
         LOG(ERROR)<<"File,Path "<<cmd->toChars()<<",not exist";
         return;
     }
-    FileInputStream stream = createFileInputStream(createFile(cmd));
+    FileInputStream stream = FileInputStream::New(File::New(cmd));
     stream->open();
     String content = stream->readAll()->toString();
-    item = createHtmlTemplateIncludeItem();
-    item->templateItem = createHtmlTemplate();
+    item = HtmlTemplateIncludeItem::New();
+    item->templateItem = HtmlTemplate::New();
     item->templateItem->import(content);
     stream->close();
 }

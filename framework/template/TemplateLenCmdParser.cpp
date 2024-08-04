@@ -9,7 +9,7 @@ _TemplateLenCmdParser::_TemplateLenCmdParser() {
 }
 
 void _TemplateLenCmdParser::doParse(String) {
-    item = createHtmlTemplateLenItem();
+    item = HtmlTemplateLenItem::New();
 }
 
 HtmlTemplateItem _TemplateLenCmdParser::getTemplateItem() {

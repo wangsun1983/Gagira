@@ -9,8 +9,8 @@ _HttpRouter::_HttpRouter(String p, RouterListener l) {
     mPath = p;
     mListener = l;
 
-    beforeExecInterceptors = createArrayList<Interceptor>();
-    afterExecInterceptors = createArrayList<Interceptor>();
+    beforeExecInterceptors = ArrayList<Interceptor>::New();
+    afterExecInterceptors = ArrayList<Interceptor>::New();
 }
 
 void _HttpRouter::update(HttpRouter r) {

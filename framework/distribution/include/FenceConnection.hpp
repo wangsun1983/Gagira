@@ -58,8 +58,8 @@ private:
     template<typename T>
     T waitResponse(InputStream input) {
         T resp = nullptr;
-        auto parser = createDistributeMessageParser(1024*16);
-        ByteArray data = createByteArray(parser->getBufferSize());
+        auto parser = DistributeMessageParser::New(1024*16);
+        ByteArray data = ByteArray::New(parser->getBufferSize());
 
         while(1) {
             int ret = input->read(data);

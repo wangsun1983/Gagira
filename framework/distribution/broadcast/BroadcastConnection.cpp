@@ -55,25 +55,25 @@ sp<_BroadcastMessageParam> _BroadcastMessageParam::build() {
 
 //---------- BroadcastConnection
 _BroadcastConnection::_BroadcastConnection(String s,BroadcastConnectionListener l) {
-    HttpUrl url = createHttpUrl(s);
+    HttpUrl url = HttpUrl::New(s);
     mAddress = url->getInetAddress()->get(0);
     if(mAddress == nullptr) {
         Trigger(InitializeException,"Failed to find BroadcastCenter");
     }
 
     mListener = l;
-    mSocketMonitor = createSocketMonitor();
-    mParser = createDistributeMessageParser(1024*4);
-    mConverter = createDistributeMessageConverter();
+    mSocketMonitor = SocketMonitor::New();
+    mParser = DistributeMessageParser::New(1024*4);
+    mConverter = DistributeMessageConverter::New();
 
     mIsConnected = false;
-    mStatusReadWriteLock = createReadWriteLock();
+    mStatusReadWriteLock = ReadWriteLock::New();
     mStatusWriteLock = mStatusReadWriteLock->getWriteLock();
     mStatusReadLock = mStatusReadWriteLock->getReadLock();
 }
 
 int _BroadcastConnection::connect() {
-    mSock = createSocketBuilder()->setAddress(mAddress)->newSocket();
+    mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
     Inspect(mSock->connect() < 0,-1);
 
     mInput = mSock->getInputStream();
@@ -90,27 +90,27 @@ int _BroadcastConnection::connect() {
 }
 
 bool _BroadcastConnection::subscribeChannel(String channel) {
-    BroadcastMessage msg = createBroadcastMessage(channel,nullptr,st(BroadcastMessage)::Subscribe);
+    BroadcastMessage msg = BroadcastMessage::New(channel,nullptr,st(BroadcastMessage)::Subscribe);
     return sendMessage(msg);
 }
 
 bool _BroadcastConnection::unSubscribeChannel(String channel) {
-    BroadcastMessage msg = createBroadcastMessage(channel,nullptr,st(BroadcastMessage)::UnSubscribe);
+    BroadcastMessage msg = BroadcastMessage::New(channel,nullptr,st(BroadcastMessage)::UnSubscribe);
     return sendMessage(msg);
 }
 
 bool _BroadcastConnection::subscribePersistenceChannel() {
-    BroadcastMessage msg = createBroadcastMessage(nullptr,nullptr,st(BroadcastMessage)::SubscribePersistence);
+    BroadcastMessage msg = BroadcastMessage::New(nullptr,nullptr,st(BroadcastMessage)::SubscribePersistence);
     return sendMessage(msg);
 }
 
 bool _BroadcastConnection::subscribeDLQChannel() {
-    BroadcastMessage msg = createBroadcastMessage(nullptr,nullptr,st(BroadcastMessage)::SubscribeDLQ);
+    BroadcastMessage msg = BroadcastMessage::New(nullptr,nullptr,st(BroadcastMessage)::SubscribeDLQ);
     return sendMessage(msg);
 }
 
 bool _BroadcastConnection::postBackMessage(ByteArray data,uint32_t flags) {
-    BroadcastMessage msg = createBroadcastMessage(nullptr,data,flags|st(BroadcastMessage)::PostBack);
+    BroadcastMessage msg = BroadcastMessage::New(nullptr,data,flags|st(BroadcastMessage)::PostBack);
     return sendMessage(msg);
 }
 
@@ -135,7 +135,7 @@ void _BroadcastConnection::onSocketMessage(int event,Socket s,ByteArray data) {
                                     s->getOutputStream()->write(mConverter->generatePacket(msg));
                                 }
                             } else {
-                                BroadcastSustainMessage sustainMsg = createBroadcastSustainMessage();
+                                BroadcastSustainMessage sustainMsg = BroadcastSustainMessage::New();
                                 sustainMsg->deserialize(msg->getData());
                                 mListener->onSustain(sustainMsg->getCode(),sustainMsg->getMessage());
                             }

@@ -5,15 +5,15 @@ using namespace gagira;
 
 
 ArrayList<Conversation> _ConversationDao::getConversation(String groupname) {
-    SqlQuery query = createSqlQuery("select * from $1_conversation_table");
+    SqlQuery query = SqlQuery::New("select * from $1_conversation_table");
     query->bindParam(groupname);
-    return connection->query(query);
+    return connection->query<Conversation>(query);
 }
 
 ArrayList<Conversation> _ConversationDao::getConversationAfter(String groupname,long time) {
-    SqlQuery query = createSqlQuery("select * from $1_conversation_table where time > $2");
-    query->bindParam(groupname,createString((uint64_t)time));
-    return connection->query(query);
+    SqlQuery query = SqlQuery::New("select * from $1_conversation_table where time > $2");
+    query->bindParam(groupname,String::New((uint64_t)time));
+    return connection->query<Conversation>(query);
 }
 
 int _ConversationDao::addConversation(String groupname,
@@ -21,7 +21,7 @@ int _ConversationDao::addConversation(String groupname,
                                        String username,
                                        int type,
                                        String data) {
-    SqlQuery query = createSqlQuery("insert into $1_conversation_table(time,username,type,data) values($2,'$3',$4,'$5')");
+    SqlQuery query = SqlQuery::New("insert into $1_conversation_table(time,username,type,data) values($2,'$3',$4,'$5')");
     query->bindParam(groupname,time,username,type,data);
     printf("ConversationData query is %s \n",query->toString()->toChars());
     return -connection->exec(query);
@@ -29,7 +29,7 @@ int _ConversationDao::addConversation(String groupname,
 
 
 int _ConversationDao::createConversation(String groupname) {
-    SqlQuery query = createSqlQuery("CREATE TABLE $1_conversation_table (id INT NOT NULL AUTO_INCREMENT,\
+    SqlQuery query = SqlQuery::New("CREATE TABLE $1_conversation_table (id INT NOT NULL AUTO_INCREMENT,\
                                     time BIGINT(64) NULL,\
                                     username VARCHAR(45) NULL,\
                                     type INT NULL,\

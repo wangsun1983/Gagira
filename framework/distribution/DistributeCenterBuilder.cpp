@@ -21,19 +21,19 @@ _DistributeCenterBuilder * _DistributeCenterBuilder::setOption(DistributeOption 
 }
 
 BroadcastCenter _DistributeCenterBuilder::buildBroadcastCenter() {
-    return createBroadcastCenter(mUrl,mOption);
+    return BroadcastCenter::New(mUrl,mOption);
 }
 
 SpaceCenter _DistributeCenterBuilder::buildSpaceCenter() {
-    return createSpaceCenter(mUrl,mOption);
+    return SpaceCenter::New(mUrl,mOption);
 }
 
 QueueCenter _DistributeCenterBuilder::buildQueueCenter() {
-    return createQueueCenter(mUrl,mOption);
+    return QueueCenter::New(mUrl,mOption);
 }
 
 ArchiveCenter _DistributeCenterBuilder::buildArchiveCenter() {
-    return createArchiveCenter(mUrl,Cast<ArchiveOption>(mOption));
+    return ArchiveCenter::New(mUrl,Cast<ArchiveOption>(mOption));
 }
 
 }

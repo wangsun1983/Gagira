@@ -5,17 +5,17 @@ using namespace obotcha;
 
 namespace gagira {
 
-const String _TemplateConditionCmdParser::Eq = createString("eq");
-const String _TemplateConditionCmdParser::Ne = createString("ne");
-const String _TemplateConditionCmdParser::Lt = createString("lt");
-const String _TemplateConditionCmdParser::Le = createString("le");
-const String _TemplateConditionCmdParser::Gt = createString("gt");
-const String _TemplateConditionCmdParser::Ge = createString("ge");
+const String _TemplateConditionCmdParser::Eq = String::New("eq");
+const String _TemplateConditionCmdParser::Ne = String::New("ne");
+const String _TemplateConditionCmdParser::Lt = String::New("lt");
+const String _TemplateConditionCmdParser::Le = String::New("le");
+const String _TemplateConditionCmdParser::Gt = String::New("gt");
+const String _TemplateConditionCmdParser::Ge = String::New("ge");
 
 
 _TemplateConditionCmdParser::_TemplateConditionCmdParser() {
-    mDotCmdParser = createTemplateDotCmdParser();
-    item = createHtmlTemplateConditionItem();
+    mDotCmdParser = TemplateDotCmdParser::New();
+    item = HtmlTemplateConditionItem::New();
 }
 
 HtmlTemplateItem _TemplateConditionCmdParser::getTemplateItem() {
@@ -23,7 +23,7 @@ HtmlTemplateItem _TemplateConditionCmdParser::getTemplateItem() {
 }
 
 void _TemplateConditionCmdParser::addFinalItem() {
-    HtmlTemplateCondition cond = createHtmlTemplateCondition();
+    HtmlTemplateCondition cond = HtmlTemplateCondition::New();
     cond->isFinalCondition = true;
     item->conditions->add(cond);
 }
@@ -31,7 +31,7 @@ void _TemplateConditionCmdParser::addFinalItem() {
 void _TemplateConditionCmdParser::doParse(String command) {
     ArrayList<String> strs = command->split(" ");
     
-    HtmlTemplateCondition cond = createHtmlTemplateCondition();
+    HtmlTemplateCondition cond = HtmlTemplateCondition::New();
     
     auto iterator = strs->getIterator();
     int internalStatus = ParseAction;

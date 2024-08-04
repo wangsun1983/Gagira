@@ -23,7 +23,8 @@ class _ServletContentHelper {
 public:
     T get(HttpPacket packet) {
         T obj = AutoCreate<T>();
-        JsonReader reader = createJsonReader(packet->getEntity()->getContent()->toString());
+        JsonReader reader = JsonReader::New();
+        reader->loadContent(packet->getEntity()->getContent()->toString());
         JsonValue v = reader->get();
         v->reflectTo(obj);
         return obj;

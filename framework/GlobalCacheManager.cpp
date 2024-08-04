@@ -26,7 +26,7 @@ _HttpPacketCache::_HttpPacketCache(HttpPacket p) {
 
 //
 _GlobalCacheManager::_GlobalCacheManager() {
-    mCaches = createThreadLocal<BaseServerCache>();
+    mCaches = ThreadLocal<BaseServerCache>::New();
 }
 
 sp<_GlobalCacheManager> _GlobalCacheManager::getInstance() {

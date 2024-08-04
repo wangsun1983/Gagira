@@ -8,9 +8,9 @@
 namespace gagira {
 
 _SpaceCenter::_SpaceCenter(String url,DistributeOption option):_DistributeCenter(url,option) {
-    mConverter = createDistributeMessageConverter();
-    mDatas = createConcurrentHashMap<String,ByteArray>();
-    mListeners = createConcurrentHashMap<String,ArrayList<DistributeLinker>>();
+    mConverter = DistributeMessageConverter::New();
+    mDatas = ConcurrentHashMap<String,ByteArray>::New();
+    mListeners = ConcurrentHashMap<String,ArrayList<DistributeLinker>>::New();
 }
 
 _SpaceCenter::~_SpaceCenter() {
@@ -25,7 +25,7 @@ int _SpaceCenter::onMessage(DistributeLinker linker,ByteArray data) {
         } break;
 
         case st(SpaceMessage)::Monitor: {
-            ArrayList<String> tags = createArrayList<String>();
+            ArrayList<String> tags = ArrayList<String>::New();
             if(msg->data != nullptr) {
                 String monitorlist = msg->data->toString();
                 tags = monitorlist->split(","); 
@@ -39,7 +39,7 @@ int _SpaceCenter::onMessage(DistributeLinker linker,ByteArray data) {
                 ForEveryOne(l,tags) {
                     auto list = mListeners->get(l);
                     if(list == nullptr) {
-                        list = createArrayList<DistributeLinker>();
+                        list = ArrayList<DistributeLinker>::New();
                         mListeners->put(l,list);
                     }
 
@@ -74,9 +74,9 @@ int _SpaceCenter::onMessage(DistributeLinker linker,ByteArray data) {
 
         case st(SpaceMessage)::Update: {
             mDatas->put(msg->tag,msg->data);
-            SpaceAcquireMessageResult result = createSpaceAcquireMessageResult(st(SpaceMessage)::Ok,nullptr);
+            SpaceAcquireMessageResult result = SpaceAcquireMessageResult::New(st(SpaceMessage)::Ok,nullptr);
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(result));
-            SpaceNotifyMessage m = createSpaceNotifyMessage(st(SpaceMessage)::NotifyUpdate,
+            SpaceNotifyMessage m = SpaceNotifyMessage::New(st(SpaceMessage)::NotifyUpdate,
                                                                   msg->tag,
                                                                   msg->data);
             auto notifyData = mConverter->generatePacket(m);                                                                  
@@ -94,7 +94,7 @@ int _SpaceCenter::onMessage(DistributeLinker linker,ByteArray data) {
         case st(SpaceMessage)::Acquire: {
             String tag = msg->tag;
             auto data = mDatas->get(tag);
-            SpaceAcquireMessageResult result = createSpaceAcquireMessageResult(st(SpaceMessage)::Ok,data);
+            SpaceAcquireMessageResult result = SpaceAcquireMessageResult::New(st(SpaceMessage)::Ok,data);
             linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(result));
         } break;
 
@@ -104,7 +104,7 @@ int _SpaceCenter::onMessage(DistributeLinker linker,ByteArray data) {
 
             auto list = mListeners->get(msg->tag);
             if(list != nullptr) {
-                SpaceNotifyMessage m = createSpaceNotifyMessage(st(SpaceMessage)::NotifyRemove,
+                SpaceNotifyMessage m = SpaceNotifyMessage::New(st(SpaceMessage)::NotifyRemove,
                                                                     msg->tag,
                                                                     nullptr);
                 auto notifyData = mConverter->generatePacket(m);

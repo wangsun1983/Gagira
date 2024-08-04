@@ -12,7 +12,6 @@
 #include "Configs.hpp"
 #include "Inet4Address.hpp"
 #include "Inet6Address.hpp"
-#include "Enviroment.hpp"
 #include "ForEveryOne.hpp"
 
 using namespace obotcha;
@@ -26,8 +25,8 @@ _Server::_Server() {
     mRouterManager = st(HttpRouterManager)::getInstance();
     mResourceManager = st(HttpResourceManager)::getInstance();
     mInstance = AutoClone(this);
-    mDelayRegWsPath = createArrayList<String>();
-    mGlobalControllers = createHashMap<int,ControllerRouter>();
+    mDelayRegWsPath = ArrayList<String>::New();
+    mGlobalControllers = HashMap<int,ControllerRouter>::New();
 }
 
 sp<_Server> _Server::getInstance() {
@@ -56,7 +55,8 @@ _Server* _Server::setWsAddress(InetAddress addr) {
 }
 
 _Server* _Server::setMultiPartFilePath(String path) {
-    st(Enviroment)::getInstance()->set(st(Enviroment)::gHttpMultiPartFilePath,path);
+    //st(Enviroment)::getInstance()->set(st(Enviroment)::gHttpMultiPartFilePath,path);
+    //TODO?
     return this;
 }
 
@@ -66,7 +66,7 @@ _Server* _Server::addSqlConfig(SqlConfig config) {
 }
 
 _Server* _Server::loadConfigFile(String path) {
-    st(Configs)::getInstance()->load(createFile(path));   
+    st(Configs)::getInstance()->load(File::New(path));   
     return this;
 }
 
@@ -81,11 +81,11 @@ int _Server::start() {
 
     InetAddress address;
     if(ip == nullptr || ip->contains(".")) {
-        address = createInet4Address(ip,port);
+        address = Inet4Address::New(ip,port);
     } else {
-        address = createInet6Address(ip,port);
+        address = Inet6Address::New(ip,port);
     }
-    auto httpBuilder = createHttpServerBuilder();
+    auto httpBuilder = HttpServerBuilder::New();
     httpBuilder->setAddress(address);
     httpBuilder->setListener(AutoClone(this));
     mServer = httpBuilder->build();
@@ -94,12 +94,12 @@ int _Server::start() {
     String ws_ip = st(Configs)::getInstance()->getWebSocketServerAddress();
     int ws_port = st(Configs)::getInstance()->getWebSocketServerPort();
     if(ws_port != -1) {
-        auto webSocketBuilder = createWebSocketServerBuilder();
+        auto webSocketBuilder = WebSocketServerBuilder::New();
         InetAddress address;
         if(ws_ip != nullptr && ws_ip->contains(":")) {
-            address = createInet6Address(ws_ip,ws_port);
+            address = Inet6Address::New(ws_ip,ws_port);
         } else {
-            address = createInet4Address(ws_ip,ws_port);
+            address = Inet4Address::New(ws_ip,ws_port);
         }
 
         webSocketBuilder->setInetAddr(address);
@@ -133,17 +133,17 @@ void _Server::waitForExit(long interval) {
 void _Server::addGlobalController(st(HttpMethod)::Id method,ControllerRouter r) {
     mGlobalControllers->put(static_cast<int>(method),r);
     /*
-    ArrayList<Interceptor> list = mGlobalInterceptors->get(createInteger(method));
+    ArrayList<Interceptor> list = mGlobalInterceptors->get(Integer::New(method));
     if(list == nullptr) {
-        list = createArrayList<Interceptor>();
-        mGlobalInterceptors->put(createInteger(method),list);
+        list = ArrayList<Interceptor>::New();
+        mGlobalInterceptors->put(Integer::New(method),list);
     }
     list->add(c); */
 }
 
 //websocket
 int _Server::onData(WebSocketFrame frame,sp<_WebSocketLinker> client) {
-    st(GlobalCacheManager)::getInstance()->add(createWebSocketRequestCache(frame->getData(),client));
+    st(GlobalCacheManager)::getInstance()->add(WebSocketRequestCache::New(frame->getData(),client));
     auto router = st(WebSocketRouterManager)::getInstance()->getRouter(client->getPath());
     WsResponseEntity result = router->onInvoke();
     if(result != nullptr) {
@@ -179,13 +179,13 @@ void _Server::onHttpMessage(st(Net)::Event event,HttpLinker client,HttpResponseW
         //remove thread local cache first
         st(GlobalCacheManager)::getInstance()->remove();
 
-        ServletRequest req = createServletRequest(msg,client);
+        ServletRequest req = ServletRequest::New(msg,client);
         int method = static_cast<int>(msg->getHeader()->getMethod());
-        HttpResponse response = createHttpResponse();
+        HttpResponse response = HttpResponse::New();
 
         auto gController = mGlobalControllers->get(method);
         if(gController != nullptr) {
-            st(GlobalCacheManager)::getInstance()->add(createHttpPacketCache(msg));
+            st(GlobalCacheManager)::getInstance()->add(HttpPacketCache::New(msg));
             auto entity = gController->onInvoke();
             if(entity != nullptr && entity->getStatus() != st(HttpStatus)::Ok) {
                 response->getHeader()->setResponseStatus(entity->getStatus());
@@ -199,17 +199,17 @@ void _Server::onHttpMessage(st(Net)::Event event,HttpLinker client,HttpResponseW
         if(file != nullptr) {
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
             //response->setFile(file);
-            HttpChunk chunk = createHttpChunk(file);
+            HttpChunk chunk = HttpChunk::New(file);
             response->getEntity()->setChunk(chunk);
             w->write(response);
             return;
         }
 
         FetchRet(router,map) = mRouterManager->getRouter(method,url);
-        ServletRequestCache cache = createServletRequestCache(req,createControllerParam(map));
+        ServletRequestCache cache = ServletRequestCache::New(req,ControllerParam::New(map));
         st(GlobalCacheManager)::getInstance()->add(cache);
         if(router != nullptr) {
-            HttpEntity entity = createHttpEntity();
+            HttpEntity entity = HttpEntity::New();
             HttpResponseEntity obj = router->invoke();
             if(obj != nullptr) {
                 if(obj->getStatus() != st(HttpResponseEntity)::NoResponse) {

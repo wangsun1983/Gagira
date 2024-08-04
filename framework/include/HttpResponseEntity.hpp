@@ -22,7 +22,7 @@ public:
 
     template<typename U>
     _HttpResponseEntity(U v,int status = st(HttpStatus)::Ok,ArrayList<HttpCookie> cookies = nullptr) {
-        mContent = createTextContent(v);
+        mContent = TextContent::New(v);
         mStatus = status;
         mCookies = cookies;
         mChunk = nullptr;

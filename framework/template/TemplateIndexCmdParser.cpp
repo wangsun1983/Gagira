@@ -9,7 +9,7 @@ _TemplateIndexCmdParser::_TemplateIndexCmdParser() {
 }
 
 void _TemplateIndexCmdParser::doParse(String cmd) {
-    item = createHtmlTemplateIndexItem();
+    item = HtmlTemplateIndexItem::New();
     //find last index
     int size = cmd->size();
     int start = size - 1;

@@ -7,7 +7,7 @@ using namespace obotcha;
 namespace gagira {
 
 _HtmlTemplateObjectItem::_HtmlTemplateObjectItem() {
-    fieldNames = createArrayList<String>();
+    fieldNames = ArrayList<String>::New();
 }
 
 String _HtmlTemplateObjectItem::toString(Object o) {
@@ -33,43 +33,43 @@ String _HtmlTemplateObjectItem::toString(Object o) {
     if(field != nullptr) {
         switch(field->getType()) {
             case st(Field)::Type::Long: {
-                return createString(field->getLongValue());
+                return String::New(field->getLongValue());
             } break;
 
             case st(Field)::Type::Int: {
-                return createString(field->getIntValue());
+                return String::New(field->getIntValue());
             } break;
 
             case st(Field)::Type::Byte: {
-                return createString(field->getByteValue());
+                return String::New(field->getByteValue());
             } break;
 
             case st(Field)::Type::Bool: {
-                return createString(field->getBoolValue());
+                return String::New(field->getBoolValue());
             } break;
 
             case st(Field)::Type::Double: {
-                return createString(field->getDoubleValue());
+                return String::New(field->getDoubleValue());
             } break;
 
             case st(Field)::Type::Float: {
-                return createString(field->getFloatValue());
+                return String::New(field->getFloatValue());
             } break;
 
             case st(Field)::Type::String: {
-                return createString(field->getStringValue());
+                return String::New(field->getStringValue());
             } break;
 
             case st(Field)::Type::Uint16: {
-                return createString(field->getUint16Value());
+                return String::New(field->getUint16Value());
             } break;
 
             case st(Field)::Type::Uint32: {
-                return createString(field->getUint32Value());
+                return String::New(field->getUint32Value());
             } break;
 
             case st(Field)::Type::Uint64: {
-                return createString(field->getUint64Value());
+                return String::New(field->getUint64Value());
             } break;
 
             case st(Field)::Type::Object: {
@@ -83,25 +83,25 @@ String _HtmlTemplateObjectItem::toString(Object o) {
 
 String _HtmlTemplateObjectItem::_objectToString(Object obj) {
     if (IsInstance(Integer, obj)) {
-        return createString(Cast<Integer>(obj));
+        return String::New(Cast<Integer>(obj));
     } else if (IsInstance(Long, obj)) {
-        return createString(Cast<Long>(obj));
+        return String::New(Cast<Long>(obj));
     } else if (IsInstance(Boolean, obj)) {
-        return createString(Cast<Boolean>(obj));
+        return String::New(Cast<Boolean>(obj));
     } else if (IsInstance(Double, obj)) {
-        return createString(Cast<Double>(obj));
+        return String::New(Cast<Double>(obj));
     } else if (IsInstance(Float, obj)) {
-        return createString(Cast<Float>(obj));
+        return String::New(Cast<Float>(obj));
     } else if (IsInstance(Byte, obj)) {
-        return createString(Cast<Byte>(obj));
+        return String::New(Cast<Byte>(obj));
     } else if (IsInstance(Uint8, obj)) {
-        return createString(Cast<Uint8>(obj));
+        return String::New(Cast<Uint8>(obj));
     } else if (IsInstance(Uint16, obj)) {
-        return createString(Cast<Uint16>(obj));
+        return String::New(Cast<Uint16>(obj));
     } else if (IsInstance(Uint32, obj)) {
-        return createString(Cast<Uint32>(obj));
+        return String::New(Cast<Uint32>(obj));
     } else if (IsInstance(Uint64, obj)) {
-        return createString(Cast<Uint64>(obj));
+        return String::New(Cast<Uint64>(obj));
     } else if (IsInstance(String, obj)) {
         return Cast<String>(obj);
     }

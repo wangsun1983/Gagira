@@ -13,7 +13,7 @@ _TemplateFunctionCmdParser::_TemplateFunctionCmdParser(String name,HtmlTemplateF
 
 void _TemplateFunctionCmdParser::doParse(String cmd) {
     cmd = cmd->trim();
-    mItem = createHtmlTemplateFunctionItem(mName,mFunc);
+    mItem = HtmlTemplateFunctionItem::New(mName,mFunc);
     mItem->mFunc = mFunc;
 
     ArrayList<String> params = cmd->split(" ");
@@ -22,14 +22,14 @@ void _TemplateFunctionCmdParser::doParse(String cmd) {
         String param = iterator->getValue();
         if(param != nullptr && param->size() != 0) {
             if(param->startsWith(".")) {
-                TemplateDotCmdParser parser = createTemplateDotCmdParser();
+                TemplateDotCmdParser parser = TemplateDotCmdParser::New();
                 parser->doParse(param);
                 HtmlTemplateItem item = parser->getTemplateItem();
                 if(item != nullptr) {
                     mItem->mItems->add(item);
                 }
             } else {
-                HtmlTemplateItem item = createHtmlTemplateTextItem(param);
+                HtmlTemplateItem item = HtmlTemplateTextItem::New(param);
                 mItem->mItems->add(item);
             }
         }

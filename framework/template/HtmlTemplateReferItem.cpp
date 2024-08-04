@@ -4,7 +4,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-ThreadLocal<HashMap<String,String>> _HtmlTemplateReferItem::values = createThreadLocal<HashMap<String,String>>();
+ThreadLocal<HashMap<String,String>> _HtmlTemplateReferItem::values = ThreadLocal<HashMap<String,String>>::New();
 
 _HtmlTemplateReferItem::_HtmlTemplateReferItem(String name) {
     paramName = name;
@@ -17,7 +17,7 @@ String _HtmlTemplateReferItem::getName() {
 void _HtmlTemplateReferItem::setValue(String param,String value) {
     auto map = values->get();
     if(map == nullptr) {
-        map = createHashMap<String,String>();
+        map = HashMap<String,String>::New();
         values->set(map);
     }
 

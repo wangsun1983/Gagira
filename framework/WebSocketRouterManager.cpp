@@ -7,10 +7,10 @@ namespace gagira {
 sp<_WebSocketRouterManager> _WebSocketRouterManager::mInstance = nullptr;
 
 _WebSocketRouterManager::_WebSocketRouterManager() {
-    lock = createReadWriteLock();
+    lock = ReadWriteLock::New();
     mReadLock = lock->getReadLock();
     mWriteLock = lock->getWriteLock();
-    mControllers = createHashMap<String,ControllerRouter>();
+    mControllers = HashMap<String,ControllerRouter>::New();
 }
 
 sp<_WebSocketRouterManager> _WebSocketRouterManager::getInstance() {

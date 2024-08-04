@@ -6,8 +6,8 @@
 #include "OnlineService.hpp"
 
 _UserService::_UserService() {
-    userInfoDaoInstance = createUserInfoDao();
-    groupInfoDaoInstance = createGroupInfoDao();
+    userInfoDaoInstance = UserInfoDao::New();
+    groupInfoDaoInstance = GroupInfoDao::New();
 }
 
 UserInfo _UserService::getUserInfo(String username,String password) {

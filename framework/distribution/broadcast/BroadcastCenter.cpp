@@ -18,17 +18,17 @@ using namespace obotcha;
 namespace gagira {
 
 _BroadcastCenter::_BroadcastCenter(String url,DistributeOption option):_DistributeCenter(url,option) {
-    mChannelGroups = createConcurrentHashMap<String,ArrayList<OutputStream>>();
-    mStickyMessages = createConcurrentHashMap<String,HashMap<String,ByteArray>>();
-    mWaitAckThreadPools = createExecutorBuilder()->newScheduledThreadPool();
-    mWaitAckMessages = createConcurrentHashMap<String,Future>();
-    mPersistRwLock = createReadWriteLock();;
+    mChannelGroups = ConcurrentHashMap<String,ArrayList<OutputStream>>::New();
+    mStickyMessages = ConcurrentHashMap<String,HashMap<String,ByteArray>>::New();
+    mWaitAckThreadPools = ExecutorBuilder::New()->newScheduledThreadPool();
+    mWaitAckMessages = ConcurrentHashMap<String,Future>::New();
+    mPersistRwLock = ReadWriteLock::New();;
     mPersistRLock = mPersistRwLock->getReadLock();
     mPersistWLock = mPersistRwLock->getWriteLock();
     mPostBackCompleted = ((option != nullptr && option->getWaitPostBack())
                             ?false:true);
-    mSchedulePool = createThreadScheduledPoolExecutor(-1,1000);
-    mDlqMutex = createMutex();
+    mSchedulePool = ThreadScheduledPoolExecutor::New(-1,1000);
+    mDlqMutex = Mutex::New();
 }
 
 int _BroadcastCenter::start() {
@@ -85,7 +85,7 @@ int _BroadcastCenter::dispatchMessage(Socket sock,ByteArray data) {
     long expireTime = msg->getExpireTime();
     if(expireTime != 0 && st(System)::CurrentTimeMillis() > expireTime) {
         //message timeout
-        BroadcastDLQMessage dlqMessage = createBroadcastDLQMessage();
+        BroadcastDLQMessage dlqMessage = BroadcastDLQMessage::New();
         dlqMessage->setCode(st(BroadcastDLQMessage)::MessageTimeOut)
                     ->setData(data)
                     ->setPointTime(st(System)::CurrentTimeMillis())
@@ -98,8 +98,8 @@ int _BroadcastCenter::dispatchMessage(Socket sock,ByteArray data) {
         && !mPostBackCompleted
         && msg->getType() != st(BroadcastMessage)::SubscribePersistence) {
         //send sustain message to client
-        BroadcastSustainMessage sustainMsg = createBroadcastSustainMessage(st(BroadcastSustainMessage)::WaitForPostBack,nullptr);
-        BroadcastMessage sendData = createBroadcastMessage(nullptr,sustainMsg->serialize(),st(BroadcastMessage)::Sustain);
+        BroadcastSustainMessage sustainMsg = BroadcastSustainMessage::New(st(BroadcastSustainMessage)::WaitForPostBack,nullptr);
+        BroadcastMessage sendData = BroadcastMessage::New(nullptr,sustainMsg->serialize(),st(BroadcastMessage)::Sustain);
         sock->getOutputStream()->write(mConverter->generatePacket(sendData));
         return -1;
     }
@@ -211,7 +211,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                     }
 
                     if(stream == originStream || stream->write(packet) < 0) {
-                        BroadcastDLQMessage dlqMessage = createBroadcastDLQMessage();
+                        BroadcastDLQMessage dlqMessage = BroadcastDLQMessage::New();
                         dlqMessage->setCode(stream == originStream?st(BroadcastDLQMessage)::NoClient:st(BroadcastDLQMessage)::ClientDisconnect)
                                   ->setData(packet)
                                   ->setToken(msg->getToken())
@@ -220,12 +220,12 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                         processSendFailMessage(dlqMessage);
                     }
                 } else {
-                    auto ll = createArrayList<OutputStream>();
+                    auto ll = ArrayList<OutputStream>::New();
                     bool isFirst = true;
                     ForEveryOne(stream,channels) {
                         if(stream != originStream && stream->write(packet) < 0) {
                             ll->add(stream);
-                            BroadcastDLQMessage dlqMessage = createBroadcastDLQMessage();
+                            BroadcastDLQMessage dlqMessage = BroadcastDLQMessage::New();
                             auto s = Cast<SocketOutputStream>(stream);
                             dlqMessage->setCode(st(BroadcastDLQMessage)::ClientDisconnect)
                                     ->setData(isFirst?packet:nullptr)
@@ -243,7 +243,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
                     }
                 }
             } else {
-                BroadcastDLQMessage dlqMessage = createBroadcastDLQMessage();
+                BroadcastDLQMessage dlqMessage = BroadcastDLQMessage::New();
                 dlqMessage->setCode(st(BroadcastDLQMessage)::NoClient)
                             ->setData(mConverter->generatePacket(msg))
                             ->setPointTime(st(System)::CurrentTimeMillis())
@@ -259,7 +259,7 @@ int _BroadcastCenter::processPublish(BroadcastMessage msg) {
             auto channel = msg->getChannel();
             auto stickyMap = mStickyMessages->get(channel);
             if(stickyMap == nullptr) {
-                stickyMap = createHashMap<String,ByteArray>();
+                stickyMap = HashMap<String,ByteArray>::New();
                 mStickyMessages->put(channel,stickyMap);
             }
             stickyMap->put(msg->getToken(),mConverter->generatePacket(msg));
@@ -276,7 +276,7 @@ int _BroadcastCenter::processSubscribe(BroadcastMessage msg) {
         auto channel = msg->getChannel();
         auto channels = mChannelGroups->get(channel);
         if(channels == nullptr) {
-            channels = createArrayList<OutputStream>();
+            channels = ArrayList<OutputStream>::New();
             mChannelGroups->put(channel,channels);
         }
         //check whether duplicated subscribe msg was sent
@@ -311,7 +311,7 @@ int _BroadcastCenter::processUnSubscribe(BroadcastMessage msg) {
         auto channel = msg->getChannel();
         auto channels = mChannelGroups->get(channel);
         if(channels != nullptr && channels->size() > 0) {
-            BroadcastMessage resp = createBroadcastMessage(channel,nullptr,st(BroadcastMessage)::Detach);
+            BroadcastMessage resp = BroadcastMessage::New(channel,nullptr,st(BroadcastMessage)::Detach);
             auto outputstream = msg->mSocket->getOutputStream();
 
             outputstream->write(mConverter->generatePacket(resp));
@@ -329,7 +329,7 @@ bool _BroadcastCenter::processSendFailMessage(BroadcastDLQMessage msg) {
     String token = msg->getToken();
     Synchronized(mDlqMutex){
         Inspect(mDlqClient == nullptr,false);
-        BroadcastMessage resp = createBroadcastMessage(nullptr,msg->serialize(),st(BroadcastMessage)::Publish);
+        BroadcastMessage resp = BroadcastMessage::New(nullptr,msg->serialize(),st(BroadcastMessage)::Publish);
         return mDlqClient->getOutputStream()->write(mConverter->generatePacket(resp)) > 0;
     }
 

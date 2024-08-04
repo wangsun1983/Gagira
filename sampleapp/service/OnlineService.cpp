@@ -15,18 +15,18 @@ sp<_OnlineService> _OnlineService::getInstance() {
 }
 
 _OnlineService::_OnlineService() {
-    mGroupDaoInstance = createGroupInfoDao();
+    mGroupDaoInstance = GroupInfoDao::New();
 
-    mClientsLock = createReadWriteLock();
+    mClientsLock = ReadWriteLock::New();
     mClientsRdLock = mClientsLock->getReadLock();
     mClientsWrLock = mClientsLock->getWriteLock();
-    mWsClients = createHashMap<String,WebSocketLinker>();
-    mUsers = createHashMap<String,String>();
+    mWsClients = HashMap<String,WebSocketLinker>::New();
+    mUsers = HashMap<String,String>::New();
 
-    mGroupMembersLock = createReadWriteLock();
+    mGroupMembersLock = ReadWriteLock::New();
     mGroupMembersRdLock = mGroupMembersLock->getReadLock();
     mGroupMembersWrLock = mGroupMembersLock->getWriteLock();
-    groupMembers = createHashMap<String,ArrayList<WebSocketLinker>>();
+    groupMembers = HashMap<String,ArrayList<WebSocketLinker>>::New();
 }
 
 void _OnlineService::newWsClient(String sessionid,WebSocketLinker client) {

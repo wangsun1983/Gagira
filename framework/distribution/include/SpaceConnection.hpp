@@ -33,7 +33,7 @@ public:
 
     template<typename T>
     int update(String tag,T value) {
-        auto message = createSpaceUpdateMessage(tag,value->serialize(),nullptr);
+        auto message = SpaceUpdateMessage::New(tag,value->serialize(),nullptr);
         return mOutput->write(mConverter->generatePacket(message));
     }
 
@@ -46,9 +46,9 @@ public:
 
     template< typename T>
     T get(String tag) {
-        auto message = createSpaceAcquireMessage(tag);
-        DistributeMessageParser parser = createDistributeMessageParser(32*1024);
-        auto sock = createSocketBuilder()->setAddress(mAddress)->newSocket();
+        auto message = SpaceAcquireMessage::New(tag);
+        DistributeMessageParser parser = DistributeMessageParser::New(32*1024);
+        auto sock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
         if(sock->connect() < 0) {
             return nullptr;
         }
@@ -59,7 +59,7 @@ public:
 
         ArrayList<ByteArray> response = nullptr;
         while(1) {
-            ByteArray data = createByteArray(4*1024);
+            ByteArray data = ByteArray::New(4*1024);
             int ret = sock->getInputStream()->read(data);
             if(ret > 0) {
                 data->quickShrink(ret);

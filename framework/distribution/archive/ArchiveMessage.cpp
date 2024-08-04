@@ -1,15 +1,23 @@
 #include "ArchiveMessage.hpp"
+#include "Md.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-const String _ArchiveMessage::kReject = createString("?<Reject>?");
+const String _ArchiveMessage::kReject = String::New("?<Reject>?");
    
 
 //---_ArchiveMessage---
 _ArchiveMessage::_ArchiveMessage() {
-    //nothing;
+    permitFlag = 0;
+}
+
+int _ArchiveMessage::getEvent() {
+    return event;
+}
+uint64_t _ArchiveMessage::getPort() {
+    return privateData;
 }
 
 uint64_t _ArchiveMessage::getUploadFileLength() {
@@ -17,7 +25,7 @@ uint64_t _ArchiveMessage::getUploadFileLength() {
 }
 
 uint64_t _ArchiveMessage::getDownloadFileSize() {
-    return privateData;
+    return privateData2;
 }
 
 uint64_t _ArchiveMessage::getQueryFileSize() {
@@ -25,15 +33,15 @@ uint64_t _ArchiveMessage::getQueryFileSize() {
 }
 
 bool _ArchiveMessage::isPermitted() {
-    return this->privateData == 0;
+    return this->permitFlag == 0;
 }
 
-uint64_t _ArchiveMessage::getStartPos() {
-    return this->privateData;
+uint32_t _ArchiveMessage::getStartPos() {
+    return (this->privateData2 & 0xFFFF);
 }
 
 uint64_t _ArchiveMessage::getReadLength() {
-    return this->privateData;
+    return this->privateData2;
 }
 
 uint64_t _ArchiveMessage::getDataSize() {
@@ -48,6 +56,38 @@ uint64_t _ArchiveMessage::getFlags() {
     return this->privateData;
 }
 
+uint32_t _ArchiveMessage::getPermitFlag() {
+    return this->permitFlag;
+}
+
+uint64_t _ArchiveMessage::getFileNo() {
+    return this->privateData;
+}
+
+uint64_t _ArchiveMessage::getSeekType() {
+    return (this->privateData2 & 0xFFFF0000)>>31;
+}
+
+String _ArchiveMessage::getFileName() {
+    return this->filename;
+}
+
+ByteArray _ArchiveMessage::getData() {
+    return this->data;
+}
+
+ByteArray _ArchiveMessage::getVerifyData() {
+    return this->verifyData;
+}
+
+String _ArchiveMessage::getRenameOriginalName() {
+    return this->filename;
+}
+
+String _ArchiveMessage::getRenameNewName() {
+    return this->data->toString();
+}
+
 //--- ApplyUploadMessage ---
 _ApplyUploadConnectMessage::_ApplyUploadConnectMessage() {
     this->event = ApplyUploadConnect;
@@ -59,31 +99,42 @@ _ConfirmUploadConnectMessage::_ConfirmUploadConnectMessage() {
     this->event = ConfirmUploadConnect;
 }
 
-_ConfirmUploadConnectMessage::_ConfirmUploadConnectMessage(uint32_t v) {
+_ConfirmUploadConnectMessage::_ConfirmUploadConnectMessage(uint32_t port) {
     this->event = ConfirmUploadConnect;
-    this->port = v;
+    this->privateData = port;
 }
 
 //ApplyUploadInfoMessage(File);
 _ApplyUploadMessage::_ApplyUploadMessage() {
-    
+    this->event = ApplyUpload; 
 }
 
 _ApplyUploadMessage::_ApplyUploadMessage(File file) {
     this->event = ApplyUpload;
     this->filename = file->getName();
     this->privateData = file->length();
+    //we should compute md5sum value
+    Md md5sum = Md::New();
+    this->verifyData = md5sum->encodeFile(file)->toByteArray();
 }
 
 //--- ConfirmApplyUploadInfoMessage ---
 _ConfirmApplyUploadMessage::_ConfirmApplyUploadMessage() {
     this->event = ConfirmUpload;
-    this->privateData = 0;
 }
 
 _ConfirmApplyUploadMessage::_ConfirmApplyUploadMessage(uint32_t result) {
     this->event = ConfirmUpload;
-    this->privateData = result;
+    this->permitFlag = result;
+}
+
+_CompleteUploadMessage::_CompleteUploadMessage() {
+    this->event = CompleteUpload;
+}
+
+_CompleteUploadMessage::_CompleteUploadMessage(uint32_t result) {
+    this->event = CompleteUpload;
+    this->permitFlag = result;
 }
 
 //--- ApplyDownloadMessage ---
@@ -100,18 +151,26 @@ _ApplyDownloadMessage::_ApplyDownloadMessage(String filename) {
 //--- ConfirmDownloadMessage ---
 _ConfirmDownloadMessage::_ConfirmDownloadMessage() {
     this->event = ConfirmDownload;
-    this->privateData = 0;
     //do nothing
 }
 
-_ConfirmDownloadMessage::_ConfirmDownloadMessage(File file) {
+_ConfirmDownloadMessage::_ConfirmDownloadMessage(uint32_t result) {
     this->event = ConfirmDownload;
-    this->filename = file->getName();
-    this->privateData = EEXIST; 
+    this->permitFlag = result;
 }
 
-_ProcessDownloadMessage::_ProcessDownloadMessage() {
+_ConfirmDownloadMessage::_ConfirmDownloadMessage(File file,uint64_t id) {
+    this->event = ConfirmDownload;
+    this->filename = file->getName();
+    this->privateData = id;
+    this->privateData2 = file->length();
+    Md md5sum = Md::New();
+    this->verifyData = md5sum->encodeFile(file)->toByteArray();
+}
+
+_ProcessDownloadMessage::_ProcessDownloadMessage(uint64_t fileno) {
     this->event = ProcessDownload;
+    this->privateData = fileno;
 }
 
 _QueryInfoMessage::_QueryInfoMessage(String filename) {
@@ -121,11 +180,17 @@ _QueryInfoMessage::_QueryInfoMessage(String filename) {
 
 _ConfirmQueryInfoMessage::_ConfirmQueryInfoMessage() {
     this->event = ConfirmQueryInfo;
-    this->privateData = 0;
+}
+
+_ConfirmQueryInfoMessage::_ConfirmQueryInfoMessage(uint32_t result) {
+    this->event = ConfirmQueryInfo;
+    this->permitFlag = result;
 }
 
 _ConfirmQueryInfoMessage::_ConfirmQueryInfoMessage(File file) {
+    printf("ConfirmQUeryInfo trace1 \n");
     this->event = ConfirmQueryInfo;
+    printf("ConfirmQUeryInfo trace2 size is %d,permit flag is %d \n",file->length(),permitFlag);
     this->privateData = file->exists()?file->length():0;
 }
 
@@ -135,60 +200,66 @@ _ApplyOpenMessage::_ApplyOpenMessage(String filename,uint64_t flags) {
     this->privateData = flags;
 }
 
-_ConfirmOpenMessage::_ConfirmOpenMessage(File file) {
+_ConfirmOpenMessage::_ConfirmOpenMessage(uint64_t fileno,uint32_t result) {
     this->event = ConfirmOpen;
-    this->privateData = file->exists()?0:ENOENT;
+    this->permitFlag = result;
+    this->privateData = fileno;
 }
 
 _ConfirmOpenMessage::_ConfirmOpenMessage() {
     this->event = ConfirmOpen;
-    this->privateData = ENOENT;
 }
 
-_ApplySeekToMessage::_ApplySeekToMessage(uint32_t start) {
+_ApplySeekToMessage::_ApplySeekToMessage(uint64_t fileno,uint32_t start,Type type) {
     this->event = ApplySeekTo;
-    this->privateData = start;
+    this->privateData = fileno;
+    this->privateData2 = start;
+    this->privateData2 |= (((uint32_t)type)<<31);
 }
 
 _ConfirmSeekToMessage::_ConfirmSeekToMessage(uint32_t result) {
     this->event = ConfirmSeekTo;
-    this->privateData = result;
+    this->permitFlag = result;
 }
 
 _ConfirmSeekToMessage::_ConfirmSeekToMessage() {
     this->event = ConfirmSeekTo;
-    this->privateData = EIO;
 }
 
-_ApplyReadMessage::_ApplyReadMessage(uint64_t len) {
+_ApplyReadMessage::_ApplyReadMessage(uint64_t fileno,uint64_t len) {
     this->event = ProcessRead;
-    this->privateData = len;
+    this->privateData = fileno;
+    this->privateData2 = len;
 }
 
 _ConfirmReadMessage::_ConfirmReadMessage() {
     this->event = ConfirmRead;
-    this->privateData = EIO;
 }
 
 _ConfirmReadMessage::_ConfirmReadMessage(ByteArray data) {
     this->event = ConfirmRead;
     this->data = data;
-    this->privateData = data->size();
+    this->privateData2 = data->size();
 }
 
-_ApplyWriteMessage::_ApplyWriteMessage(ByteArray data) {
+_ConfirmReadMessage::_ConfirmReadMessage(uint64_t result) {
+    this->event = ConfirmRead;
+    this->permitFlag = result;
+}
+
+_ApplyWriteMessage::_ApplyWriteMessage(uint64_t fileno,ByteArray data) {
     this->event = ApplyWrite;
     this->data = data;
+    this->privateData = fileno;
 }
 
 _ConfirmWriteMessage::_ConfirmWriteMessage() {
     this->event = ConfirmWrite;
-    this->privateData = 0;
 }
 
 _ConfirmWriteMessage::_ConfirmWriteMessage(uint64_t result) {
     this->event = ConfirmWrite;
-    this->privateData = result;
+    this->permitFlag = result;
 }
 
 _ApplyDelMessage::_ApplyDelMessage(String filename) {
@@ -198,12 +269,11 @@ _ApplyDelMessage::_ApplyDelMessage(String filename) {
 
 _ConfirmDelMessage::_ConfirmDelMessage() {
     this->event = ConfirmDel;
-    this->privateData = 0;
 }
 
 _ConfirmDelMessage::_ConfirmDelMessage(uint64_t result) {
     this->event = ConfirmDel;
-    this->privateData = result;
+    this->permitFlag = result;
 }
 
 _ApplyRenameMessage::_ApplyRenameMessage(String originalname,String newname) {
@@ -214,14 +284,27 @@ _ApplyRenameMessage::_ApplyRenameMessage(String originalname,String newname) {
 
 _ConfirmRenameMessage::_ConfirmRenameMessage() {
     this->event = ConfirmRename;
-    this->privateData = 0;
 }
 
-_ConfirmRenameMessage::_ConfirmRenameMessage(uint64_t result) {
+_ConfirmRenameMessage::_ConfirmRenameMessage(uint32_t result) {
     this->event = ConfirmRename;
-    this->privateData = result;
+    this->permitFlag = result;
 }
 
+_ApplyCloseStreamMessage::_ApplyCloseStreamMessage(uint64_t fileno) {
+    this->event = ApplyCloseStream;
+    this->privateData = fileno;
+}
+
+
+_ConfirmCloseStreamMessage::_ConfirmCloseStreamMessage() {
+    this->event = ConfirmCloseStream;
+}
+
+_ConfirmCloseStreamMessage::_ConfirmCloseStreamMessage(uint32_t result) {
+    this->event = ConfirmCloseStream;
+    this->permitFlag = result;
+}
 
 }
 

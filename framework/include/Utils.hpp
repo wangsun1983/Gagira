@@ -60,8 +60,8 @@ template <typename T> T getClass(sp<T>) {
     {                                                                          \
         auto func = std::bind(&decltype(getClass(instance))::function,         \
                               instance.get_pointer());                         \
-        ControllerRouter r = createControllerRouter(func, instance);           \
-        HttpRouter router = createHttpRouter(url, r);                          \
+        ControllerRouter r = ControllerRouter::New(func, instance);           \
+        HttpRouter router = HttpRouter::New(url, r);                          \
         st(HttpRouterManager)::getInstance()->addRouter(static_cast<int>(method), router);       \
     }
 
@@ -97,7 +97,7 @@ template <typename T> T getClass(sp<T>) {
     {                                                                          \
         auto func = std::bind(&decltype(getClass(instance))::function,         \
                               instance.get_pointer());                         \
-        ControllerRouter r = createControllerRouter(func, instance);           \
+        ControllerRouter r = ControllerRouter::New(func, instance);           \
         st(Server)::getInstance()->addGlobalController(method, r);             \
     }
 
@@ -105,7 +105,7 @@ template <typename T> T getClass(sp<T>) {
     {                                                                          \
         auto func = std::bind(&decltype(getClass(instance))::function,         \
                               instance.get_pointer());                         \
-        ControllerRouter r = createControllerRouter(func, instance);           \
+        ControllerRouter r = ControllerRouter::New(func, instance);           \
         st(WebSocketRouterManager)::getInstance()->addRouter(path, r);         \
         auto wsServer = st(Server)::getInstance()->getWebSocketServer();       \
         if(wsServer != nullptr) {                                              \

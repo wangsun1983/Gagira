@@ -8,8 +8,8 @@ using namespace obotcha;
 namespace gagira {
 
 _MySqlDao::_MySqlDao() {
-    connection = createMySqlConnection();
-    MySqlConnectParam param = createMySqlConnectParam();
+    connection = MySqlConnection::New();
+    MySqlConnectParam param = MySqlConnectParam::New();
 
     ArrayList<SqlConfig> confs = st(Configs)::getInstance()->getSqlConfigs();
     auto iterator = confs->getIterator();

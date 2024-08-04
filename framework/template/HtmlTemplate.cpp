@@ -17,25 +17,25 @@ using namespace obotcha;
 
 namespace gagira {
 
-String _HtmlTemplate::RangeCommand = createString("range");
-String _HtmlTemplate::IndexCommand = createString("index");
-String _HtmlTemplate::WithCommand = createString("with");
-String _HtmlTemplate::EndCommand = createString("end");
-String _HtmlTemplate::DotCommand = createString(".");
-String _HtmlTemplate::IfCommand = createString("if");
-String _HtmlTemplate::ElseIfCommand = createString("else if");
-String _HtmlTemplate::ElseCommand = createString("else");
-String _HtmlTemplate::IncludeCommand = createString("template");
-String _HtmlTemplate::DefineCommand = createString("define");
-String _HtmlTemplate::LenCommand = createString("len");
+String _HtmlTemplate::RangeCommand = String::New("range");
+String _HtmlTemplate::IndexCommand = String::New("index");
+String _HtmlTemplate::WithCommand = String::New("with");
+String _HtmlTemplate::EndCommand = String::New("end");
+String _HtmlTemplate::DotCommand = String::New(".");
+String _HtmlTemplate::IfCommand = String::New("if");
+String _HtmlTemplate::ElseIfCommand = String::New("else if");
+String _HtmlTemplate::ElseCommand = String::New("else");
+String _HtmlTemplate::IncludeCommand = String::New("template");
+String _HtmlTemplate::DefineCommand = String::New("define");
+String _HtmlTemplate::LenCommand = String::New("len");
 
 //template like Go
 //{{.}}
 _HtmlTemplate::_HtmlTemplate() {
-    items = createArrayList<HtmlTemplateItem>();
-    sections = createHashMap<String,HtmlTemplateItem>();
-    //mFunctions = createHashMap<String,HtmlTemplateItem>();
-    functionsCache = createArrayList<Object>();
+    items = ArrayList<HtmlTemplateItem>::New();
+    sections = HashMap<String,HtmlTemplateItem>::New();
+    //mFunctions = HashMap<String,HtmlTemplateItem>::New();
+    functionsCache = ArrayList<Object>::New();
 
     memset(mStatus,0,32*sizeof(int));
     mStatusCount = 0;
@@ -69,7 +69,7 @@ int _HtmlTemplate::import(String html,int start,bool onsection) {
                 }
                 
                 if(text != nullptr && text->size() > 0) {
-                    HtmlTemplateItem item = createHtmlTemplateTextItem(text);
+                    HtmlTemplateItem item = HtmlTemplateTextItem::New(text);
                     items->add(item);
                 }
             }
@@ -87,7 +87,7 @@ int _HtmlTemplate::import(String html,int start,bool onsection) {
             }
             
             if(text != nullptr && text->size() != 0) {
-                HtmlTemplateItem item = createHtmlTemplateTextItem(text);
+                HtmlTemplateItem item = HtmlTemplateTextItem::New(text);
                 items->add(item);
             }
         }
@@ -100,18 +100,18 @@ LoopFind:
         if(cmd->startsWith("/*") && cmd->endsWith("*/")) {
             //this is a comment,Do nothing;
         } if(cmd->startsWith(".")) {
-            mCurrentParser = createTemplateDotCmdParser();
+            mCurrentParser = TemplateDotCmdParser::New();
             mCurrentParser->doParse(cmd->subString(1,cmd->size() - 1));
             items->add(mCurrentParser->getTemplateItem());
         } else if(cmd->startsWithIgnoreCase(IfCommand)) {
             //mStatus = ParseIfContent;
             addCurrentStatus(ParseIfContent);
-            mCurrentParser = createTemplateConditionCmdParser();
+            mCurrentParser = TemplateConditionCmdParser::New();
             mCurrentParser->doParse(
                     cmd->subString(IfCommand->size(),cmd->size()- IfCommand->size()));
             HtmlTemplateConditionItem item = Cast<HtmlTemplateConditionItem>(mCurrentParser->getTemplateItem());
             HtmlTemplateCondition cond =item->conditions->get(item->conditions->size() - 1);
-            cond->content = createHtmlTemplate();
+            cond->content = HtmlTemplate::New();
             cond->content->addCurrentStatus(ParseIfContent);
             int ret = cond->content->import(html,tagEndIndex,true);
             //removeCurrentStatus();
@@ -141,14 +141,14 @@ LoopFind:
                 }
                 HtmlTemplateConditionItem item = Cast<HtmlTemplateConditionItem>(mCurrentParser->getTemplateItem());
                 HtmlTemplateCondition cond =item->conditions->get(item->conditions->size() - 1);
-                cond->content = createHtmlTemplate();
+                cond->content = HtmlTemplate::New();
                 newTemplate = cond->content;
             } else if(currentStatus() == ParseRangeContent) {
                 HtmlTemplateRangeItem item = Cast<HtmlTemplateRangeItem>(mCurrentParser->getTemplateItem());
                 if(item == nullptr) {
                     return -1;
                 }
-                item->mNoValueTemplate = createHtmlTemplate();
+                item->mNoValueTemplate = HtmlTemplate::New();
                 newTemplate = item->mNoValueTemplate;
             }
             
@@ -180,20 +180,20 @@ LoopFind:
                 return  -1;
             }
         } else if(cmd->startsWith("$")) {
-            mCurrentParser = createTemplateReferCmdParser();
+            mCurrentParser = TemplateReferCmdParser::New();
             mCurrentParser->doParse(cmd->subString(1,cmd->size()- 1));
             items->add(mCurrentParser->getTemplateItem());
         } else if(cmd->startsWith(LenCommand)) {
-            mCurrentParser = createTemplateLenCmdParser();
+            mCurrentParser = TemplateLenCmdParser::New();
             mCurrentParser->doParse(cmd->subString(LenCommand->size(),cmd->size()- LenCommand->size()));
             items->add(mCurrentParser->getTemplateItem());
         } else if(cmd->startsWithIgnoreCase(RangeCommand)) {
             addCurrentStatus(ParseRangeContent);
-            mCurrentParser = createTemplateRangeCmdParser();
+            mCurrentParser = TemplateRangeCmdParser::New();
             mCurrentParser->doParse(cmd->subString(RangeCommand->size(),cmd->size()- RangeCommand->size()));
             
             HtmlTemplateRangeItem item = Cast<HtmlTemplateRangeItem>(mCurrentParser->getTemplateItem());
-            item->mTemplate = createHtmlTemplate();
+            item->mTemplate = HtmlTemplate::New();
             item->mTemplate->addCurrentStatus(ParseRangeContent);
             int ret = item->mTemplate->import(html,tagEndIndex,true);
             //removeCurrentStatus();
@@ -204,16 +204,16 @@ LoopFind:
                 tagStartIndex = ret;
             }
         } else if(cmd->startsWithIgnoreCase(IncludeCommand)) {
-            mCurrentParser = createTemplateIncludeCmdParser();
+            mCurrentParser = TemplateIncludeCmdParser::New();
             mCurrentParser->doParse(cmd->subString(IncludeCommand->size(),cmd->size()- IncludeCommand->size()));
             items->add(mCurrentParser->getTemplateItem());
         } else if(cmd->startsWithIgnoreCase(DefineCommand)) {
             addCurrentStatus(ParseDefine);
-            mCurrentParser = createTemplateDefineCmdParser();
+            mCurrentParser = TemplateDefineCmdParser::New();
             mCurrentParser->doParse(cmd->subString(DefineCommand->size(),cmd->size()- DefineCommand->size()));
             
             HtmlTemplateDefineItem item = Cast<HtmlTemplateDefineItem>(mCurrentParser->getTemplateItem());
-            item->mTemplate = createHtmlTemplate();
+            item->mTemplate = HtmlTemplate::New();
             item->mTemplate->addCurrentStatus(ParseDefine);
             int ret = item->mTemplate->import(html,tagEndIndex,true);
             //removeCurrentStatus();
@@ -225,10 +225,10 @@ LoopFind:
             }
         } else if(cmd->startsWithIgnoreCase(WithCommand)) {
             addCurrentStatus(ParseWith);
-            mCurrentParser = createTemplateWithCmdParser();
+            mCurrentParser = TemplateWithCmdParser::New();
             mCurrentParser->doParse(cmd->subString(WithCommand->size(),cmd->size()- WithCommand->size()));
             HtmlTemplateWithItem item = Cast<HtmlTemplateWithItem>(mCurrentParser->getTemplateItem());
-            item->content = createHtmlTemplate();
+            item->content = HtmlTemplate::New();
             int ret = item->content->import(html,tagEndIndex,true);
             //removeCurrentStatus();
             if(ret < 0) {
@@ -242,7 +242,7 @@ LoopFind:
             int index = cmd->indexOf(" ");
             String name = cmd->subString(0,index);
             if(mFunctions.find(name->getStdString()) != mFunctions.end()) {
-                mCurrentParser = createTemplateFunctionCmdParser(name,mFunctions[name->getStdString()]);
+                mCurrentParser = TemplateFunctionCmdParser::New(name,mFunctions[name->getStdString()]);
                 mCurrentParser->doParse(cmd->subString(name->size(),cmd->size()- name->size()));
                 items->add(mCurrentParser->getTemplateItem());
             }
@@ -254,7 +254,7 @@ LoopFind:
 }
 
 String _HtmlTemplate::execute(Object data) {
-    StringBuffer templateString = createStringBuffer();
+    StringBuffer templateString = StringBuffer::New();
     auto iterator = items->getIterator();
     while(iterator->hasValue()) {
         auto item = iterator->getValue();
@@ -270,7 +270,7 @@ String _HtmlTemplate::execute(Object data) {
 }
 
 int _HtmlTemplate::importFile(String path) {
-    FileInputStream input = createFileInputStream(path);
+    FileInputStream input = FileInputStream::New(path);
     input->open();
     String content = input->readAll()->toString();
     input->close();

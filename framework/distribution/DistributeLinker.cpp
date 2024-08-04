@@ -5,7 +5,7 @@ namespace gagira {
 _DistributeLinker::_DistributeLinker(Socket sock,int buffsize) {
     mSocket = sock;
     mBuffSize = buffsize;
-    mParser = createDistributeMessageParser(buffsize);
+    mParser = DistributeMessageParser::New(buffsize);
 }
 
 ArrayList<ByteArray> _DistributeLinker::doParse(ByteArray data) {

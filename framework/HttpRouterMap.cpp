@@ -11,7 +11,7 @@ _HttpRouterSegment::_HttpRouterSegment(int type,String value) {
 
 //---------HttpRouterSegments--------
 _HttpRouterSegments::_HttpRouterSegments(HttpRouter r) {
-    mSegments = createArrayList<HttpRouterSegment> ();
+    mSegments = ArrayList<HttpRouterSegment>::New();
     mRouter = r;
 }
 
@@ -20,7 +20,7 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterSegments::match(ArrayList<S
         return MakeRet(nullptr,nullptr);
     }
 
-    HashMap<String,String> params = createHashMap<String,String>();
+    HashMap<String,String> params = HashMap<String,String>::New();
     for(int i = 0;i < items->size();i++) {
         auto segment = mSegments->get(i);
         if(segment->type == st(HttpRouterSegment)::SegmentPath && !segment->value->equals(items->get(i))) {
@@ -40,17 +40,17 @@ void _HttpRouterSegments::addSegment(HttpRouterSegment segment) {
 
 //---------HttpRouterSegments--------
 _HttpRouterMap::_HttpRouterMap() {
-    mUrls = createHashMap<String,ArrayList<HttpRouterSegments>>();
+    mUrls = HashMap<String,ArrayList<HttpRouterSegments>>::New();
 }
 
 void _HttpRouterMap::addRouter(HttpRouter r) {
     String path = r->getPath();
     ArrayList<String> items = path->split("/");
     String root = items->get(0);
-    HttpRouterSegments segments = createHttpRouterSegments(r);
+    HttpRouterSegments segments = HttpRouterSegments::New(r);
     ArrayList<HttpRouterSegments> list = mUrls->get(root);
     if(list == nullptr) {
-        list = createArrayList<HttpRouterSegments>();
+        list = ArrayList<HttpRouterSegments>::New();
         mUrls->put(root,list);
     };
     list->add(segments);
@@ -59,10 +59,10 @@ void _HttpRouterMap::addRouter(HttpRouter r) {
         auto item = items->get(i)->trimAll();
         HttpRouterSegment segment;
         if(item->startsWith("{")  && item->endsWith("}")) {
-            segment = createHttpRouterSegment(st(HttpRouterSegment)::SegmentParam,
+            segment = HttpRouterSegment::New(st(HttpRouterSegment)::SegmentParam,
                                               item->subString(1,item->size() - 2));
         } else {
-            segment = createHttpRouterSegment(st(HttpRouterSegment)::SegmentPath,
+            segment = HttpRouterSegment::New(st(HttpRouterSegment)::SegmentPath,
                                               item);
         }
         segments->addSegment(segment);
@@ -120,7 +120,7 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterMap::findRouter(String path
 
 HashMap<String, String> _HttpRouterMap::parseQuery(String query) {
 
-    HashMap<String, String> result = createHashMap<String, String>();
+    HashMap<String, String> result = HashMap<String, String>::New();
     const char *p = query->toChars();
     int index = 0;
     int start = 0;
@@ -132,7 +132,7 @@ HashMap<String, String> _HttpRouterMap::parseQuery(String query) {
         switch (p[index]) {
         case '&': {
             // value end
-            value = createString(&p[start], 0, index - start);
+            value = String::New(&p[start], 0, index - start);
             result->put(name, value);
             start = ++index;
             continue;
@@ -140,7 +140,7 @@ HashMap<String, String> _HttpRouterMap::parseQuery(String query) {
 
         case '=': {
             // name end
-            name = createString(&p[start], 0, index - start);
+            name = String::New(&p[start], 0, index - start);
             start = ++index;
             continue;
         }
@@ -152,7 +152,7 @@ HashMap<String, String> _HttpRouterMap::parseQuery(String query) {
         index++;
     }
 
-    value = createString(&p[start], 0, index - start);
+    value = String::New(&p[start], 0, index - start);
     result->put(name, value);
     return result;
 }

@@ -6,7 +6,7 @@
 #include "String.hpp"
 
 _ConversationController::_ConversationController() {
-    mConversationService = createConversationService();
+    mConversationService = ConversationService::New();
 }
 
 HttpResponseEntity _ConversationController::onNewConversation() {
@@ -15,7 +15,8 @@ HttpResponseEntity _ConversationController::onNewConversation() {
     ServletRequest req = getRequest();
     String s = req->getContent<String>();
 
-    JsonReader reader = createJsonReader(s);
+    JsonReader reader = JsonReader::New();
+    reader->loadContent(s);
     JsonValue value = reader->get();
 
     int type = value->getInteger("type")->toValue();
@@ -33,10 +34,10 @@ HttpResponseEntity _ConversationController::onNewConversation() {
             String user = value->getString("username");
             String text = value->getString("data");
             int ret = mConversationService->addConversation(group,user,TextMessage,text,s->toByteArray());
-            return createHttpResponseEntity(createString(ret));
+            return HttpResponseEntity::New(String::New(ret));
         } 
         break;
     }
 
-    return createHttpResponseEntity(200);
+    return HttpResponseEntity::New(200);
 }

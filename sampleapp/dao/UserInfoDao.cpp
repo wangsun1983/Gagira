@@ -4,10 +4,10 @@
 UserInfo _UserInfoDao::getUserInfo(String username,String password) {
     SqlQuery query = nullptr;
     if(password != nullptr) {
-        query = createSqlQuery("select * from user_table where username ='$1' AND password='$2'");
+        query = SqlQuery::New("select * from user_table where username ='$1' AND password='$2'");
         query->bindParam(username,password);
     } else {
-        query = createSqlQuery("select * from user_table where username ='$1'");
+        query = SqlQuery::New("select * from user_table where username ='$1'");
         query->bindParam(username);
     }
 
@@ -20,7 +20,7 @@ UserInfo _UserInfoDao::getUserInfo(String username,String password) {
 }
 
 int _UserInfoDao::addNewUser(String username,String password) {
-    SqlQuery query = createSqlQuery("insert into user_table(username,password) VALUES('$1','$2')");
+    SqlQuery query = SqlQuery::New("insert into user_table(username,password) VALUES('$1','$2')");
     query->bindParam(username,password);
     return -connection->exec(query);
 }

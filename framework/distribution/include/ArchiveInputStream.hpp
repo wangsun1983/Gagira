@@ -12,21 +12,19 @@ namespace gagira {
 
 DECLARE_CLASS(ArchiveInputStream) IMPLEMENTS(InputStream) {
 public:
-    _ArchiveInputStream(ArchiveFile);
-    _ArchiveInputStream(String filename,String url);
+    _ArchiveInputStream(uint64_t fileno,ArchiveConnection);
 
     long seekTo(int index);
-    
     long read(ByteArray);
-    long read(ByteArray, int start);
-    long read(ByteArray, int start,int length);
+    long read(ByteArray, uint64_t start);
+    long read(ByteArray, uint64_t start,uint64_t length);
     ByteArray readAll();
     bool open();
     void close();
 
 private:
-    ArchiveFile mArchiveFile;
     ArchiveConnection mConnection;
+    uint64_t mFileNo;
 };
 
 }

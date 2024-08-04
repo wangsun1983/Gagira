@@ -10,10 +10,18 @@ namespace gagira {
 
 DECLARE_CLASS(ArchiveHandleResult) {
 public:
-    _ArchiveHandleResult(String path,int result);
+    enum Type {
+        Deal = 0,
+        Reject,
+    };
+
+    _ArchiveHandleResult(String path,Type result);
     _ArchiveHandleResult(String path);
+    _ArchiveHandleResult(Type result);
+    static sp<_ArchiveHandleResult> DisAllow();
+    static sp<_ArchiveHandleResult> Allow(String path,Type result);
     String path;
-    int result;
+    Type result;
 };
 
 }

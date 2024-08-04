@@ -10,7 +10,7 @@ _TemplateDefineCmdParser::_TemplateDefineCmdParser() {
 
 void _TemplateDefineCmdParser::doParse(String cmd) {
     cmd = cmd->trim();
-    item = createHtmlTemplateDefineItem();
+    item = HtmlTemplateDefineItem::New();
     
     if(cmd->startsWith("\"") && cmd->endsWith("\"")) {
         item->mName = cmd->subString(1,cmd->size() - 2);

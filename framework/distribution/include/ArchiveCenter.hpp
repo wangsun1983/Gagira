@@ -22,6 +22,8 @@
 #include "DistributeMessageConverter.hpp"
 #include "FileInputStream.hpp"
 #include "FileOutputStream.hpp"
+#include "DistributeHandler.hpp"
+#include "ArchiveFileManager.hpp"
 
 using namespace obotcha;
 
@@ -36,6 +38,7 @@ public:
     uint64_t mFileSize;
     String mPath;
     int mStatus;
+    ByteArray mVerifyData;
     DistributeMessageParser mParser;
 };
 
@@ -74,7 +77,7 @@ public:
     int onDisconnectClient(DistributeLinker);
 
 private:
-    String transformFilePath(DistributeLinker,ArchiveMessage msg);
+    DefRet(st(ArchiveHandleResult)::Type,String) transformFilePath(DistributeLinker,ArchiveMessage msg);
 
     ArchiveCenterUploadMonitor createUploadMonitor();
     DistributeMessageConverter mConverter;
@@ -82,12 +85,20 @@ private:
     ArchiveOption mOption;
     AtomicUint32 mCurrentPort;
     ConcurrentQueue<ArchiveCenterUploadMonitor> mThreads;
-    ConcurrentHashMap<DistributeLinker,File> mDownloadRequests;
+    //ConcurrentHashMap<DistributeLinker,File> mDownloadRequests;
     ConcurrentHashMap<DistributeLinker,FileInputStream> mReadLinks;
     ConcurrentHashMap<DistributeLinker,FileOutputStream> mWriteLinks;
     String mSavedPath;
     DistributeHandler mHandler;
+
+    //int
+    //AtomicUint64 mFileNoGenerator;
+    ConcurrentHashMap<Integer,File> mFileNoMaps;
+
+    //status manager
+    ArchiveFileManager mFileManager;
 };
+
 
 }
 

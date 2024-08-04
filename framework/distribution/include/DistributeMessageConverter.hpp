@@ -17,8 +17,8 @@ public:
     template<typename T>
     ByteArray generatePacket(T msg) {
         ByteArray serializeData = msg->serialize();
-        ByteArray finalData = createByteArray(serializeData->size() + sizeof(uint32_t));
-        ByteArrayWriter writer = createByteArrayWriter(finalData);
+        ByteArray finalData = ByteArray::New(serializeData->size() + sizeof(uint32_t));
+        ByteArrayWriter writer = ByteArrayWriter::New(finalData);
         writer->write<uint32_t>(serializeData->size());
         writer->write(serializeData);
         return finalData;
@@ -26,7 +26,7 @@ public:
 
     template<typename T>
     T generateMessage(ByteArray data) {
-        ByteArray msgData = createByteArray(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
+        ByteArray msgData = ByteArray::New(data->toValue() + sizeof(uint32_t),data->size() - sizeof(uint32_t),true);
         auto msg = AutoCreate<T>();
         msg->deserialize(msgData);
         return msg;

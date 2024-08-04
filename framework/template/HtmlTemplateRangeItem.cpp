@@ -24,13 +24,13 @@ String _HtmlTemplateRangeItem::toString(Object o) {
         return nullptr;
     }
 
-    StringBuffer buffer = createStringBuffer();
+    StringBuffer buffer = StringBuffer::New();
 
     for(int i = 0;i < size;i++) {
         Object obj = o->__getListItemObject("",i);
         if(mIndexName != nullptr) {
             //for display ,cout from 1 instead of 0
-            st(HtmlTemplateReferItem)::setValue(mIndexName,createString(i + 1));
+            st(HtmlTemplateReferItem)::setValue(mIndexName,String::New(i + 1));
             buffer->append(mTemplate->execute(obj));
         }
     }
