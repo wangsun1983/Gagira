@@ -129,7 +129,7 @@ public:
     bool postBackMessage(ByteArray data,uint32_t flags = st(BroadcastMessage)::StartFalg);
     bool subscribePersistenceChannel();
     bool subscribeDLQChannel();
-
+    
 private:
     bool sendMessage(BroadcastMessage);
     InetAddress mAddress;
@@ -142,7 +142,7 @@ private:
     BroadcastConnectionListener mListener;
 
     SocketMonitor mSocketMonitor;
-    void onSocketMessage(int,Socket,ByteArray);
+    void onSocketMessage(st(Net)::Event,Socket,ByteArray);
 
     ReadWriteLock mStatusReadWriteLock;
     ReadLock mStatusReadLock;

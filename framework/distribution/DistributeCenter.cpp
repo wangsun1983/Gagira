@@ -73,8 +73,12 @@ DistributeLinker _DistributeCenter::getLinker(Socket sock) {
 }
 
 int _DistributeCenter::close() {
+    Inspect(isClosed(),0)
+
     if(mServerSock != nullptr) {
-        mSocketMonitor->unbind(mServerSock);
+        printf("disctibute close trace1\n");
+        mSocketMonitor->unbind(mServerSock,true);
+        printf("disctibute close trace2\n");
         mServerSock->close();
         mServerSock = nullptr;
     }
@@ -95,6 +99,10 @@ void _DistributeCenter::waitForExit(long interval) {
 
 _DistributeCenter::~_DistributeCenter() {
     this->close();
+}
+
+bool _DistributeCenter::isClosed() {
+    return mExitLatch->getCount() == 0;
 }
 
 }

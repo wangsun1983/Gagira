@@ -10,10 +10,16 @@ using namespace obotcha;
 namespace gagira {
 
 class _ArchiveMessage;
+class _FenceMessage;
+
 DECLARE_CLASS(DistributeHandler) {
 public:
     virtual ArchiveHandleResult onRequest(DistributeLinker,sp<_ArchiveMessage>) {
         return nullptr;
+    }
+
+    virtual int onRequest(DistributeLinker,sp<_FenceMessage>) {
+        return 0;
     }
 };
 

@@ -114,9 +114,9 @@ bool _BroadcastConnection::postBackMessage(ByteArray data,uint32_t flags) {
     return sendMessage(msg);
 }
 
-void _BroadcastConnection::onSocketMessage(int event,Socket s,ByteArray data) {
+void _BroadcastConnection::onSocketMessage(st(Net)::Event event,Socket s,ByteArray data) {
     switch(event) {
-        case st(NetEvent)::Message: {
+        case st(Net)::Event::Message: {
             mParser->pushData(data);
             auto result = mParser->doParse();
             if(result != nullptr && result->size() != 0) {
@@ -145,12 +145,12 @@ void _BroadcastConnection::onSocketMessage(int event,Socket s,ByteArray data) {
             }
         }
 
-        case st(NetEvent)::Connect:{
+        case st(Net)::Event::Connect:{
             //call onConnect when connected server successfully
             break;
         }
 
-        case st(NetEvent)::Disconnect:{
+        case st(Net)::Event::Disconnect:{
             if(mListener != nullptr) {
                 mListener->onDisconnect();
             }

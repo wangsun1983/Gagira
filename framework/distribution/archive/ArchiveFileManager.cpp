@@ -4,6 +4,7 @@
 
 namespace gagira {
 
+const uint64_t _ArchiveFileManager::kInvalidFileNo = 0;
 //------- ArchiveFileManager --------
 _ArchiveFileManager::_ArchiveFileManager() {
     mStatus = HashMap<String,HashMap<DistributeLinker,ArrayList<Integer>>>::New();
@@ -44,24 +45,27 @@ _ArchiveFileManager::_ArchiveFileManager() {
     mFileMutex = Mutex::New();
     mReadLinks = HashMap<DistributeLinker,HashMap<Uint64,FileInputStream>>::New();
     mWriteLinks = HashMap<DistributeLinker,HashMap<Uint64,FileOutputStream>>::New();
-    mDownloadLinks = HashMap<Uint64,File>::New();
+    mDownloadLinks = HashMap<DistributeLinker,HashMap<Uint64,File>>::New();
+    mOpenLinks = HashMap<DistributeLinker,HashMap<Uint64,File>>::New();
 
-    mFileNoGenerator = AtomicUint64::New(1); // 0:error
+    mFileNoGenerator = AtomicUint64::New(1); // 0:invalid
 }
 
 
 int _ArchiveFileManager::updateFileStatus(String path,DistributeLinker linker,Action action) {
     AutoLock l(mStatusMutex);
-    printf("updateFileStatus trace1 \n");
+    //check whether path is exist
+    File file = File::New(path);
+    if(!file->exists()) {
+        return -ENOENT;
+    }
     auto status = mStatus->get(path);
     if(status != nullptr) {
-        printf("updateFileStatus trace2 \n");
         ForEveryOne(pair,status) {
             auto list = pair->getValue();
             ForEveryOne(current_action,list) {
-                printf("updateFileStatus,path is %s,current_action is %d,action is %d \n",path->toChars(),current_action->toValue(),action);
                 if(kActionConfimTable[current_action->toValue()][action] == 0) {
-                    return -1;
+                    return -EBUSY;
                 }
             }
         }
@@ -73,28 +77,36 @@ int _ArchiveFileManager::updateFileStatus(String path,DistributeLinker linker,Ac
         }
         selfList->add(Integer::New(action));
     } else {
-        printf("updateFileStatus trace3 \n");
         auto status = HashMap<DistributeLinker,ArrayList<Integer>>::New();
         auto actions = ArrayList<Integer>::New();
         actions->add(Integer::New(action));
         status->put(linker,actions);
         mStatus->put(path,status);
-        printf("updateFileStatus trace4,add path is %s \n",path->toChars());
     }
     return 0;
 }
 
 void _ArchiveFileManager::removeFileStatus(String path,DistributeLinker linker,Action action) {
     AutoLock l(mStatusMutex);
-    printf("ArchiveFileManager removeFileStatus trace1,action is %d,path is %s \n",action,path->toChars());
+    if(path == nullptr) {
+        return;
+    }
+    
     auto status = mStatus->get(path);
-    auto actionList = status->get(linker);
-    printf("ArchiveFileManager removeFileStatus trace2,action list size is %d\n",actionList->size());
-    actionList->remove(Integer::New(action));
+    if(status != nullptr) {
+        auto actionList = status->get(linker);
+        if(actionList != nullptr) {
+            actionList->remove(Integer::New(action));
+            //no actions,remove linker
+            if(actionList->size() == 0) {
+                status->remove(linker);
+            }
+        }
 
-    //no actions,remove linker
-    if(actionList->size() == 0) {
-        status->remove(linker);
+        //no linker,remove all
+        if(status->size() == 0) {
+            mStatus->remove(path);
+        }
     }
 }
 
@@ -127,6 +139,10 @@ void _ArchiveFileManager::removeReadLink(DistributeLinker link,uint64_t fileno) 
     auto maps = mReadLinks->get(link);
     if(maps != nullptr) {
         maps->remove(Uint64::New(fileno));
+
+        if(maps->size() == 0) {
+            maps->remove(link);
+        }
     }
 }
 
@@ -139,7 +155,6 @@ uint64_t _ArchiveFileManager::addWriteLink(DistributeLinker link,FileOutputStrea
         maps = HashMap<Uint64,FileOutputStream>::New();
         mWriteLinks->put(link,maps);
     }
-    printf("ArchiveFileManager add write link fileno is %d,link is %lx",fileno,link.get_pointer());
     maps->put(Uint64::New(fileno),output);
     return fileno;
 }
@@ -147,7 +162,6 @@ uint64_t _ArchiveFileManager::addWriteLink(DistributeLinker link,FileOutputStrea
 FileOutputStream _ArchiveFileManager::getOutputStream(DistributeLinker link,uint64_t fileno) {
     AutoLock l(mFileMutex);
     auto maps = mWriteLinks->get(link);
-    printf("ArchiveFileManager get write link fileno is %d,link is %lx",fileno,link.get_pointer());
     return maps == nullptr ? nullptr : maps->get(Uint64::New(fileno));
 }
 
@@ -156,39 +170,128 @@ void _ArchiveFileManager::removeWriteLink(DistributeLinker link,uint64_t fileno)
     auto maps = mWriteLinks->get(link);
     if(maps != nullptr) {
         maps->remove(Uint64::New(fileno));
+
+        if(maps->size() == 0) {
+            maps->remove(link);
+        }
     }
 }
 
-uint64_t _ArchiveFileManager::addDownloadLink(File file) {
+uint64_t _ArchiveFileManager::addDownloadLink(DistributeLinker linker,File file) {
     AutoLock l(mFileMutex);
     auto fileno = mFileNoGenerator->getAndIncrement();;
-    mDownloadLinks->put(Uint64::New(fileno),file);
+    auto map = mDownloadLinks->get(linker);
+    if(map == nullptr) {
+        map = HashMap<Uint64,File>::New();
+        mDownloadLinks->put(linker,map);
+    }
+
+    map->put(Uint64::New(fileno),file);
     return fileno;
 }
 
-File _ArchiveFileManager::getDownloadFile(uint64_t fileno) {
+File _ArchiveFileManager::getDownloadFile(DistributeLinker linker,uint64_t fileno) {
     AutoLock l(mFileMutex);
-    return mDownloadLinks->get(Uint64::New(fileno));
+    auto map = mDownloadLinks->get(linker);
+    if(map != nullptr) {
+        return map->get(Uint64::New(fileno));
+    }
+
+    return nullptr;
 }
 
-void _ArchiveFileManager::removeDownloadFile(uint64_t fileno) {
+void _ArchiveFileManager::removeDownloadFile(DistributeLinker linker,uint64_t fileno) {
     AutoLock l(mFileMutex);
-    mDownloadLinks->remove(Uint64::New(fileno));
+    auto map = mDownloadLinks->get(linker);
+    if(map != nullptr) {
+        map->remove(Uint64::New(fileno));
+
+        if(map->size() != 0) {
+            mDownloadLinks->remove(linker);
+        }
+    }
 }
 
-void _ArchiveFileManager::addOpenFileLink(uint64_t fileno,File file) {
+void _ArchiveFileManager::addOpenFileLink(DistributeLinker linker,uint64_t fileno,File file) {
     AutoLock l(mFileMutex);
-    mDownloadLinks->put(Uint64::New(fileno),file);
+    auto map = mOpenLinks->get(linker);
+    if(map == nullptr) {
+        map = HashMap<Uint64,File>::New();
+        mOpenLinks->put(linker,map);
+    }
+
+    map->put(Uint64::New(fileno),file);
 }
 
-File _ArchiveFileManager::getOpenFile(uint64_t fileno) {
+File _ArchiveFileManager::getOpenFile(DistributeLinker linker,uint64_t fileno) {
     AutoLock l(mFileMutex);
-    return mDownloadLinks->get(Uint64::New(fileno));
+    auto map = mOpenLinks->get(linker);
+    if(map != nullptr) {
+        return map->get(Uint64::New(fileno));
+    }
+
+    return nullptr;
 }
 
-void _ArchiveFileManager::removeOpenFile(uint64_t fileno) {
+void _ArchiveFileManager::removeOpenFile(DistributeLinker linker,uint64_t fileno) {
     AutoLock l(mFileMutex);
-    mDownloadLinks->remove(Uint64::New(fileno));
+    auto map = mOpenLinks->get(linker);
+    if(map != nullptr) {
+        map->remove(Uint64::New(fileno));
+
+        if(map->size() == 0) {
+            mOpenLinks->remove(linker);
+        }
+    }
+}
+
+void _ArchiveFileManager::onLinkerDisconnected(DistributeLinker linker) {
+    AutoLock l(mFileMutex);
+    auto readers = mReadLinks->remove(linker);
+    if(readers != nullptr) {
+        ForEveryOne(pair,readers) {
+            pair->getValue()->close();
+        }
+    }
+
+    auto writers = mWriteLinks->remove(linker);
+    if(writers != nullptr) {
+        ForEveryOne(pair,writers) {
+            pair->getValue()->close();
+        }
+    }
+
+    mDownloadLinks->remove(linker);
+    mOpenLinks->remove(linker);
+
+    auto iterator = mStatus->getIterator();
+    for(auto iterator = mStatus->getIterator();iterator->hasValue();iterator->next()) {
+        auto map = iterator->getValue();
+        map->remove(linker);
+        if(map->size() == 0) {
+            iterator->remove();
+        }
+    }
+}
+
+size_t _ArchiveFileManager::getReadLinkNums() {
+    AutoLock l(mFileMutex);
+    return mReadLinks->size();
+}
+
+size_t _ArchiveFileManager::getWriteLinkNums() {
+    AutoLock l(mFileMutex);
+    return mWriteLinks->size();
+}
+
+size_t _ArchiveFileManager::getDownloadLinkNums() {
+    AutoLock l(mFileMutex);
+    return mDownloadLinks->size();
+}
+
+size_t _ArchiveFileManager::getOpenLinkNums() {
+    AutoLock l(mFileMutex);
+    return mOpenLinks->size();
 }
 
 }

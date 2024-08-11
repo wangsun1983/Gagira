@@ -5,9 +5,6 @@ using namespace obotcha;
 
 namespace gagira {
 
-const String _ArchiveMessage::kReject = String::New("?<Reject>?");
-   
-
 //---_ArchiveMessage---
 _ArchiveMessage::_ArchiveMessage() {
     permitFlag = 0;
@@ -188,9 +185,7 @@ _ConfirmQueryInfoMessage::_ConfirmQueryInfoMessage(uint32_t result) {
 }
 
 _ConfirmQueryInfoMessage::_ConfirmQueryInfoMessage(File file) {
-    printf("ConfirmQUeryInfo trace1 \n");
     this->event = ConfirmQueryInfo;
-    printf("ConfirmQUeryInfo trace2 size is %d,permit flag is %d \n",file->length(),permitFlag);
     this->privateData = file->exists()?file->length():0;
 }
 

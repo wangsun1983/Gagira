@@ -20,7 +20,6 @@ namespace gagira {
 
 DECLARE_CLASS(ArchiveMessage) IMPLEMENTS(Serializable) {
 public:
-    static const String kReject;
     enum Type {
         ApplyUploadConnect = 0,
         ConfirmUploadConnect,

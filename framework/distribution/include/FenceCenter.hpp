@@ -3,17 +3,16 @@
 
 #include "Object.hpp"
 #include "String.hpp"
-#include "SocketMonitor.hpp"
-#include "SpaceOption.hpp"
 #include "DistributeCenter.hpp"
 #include "DistributeOption.hpp"
 #include "DistributeLinker.hpp"
+#include "DistributeHandler.hpp"
 #include "DistributeMessageConverter.hpp"
 #include "Fence.hpp"
 #include "LinkedList.hpp"
-#include "UUID.hpp"
 #include "ThreadScheduledPoolExecutor.hpp"
 #include "FenceMessage.hpp"
+#include "FenceOption.hpp"
 
 using namespace obotcha;
 
@@ -42,7 +41,7 @@ public:
 
 DECLARE_CLASS(FenceCenter) IMPLEMENTS(DistributeCenter) {
 public:
-    _FenceCenter(String url,DistributeOption);
+    _FenceCenter(String url,FenceOption option = nullptr);
     ~_FenceCenter();
     int onMessage(DistributeLinker,ByteArray);
     int onNewClient(DistributeLinker);
@@ -65,6 +64,8 @@ private:
     HashMap<String,String> mFenceOwners; //<fence name,token>
 
     ThreadScheduledPoolExecutor mScheduledPool;
+
+    DistributeHandler mHandler;
 };
 
 }

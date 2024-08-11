@@ -13,7 +13,8 @@ namespace gagira {
 DECLARE_CLASS(FenceMessage) IMPLEMENTS(Serializable) {
 public:
     enum Type {
-        ApplyFence = 1,
+        Idle = 0,
+        ApplyFence,
         ConfirmFence,
 
         ApplyReleaseFence,
@@ -32,17 +33,20 @@ public:
         ConfirmReleaseWriteFence,
     };
     
+    _FenceMessage();
+    _FenceMessage(st(FenceMessage)::Type event,String name,uint64_t waittime = 0);
+
+    uint64_t getWaitTime();
+    uint64_t getResult();
+    String getFenceName();
+    st(FenceMessage)::Type getEvent();
+
+protected:
     uint32_t event;
     String fencename;
     // uint32_t result;
     // uint64_t waittime
     uint64_t privateData;
-
-    _FenceMessage();
-    _FenceMessage(int event,String name,uint64_t waittime = 0);
-
-    uint64_t getWaitTime();
-    uint64_t getResult();
 
     DECLARE_REFLECT_FIELD(FenceMessage,event,fencename,privateData);
 };

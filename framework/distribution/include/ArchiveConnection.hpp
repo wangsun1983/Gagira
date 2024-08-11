@@ -1,6 +1,5 @@
 #ifndef __GAGRIA_ARCHIVE_CONNECTION_HPP__
 #define __GAGRIA_ARCHIVE_CONNECTION_HPP__
-
 #include "String.hpp"
 #include "SocketListener.hpp"
 #include "File.hpp"
@@ -9,26 +8,30 @@
 #include "InputStream.hpp"
 #include "OutputStream.hpp"
 #include "ArchiveMessage.hpp"
+#include "ConcurrentQueue.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-typedef void (*onUploadStatus)(int status);
-
 DECLARE_CLASS(ArchiveConnection) {
 public:
-    enum UploadStatus {
-        FinishSendReq = 0,
-        StartUploading = 1,
-        WaitResponse = 2,
+    enum ProcessStatus {
+        Start = 0,
+        FinishSendReq,
+        StartUploading,
+        StartDownloading,
+        Uploading,
+        WaitResponse,
+        Finish
     };
 
     _ArchiveConnection(String);
     ~_ArchiveConnection();
 
-    int upload(File,onUploadStatus func = nullptr);
-    int download(String filename,String savepath);
+    //std::function<void(int status,int progress)>
+    int upload(File,std::function<void(int,int)> func = nullptr);
+    int download(String filename,String savepath,std::function<void(int,int)> func = nullptr);
     int remove(String filename);
     int rename(String originalname,String newname);
     uint64_t querySize(String filename);
@@ -43,6 +46,7 @@ public:
     int seekTo(uint64_t fileno,uint32_t pos,st(ApplySeekToMessage)::Type type);
     int write(uint64_t fileno,ByteArray);
     int closeStream(uint64_t fileno);
+
 private:
     template<typename T>
     T waitResponse(InputStream input) {
@@ -52,6 +56,11 @@ private:
 
         while(1) {
             int ret = input->read(data);
+            if(ret <= 0) {
+                mErrno = -ENETUNREACH;
+                return nullptr;
+            }
+
             data->quickShrink(ret);
             parser->pushData(data);
             auto response = parser->doParse();
@@ -70,6 +79,7 @@ private:
     InputStream mInput;
     OutputStream mOutput;
     DistributeMessageConverter mConverter;
+    ConcurrentQueue<Socket> mTemporaryUploadSocks;
     Mutex mMutex;
     int mErrno;
 };

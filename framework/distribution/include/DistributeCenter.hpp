@@ -31,6 +31,8 @@ public:
     void waitForExit(long interval = 0);
     ~_DistributeCenter();
 
+    bool isClosed();
+    
     virtual int start();
     virtual int close();
     virtual int onMessage(DistributeLinker,ByteArray) = 0;

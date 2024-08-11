@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include "ArchiveConnection.hpp"
 #include "Inet4Address.hpp"
 #include "Inet6Address.hpp"
@@ -9,12 +11,20 @@
 #include "FileOutputStream.hpp"
 #include "ArchiveFileManager.hpp"
 #include "Md.hpp"
+#include "Defer.hpp"
+#include "ForEveryOne.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
+#define PROGRESS_CALL(status,progress) \
+    if(func != nullptr) {                   \
+        func(status,progress);              \
+    }
+
 _ArchiveConnection::_ArchiveConnection(String s) {
+    signal(SIGPIPE, SIG_IGN); //ignore SIGPIPE
     HttpUrl url = HttpUrl::New(s);
     mMutex = Mutex::New();
 
@@ -22,7 +32,10 @@ _ArchiveConnection::_ArchiveConnection(String s) {
     if(mAddress == nullptr) {
         Trigger(InitializeException,"Failed to find ArchiveCenter");
     }
+
     mConverter = DistributeMessageConverter::New();
+    mTemporaryUploadSocks = ConcurrentQueue<Socket>::New();
+
     mErrno = 0;
 }
 
@@ -33,8 +46,8 @@ _ArchiveConnection::~_ArchiveConnection() {
 uint64_t _ArchiveConnection::querySize(String filename) {
     AutoLock l(mMutex);
     mErrno = -EINVAL;
-    Inspect(mOutput == nullptr,mErrno);
     uint64_t fileSize = 0;
+    Inspect(mOutput == nullptr,fileSize);
 
     do {
         mErrno = 0;
@@ -45,7 +58,9 @@ uint64_t _ArchiveConnection::querySize(String filename) {
         }
 
         ConfirmQueryInfoMessage response = waitResponse<ConfirmQueryInfoMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response == nullptr) {
+            break;
+        } else if(!response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         } else {
             fileSize = response->getQueryFileSize();
@@ -75,7 +90,7 @@ DefRet(uint64_t,int) _ArchiveConnection::openStream(String filename,uint64_t fla
         }
         
         response = waitResponse<ConfirmOpenMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response != nullptr && !response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         }
     } while(0);
@@ -97,12 +112,12 @@ int _ArchiveConnection::closeStream(uint64_t fileno) {
         }
 
         auto response = waitResponse<ConfirmCloseStreamMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response != nullptr && !response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         }
     } while(0);
 
-    return 0;
+    return mErrno;
 }
 
 ByteArray _ArchiveConnection::read(uint64_t fileno,uint64_t length) {
@@ -120,7 +135,9 @@ ByteArray _ArchiveConnection::read(uint64_t fileno,uint64_t length) {
         }
         
         auto response = waitResponse<ConfirmReadMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response == nullptr) {
+            break;
+        } else if(!response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         } else {
             data = response->getData();
@@ -145,7 +162,7 @@ int _ArchiveConnection::write(uint64_t fileno,ByteArray data) {
         }
 
         auto response = waitResponse<ConfirmWriteMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response != nullptr && !response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         }
     } while(0);
@@ -167,7 +184,7 @@ int _ArchiveConnection::rename(String originalname,String newname) {
         }
 
         auto response = waitResponse<ConfirmRenameMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response != nullptr && !response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         }
     } while(0);
@@ -187,9 +204,8 @@ int _ArchiveConnection::remove(String filename) {
             mErrno = -ENETUNREACH;
             break;
         }
-
         auto response = waitResponse<ConfirmDelMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response != nullptr && !response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         }
     } while(0);
@@ -210,7 +226,7 @@ int _ArchiveConnection::seekTo(uint64_t fileno,uint32_t pos,st(ApplySeekToMessag
         }
 
         auto response = waitResponse<ConfirmSeekToMessage>(mInput);
-        if(!response->isPermitted()) {
+        if(response != nullptr && !response->isPermitted()) {
             mErrno = -response->getPermitFlag();
         }
     } while(0);
@@ -218,22 +234,30 @@ int _ArchiveConnection::seekTo(uint64_t fileno,uint32_t pos,st(ApplySeekToMessag
     return mErrno;
 }
 
-int _ArchiveConnection::download(String filename,String savepath) {
+int _ArchiveConnection::download(String filename,String savepath,std::function<void(int,int)> func) {
     AutoLock l(mMutex);
     mErrno = -EINVAL;
     Inspect(mOutput == nullptr,mErrno);
     do {
         mErrno = 0;
+        PROGRESS_CALL(ProcessStatus::Start,0)
         ApplyDownloadMessage msg = ApplyDownloadMessage::New(filename);
         if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
             mErrno = -ENETUNREACH;
             break;
         }
+        PROGRESS_CALL(ProcessStatus::FinishSendReq,0)
+        
         ConfirmDownloadMessage resp = waitResponse<ConfirmDownloadMessage>(mInput);
+        if(resp == nullptr) {
+            break;
+        }
+
         if(!resp->isPermitted()) {
             mErrno = -resp->getPermitFlag();
             break;
         }
+
         if(resp->getDownloadFileSize() == 0) {
             mErrno = -ENOENT;
             break;
@@ -247,6 +271,7 @@ int _ArchiveConnection::download(String filename,String savepath) {
             break;
         }
         
+        PROGRESS_CALL(ProcessStatus::StartDownloading,0)
         File file = File::New(savepath);
         if(!file->exists()) {
             file->createNewFile();
@@ -255,6 +280,8 @@ int _ArchiveConnection::download(String filename,String savepath) {
         ByteArray data = ByteArray::New(32*1024);
         FileOutputStream outPut = FileOutputStream::New(file);
         outPut->open();
+        size_t recvsize = 0;
+        size_t totalsize = filesize;
         
         while(filesize != 0) {
             int len = mInput->read(data);
@@ -264,32 +291,41 @@ int _ArchiveConnection::download(String filename,String savepath) {
             data->quickShrink(len);
             outPut->write(data);
             data->quickRestore();
+            PROGRESS_CALL(ProcessStatus::StartUploading,(recvsize*100)/totalsize)
             filesize -= len;
         }
         outPut->close();
         
         if(filesize != 0) {
-            mErrno = -EBADF;
+            mErrno = -ENETUNREACH;
             break;
         }
         //check verify data
         Md md5sum = Md::New();
         auto md5value = md5sum->encodeFile(file);
-        if(md5value->sameAs(verifyData->toString())) {
+        if(!md5value->sameAs(verifyData->toString())) {
             mErrno = -EBADF;
             break;
         }
+        PROGRESS_CALL(ProcessStatus::Finish,0)
     } while(0);
+
+    //remove download file
+    if(mErrno != 0) {
+        File file = File::New(savepath);
+        file->removeAll();
+    }
 
     return mErrno;
 }
 
-int _ArchiveConnection::upload(File file,onUploadStatus func) {
+int _ArchiveConnection::upload(File file,std::function<void(int,int)> func) {
     AutoLock l(mMutex);
     mErrno = -EINVAL;
-    Inspect(mOutput == nullptr,-1);
+    Inspect(mOutput == nullptr,mErrno);
     do {
         mErrno = 0;
+        PROGRESS_CALL(ProcessStatus::Start,0)
         auto msg = ApplyUploadConnectMessage::New();
         if(mOutput->write(mConverter->generatePacket(msg)) < 0) {
             mErrno = -ENETUNREACH;
@@ -297,6 +333,15 @@ int _ArchiveConnection::upload(File file,onUploadStatus func) {
         }
 
         ConfirmUploadConnectMessage resp = waitResponse<ConfirmUploadConnectMessage>(mInput);
+        if(resp == nullptr) {
+            break;
+        }
+
+        if(!resp->isPermitted()) {
+            mErrno = -resp->getPermitFlag();
+            break;
+        }
+
         int port = resp->getPort();
         InetAddress uploadAddress = nullptr;
         switch(mAddress->getFamily()) {
@@ -310,6 +355,12 @@ int _ArchiveConnection::upload(File file,onUploadStatus func) {
         }
 
         Socket uploadSocket = SocketBuilder::New()->setAddress(uploadAddress)->newSocket();
+        mTemporaryUploadSocks->add(uploadSocket);
+
+        Defer removeBeforeExit([this,uploadSocket] {
+            mTemporaryUploadSocks->remove(uploadSocket);
+        });
+
         if(uploadSocket->connect() < 0) {
             uploadSocket->close();
             mErrno = -ENETUNREACH;
@@ -321,10 +372,7 @@ int _ArchiveConnection::upload(File file,onUploadStatus func) {
 
         auto applyInfo = ApplyUploadMessage::New(file);
         int ret = uploadOutput->write(mConverter->generatePacket(applyInfo));
-        if(func != nullptr) {
-            func(FinishSendReq);
-        }
-
+        PROGRESS_CALL(ProcessStatus::FinishSendReq,0)
         ConfirmApplyUploadMessage confirmResp = waitResponse<ConfirmApplyUploadMessage>(uploadInput);
         if(confirmResp == nullptr) {
             uploadSocket->close();
@@ -336,20 +384,22 @@ int _ArchiveConnection::upload(File file,onUploadStatus func) {
             break;
         }
 
-        if(func != nullptr) {
-            func(StartUploading);
-        }
-
+        PROGRESS_CALL(ProcessStatus::StartUploading,0)
+        
         FileInputStream inputStream = FileInputStream::New(file);
         inputStream->open();
         
         ByteArray data = ByteArray::New(32*1024);
+        size_t totalsize = file->length();
+        size_t sendsize = 0;
+
         while(1) {
             int len = inputStream->read(data);
             if(len <= 0) {
                 break;
             }
-
+            sendsize += len;
+            PROGRESS_CALL(ProcessStatus::StartUploading,(sendsize*100)/totalsize)
             data->quickShrink(len);
             if(uploadOutput->write(data) <= 0) {
                 uploadOutput->close();
@@ -360,13 +410,14 @@ int _ArchiveConnection::upload(File file,onUploadStatus func) {
         }
 
         if(mErrno == 0) {
-            if(func != nullptr) {
-                func(WaitResponse);
-            }
+            PROGRESS_CALL(ProcessStatus::WaitResponse,0)
             CompleteUploadMessage completeResponse = waitResponse<CompleteUploadMessage>(uploadInput);
-            
             inputStream->close();
             uploadSocket->close();
+            if(completeResponse == nullptr) {
+                break;
+            }
+            PROGRESS_CALL(ProcessStatus::Finish,0)
             mErrno = -completeResponse->getPermitFlag();
         }
     } while(0);
@@ -387,17 +438,24 @@ int _ArchiveConnection::connect() {
 
 int _ArchiveConnection::close() {
     AutoLock l(mMutex);
+    Inspect(mSock == nullptr,0);
+
     if(mInput != nullptr) {
         mInput->close();
         mOutput->close();
-        mInput = nullptr;
-        mOutput = nullptr;
+        //mInput = nullptr;
+        //mOutput = nullptr;
     }
-
     if(mSock != nullptr) {
         mSock->close();
         mSock = nullptr;
     }
+
+    ForEveryOne(uploadSock,mTemporaryUploadSocks) {
+        uploadSock->close();
+    }
+    mTemporaryUploadSocks->clear();
+
     mErrno = 0;
     return mErrno;
 }
@@ -405,6 +463,8 @@ int _ArchiveConnection::close() {
 int _ArchiveConnection::getErr() {
     return mErrno;
 }
+
+#undef PROGRESS_CALL
 
 }
 

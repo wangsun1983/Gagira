@@ -19,6 +19,7 @@ namespace gagira {
 
 DECLARE_CLASS(ArchiveFileManager) {
 public:
+    static const uint64_t kInvalidFileNo; //file no start from 1    
     enum Action {
         None = 0,
         Upload,
@@ -45,13 +46,21 @@ public:
     FileOutputStream getOutputStream(DistributeLinker,uint64_t fileno);
     void removeWriteLink(DistributeLinker,uint64_t fileno);
 
-    uint64_t addDownloadLink(File);
-    File getDownloadFile(uint64_t);
-    void removeDownloadFile(uint64_t);
+    uint64_t addDownloadLink(DistributeLinker,File);
+    File getDownloadFile(DistributeLinker,uint64_t);
+    void removeDownloadFile(DistributeLinker,uint64_t);
 
-    void addOpenFileLink(uint64_t fileno,File);
-    File getOpenFile(uint64_t fileno);
-    void removeOpenFile(uint64_t fileno);
+    void addOpenFileLink(DistributeLinker,uint64_t fileno,File);
+    File getOpenFile(DistributeLinker,uint64_t fileno);
+    void removeOpenFile(DistributeLinker,uint64_t fileno);
+    
+    void onLinkerDisconnected(DistributeLinker);
+
+    //sum function for Unit test
+    size_t getReadLinkNums();
+    size_t getWriteLinkNums();
+    size_t getDownloadLinkNums();
+    size_t getOpenLinkNums();
 
 private:
     Mutex mStatusMutex;
@@ -62,7 +71,8 @@ private:
     Mutex mFileMutex;
     HashMap<DistributeLinker,HashMap<Uint64,FileInputStream>> mReadLinks;
     HashMap<DistributeLinker,HashMap<Uint64,FileOutputStream>> mWriteLinks;
-    HashMap<Uint64,File> mDownloadLinks;
+    HashMap<DistributeLinker,HashMap<Uint64,File>> mDownloadLinks;
+    HashMap<DistributeLinker,HashMap<Uint64,File>> mOpenLinks;
 
     //file no generator
     AtomicUint64 mFileNoGenerator;
