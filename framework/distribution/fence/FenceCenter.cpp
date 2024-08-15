@@ -19,8 +19,7 @@ _FenceWaiter::_FenceWaiter(String token,int flag) {
 
 //FenceInfo
 _FenceInfo::_FenceInfo(String name) {
-    mutex = Mutex::New();
-    fence = Fence::New(name);
+    mutex = Mutex::New();    
     waiters = LinkedList<FenceWaiter>::New();
 }
 
@@ -31,11 +30,13 @@ _FenceCenter::_FenceCenter(String url,FenceOption option):_DistributeCenter(url,
     mFenceOwners = HashMap<String,String>::New();
     mMutex = Mutex::New();
     mScheduledPool = ExecutorBuilder::New()->setMaxThreadNum(2)->newScheduledThreadPool();
-    mHandler = option->getHandler();
+    if(option != nullptr) {
+        mHandler = option->getHandler();
+    }
 }
 
 _FenceCenter::~_FenceCenter() {
-    //TODO
+    //do nothing
 }
 
 String _FenceCenter::genToken(DistributeLinker linker) {
@@ -55,7 +56,6 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
         }
     }
     
-    printf("FenceCenter name is %s,event is %d \n",msg->getFenceName()->toChars(),msg->getEvent());
     switch(msg->getEvent()) {
         case st(FenceMessage)::ApplyReadFence: {
             AutoLock l(mMutex);
@@ -64,21 +64,20 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
             auto fence = Cast<ReadWriteFence>(info->fence);
             auto readfence = fence->getReadFence();
             auto writeFence = fence->getWriteFence();
-            if(readfence->getCount() != 0 && writeFence->getCount() == 0) {
+
+            if(readfence->getCount() != 0) {
                 readfence->addOwner(linker);
                 sendResponse(msg->getFenceName(),linker);
             } else {
                 //check write fence
                 auto owner = writeFence->getOwner();
-                if(owner != nullptr && !owner->equals(linkerToken)) {
+                if(owner != nullptr) {
                     info->waiters->putLast(FenceWaiter::New(linkerToken,st(FenceWaiter)::ReadFlag));
                     auto waittime = msg->getWaitTime();
                     if(waittime != 0) {
-                        mScheduledPool->schedule(waittime,[&](String token,String name) {
-                            AutoLock l(mMutex);
-                            DistributeLinker linker = mLinkers->remove(token);
-                            sendResponse(name,linker,ETIMEDOUT);
-                        },linkerToken,fence->getName());
+                        mScheduledPool->schedule(waittime,[&](String token,FenceInfo info) {
+                            processTimeout(token,info);
+                        },linkerToken,info);
                     }
                 } else {
                     readfence->addOwner(linker);
@@ -105,11 +104,9 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
                 info->waiters->putLast(FenceWaiter::New(linkerToken,st(FenceWaiter)::WriteFlag));
                 auto waittime = msg->getWaitTime();
                 if(waittime != 0) {
-                    mScheduledPool->schedule(waittime,[&](String token,String name) {
-                        AutoLock l(mMutex);
-                        DistributeLinker myLinker = mLinkers->remove(token);
-                        sendResponse(name,myLinker,ETIMEDOUT);
-                    },linkerToken,fence->getName());
+                    mScheduledPool->schedule(waittime,[&](String token,FenceInfo info) {
+                        processTimeout(token,info);
+                    },linkerToken,info);
                 }
             } else {
                 if(owner != nullptr && !owner->equals(linkerToken)) {
@@ -130,24 +127,19 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
         case st(FenceMessage)::ApplyFence: {
             AutoLock l(mMutex);
             mLinkers->put(linkerToken,linker);
-            printf("FenceCenter apply fence trace0,name is %s \n",msg->getFenceName()->toChars());
             auto info = getIfEmptyCreate(msg);
             auto fence = info->fence;
             auto owner = fence->getOwner();
             if(owner != nullptr && !owner->equals(linkerToken)) {
-                 printf("FenceCenter apply fence trace1,name is %s \n",msg->getFenceName()->toChars());
                 //add to wait list
                 info->waiters->putLast(FenceWaiter::New(linkerToken));
                 auto waittime = msg->getWaitTime();
                 if(waittime != 0) {
-                    mScheduledPool->schedule(waittime,[&](String token,String name) {
-                        AutoLock l(mMutex);
-                        DistributeLinker myLinker = mLinkers->remove(token);
-                        sendResponse(name,myLinker,ETIMEDOUT);
-                    },linkerToken,fence->getName());
+                    mScheduledPool->schedule(waittime,[&](String token,FenceInfo info) {
+                        processTimeout(token,info);
+                    },linkerToken,info);
                 }
             } else {
-                 printf("FenceCenter apply fence trace2,name is %s \n",msg->getFenceName()->toChars());
                 //acquire lock success
                 fence->setOwner(linkerToken);
                 mFenceOwners->put(msg->getFenceName(),linkerToken);
@@ -165,6 +157,23 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
     return -1;
 }
 
+int _FenceCenter::processTimeout(String token,FenceInfo info) {
+    AutoLock l(mMutex);
+    DistributeLinker myLinker = mLinkers->get(token);
+    if(myLinker != nullptr) {
+        auto iterator = info->waiters->getIterator();
+        for(;iterator->hasValue();iterator->next()) {
+            auto waiter = iterator->getValue();
+            if(waiter->waiterToken->sameAs(token)) {
+                sendResponse(info->fence->getName(),myLinker,ETIMEDOUT);
+                iterator->remove();
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
 int _FenceCenter::processReleaseOwner(String fencename,String linkertoken) {
     AutoLock l(mMutex);
 
@@ -172,12 +181,13 @@ int _FenceCenter::processReleaseOwner(String fencename,String linkertoken) {
     if(owner == nullptr || !owner->equals(linkertoken)) {
         return -EINVAL;
     }
-    
+
     auto info = mFences->get(fencename);
     if(info != nullptr) {
         info->fence->decCount();
         if(info->fence->isFree()) {
             AutoLock l(info->mutex);
+            bool isHit = false;
             while(info->waiters->size() != 0) {
                 auto nextWaiterToken = info->waiters->takeFirst()->waiterToken;
                 auto nextWaiter = mLinkers->get(nextWaiterToken);
@@ -186,10 +196,13 @@ int _FenceCenter::processReleaseOwner(String fencename,String linkertoken) {
                 }
 
                 mFenceOwners->put(fencename,genToken(nextWaiter));
+                info->fence->setOwner(nextWaiterToken);
+                info->fence->incCount();
+                isHit = true;
                 break;
             }
-
-            if(info->waiters->size() == 0) {
+           
+            if(!isHit) {
                 mFences->remove(fencename);
                 mFenceOwners->remove(fencename);
             }
@@ -218,7 +231,7 @@ int _FenceCenter::processReleaseReadOwner(String fencename,DistributeLinker link
         return -ECANCELED;
     }
 
-    if(readfence->getCount() == 0) {
+    if(readfence->isFree()) {
         auto waiters = info->waiters;
         writefence->setOwner(nullptr);
 
@@ -232,11 +245,6 @@ int _FenceCenter::processReleaseReadOwner(String fencename,DistributeLinker link
             writefence->setOwner(waiter->waiterToken);
             writefence->incCount();
             break;
-        }
-
-        if(writefence->getOwner() == nullptr) {
-            //no waiter and owner,remove this lock
-            mFences->remove(fencename);
         }
     }
     return 0;
@@ -256,6 +264,8 @@ int _FenceCenter::processReleaseWriteOwner(String fencename,DistributeLinker lin
     }
 
     auto writefence = fence->getWriteFence();
+    auto readfence = fence->getReadFence();
+
     if(writefence->getOwner() != genToken(linker)) {
         return -ECANCELED;
     }
@@ -264,16 +274,19 @@ int _FenceCenter::processReleaseWriteOwner(String fencename,DistributeLinker lin
     
     if(writefence->isFree()) {
         writefence->setOwner(nullptr);
+        //if reader reference is not zero,
+        //we should notify all process wait for read fence
         while(waiters->size() != 0) {
             auto waiter = waiters->takeFirst();
-            bool isFoundOwner = false;
-
             auto waiterLinker = mLinkers->get(waiter->waiterToken);
             if(waiter == nullptr || sendResponse(fencename,waiterLinker) < 0) {
                 continue;
             } 
-
+            
             if(waiter->flag == st(FenceWaiter)::ReadFlag) {
+                auto readfence = fence->getReadFence();
+                readfence->addOwner(waiterLinker);
+
                 auto iterator = waiters->getIterator();
                 while(iterator->hasValue()) {
                     auto fencewaiter = iterator->getValue();
@@ -281,22 +294,17 @@ int _FenceCenter::processReleaseWriteOwner(String fencename,DistributeLinker lin
                         auto nextwaiter = iterator->getValue();
                         auto nextLinker = mLinkers->get(nextwaiter->waiterToken);
                         if(nextLinker != nullptr && sendResponse(fencename,nextLinker) > 0) {
-                            isFoundOwner = true;
+                            readfence->addOwner(nextLinker);
                         }
                         iterator->remove();
                     }
                 }
             } else {
-                auto nextLinker = mLinkers->get(waiter->waiterToken);
-                if(sendResponse(fencename,nextLinker) > 0) {
-                    isFoundOwner = true;
-                }
-            }
-
-            if(!isFoundOwner) {
-                continue;
+                writefence->setOwner(waiter->waiterToken);
+                writefence->incCount();
             }
         }
+        
     }
     return 0;
 }
@@ -347,8 +355,11 @@ FenceInfo _FenceCenter::getIfEmptyCreate(FenceMessage msg) {
         switch(msg->getEvent()) {
             case st(FenceMessage)::ApplyReadFence:
             case st(FenceMessage)::ApplyWriteFence:
-            info->fence = ReadWriteFence::New(msg->getFenceName());
-            break;
+                info->fence = ReadWriteFence::New(msg->getFenceName());
+                break;
+            case st(FenceMessage)::ApplyFence:
+                info->fence = Fence::New(msg->getFenceName());
+                break;
         }
         mFences->put(msg->getFenceName(),info);
     }

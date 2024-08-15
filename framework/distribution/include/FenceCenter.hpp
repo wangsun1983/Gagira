@@ -55,6 +55,8 @@ private:
     int processReleaseReadOwner(String fencename,DistributeLinker linker);
     int processReleaseWriteOwner(String fencename,DistributeLinker linker);
 
+    int processTimeout(String token,FenceInfo info);
+
     FenceInfo getIfEmptyCreate(FenceMessage);
 
     DistributeMessageConverter mConverter;

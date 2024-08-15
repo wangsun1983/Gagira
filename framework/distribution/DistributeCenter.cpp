@@ -85,6 +85,7 @@ int _DistributeCenter::close() {
 
     if(mSocketMonitor != nullptr) {
         mSocketMonitor->close();
+        mSocketMonitor->waitForExit();
         mSocketMonitor = nullptr;
     }
 

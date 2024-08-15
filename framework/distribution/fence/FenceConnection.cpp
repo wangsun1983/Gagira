@@ -2,6 +2,8 @@
 #include "InitializeException.hpp"
 #include "HttpUrl.hpp"
 #include "FenceMessage.hpp"
+#include "AutoLock.hpp"
+#include "SocketBuilder.hpp"
 
 using namespace obotcha;
 
@@ -15,6 +17,8 @@ _FenceConnection::_FenceConnection(String s) {
     }
     mParser = DistributeMessageParser::New(1024*4);
     mConverter = DistributeMessageConverter::New();
+
+    mutex = Mutex::New();
 }
 
 _FenceConnection::~_FenceConnection() {
@@ -22,15 +26,19 @@ _FenceConnection::~_FenceConnection() {
 }
 
 int _FenceConnection::connect() {
-    mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
-    Inspect(mSock->connect() < 0,-1);
-
-    mInput = mSock->getInputStream();
-    mOutput = mSock->getOutputStream();
-    return 0;
+    AutoLock l(mutex);
+    if(mSock == nullptr) {
+        mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
+        Inspect(mSock->connect() < 0,-ENETUNREACH);
+        mInput = mSock->getInputStream();
+        mOutput = mSock->getOutputStream();
+        return 0;
+    }
+    return -EISCONN;
 }
 
 int _FenceConnection::close() {
+    AutoLock l(mutex);
     if(mSock != nullptr) {
         mSock->close();
         mSock = nullptr;
@@ -51,6 +59,11 @@ int _FenceConnection::acquireWriteFence(String name,uint64_t waittime) {
 }
 
 int _FenceConnection::acquireFence(int type,String name,uint64_t waittime) {
+    AutoLock l(mutex);
+    if(mInput == nullptr || mOutput == nullptr) {
+        return -EINVAL;
+    }
+
     FenceMessage msg = nullptr;
     switch(type) {
         case LocalFence:
@@ -71,6 +84,10 @@ int _FenceConnection::acquireFence(int type,String name,uint64_t waittime) {
     }
 
     auto resp = waitResponse<ConfirmFenceMessage>(mInput);
+    if(resp == nullptr) {
+        return -ENETUNREACH;
+    }
+
     return -resp->getResult();
 }
 
@@ -88,6 +105,7 @@ int _FenceConnection::releaseWriteFence(String name) {
 }
 
 int _FenceConnection::releaseFence(int type,String name) {
+    AutoLock l(mutex);
     FenceMessage msg = nullptr;
     switch(type) {
         case LocalFence:

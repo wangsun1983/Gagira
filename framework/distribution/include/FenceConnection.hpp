@@ -4,19 +4,10 @@
 #include "String.hpp"
 #include "InetAddress.hpp"
 #include "Socket.hpp"
-#include "SocketMonitor.hpp"
 #include "Mutex.hpp"
-#include "ByteRingArray.hpp"
-#include "ByteRingArrayReader.hpp"
 #include "DistributeMessageParser.hpp"
 #include "DistributeMessageConverter.hpp"
-#include "SpaceMessage.hpp"
-#include "ReadWriteLock.hpp"
 #include "System.hpp"
-#include "SocketBuilder.hpp"
-#include "BlockingLinkedList.hpp"
-#include "QueueMessage.hpp"
-#include "ThreadPoolExecutor.hpp"
 
 using namespace obotcha;
 
@@ -54,6 +45,7 @@ private:
     OutputStream mOutput;
     DistributeMessageConverter mConverter;
     DistributeMessageParser mParser;
+    Mutex mutex;
     
     template<typename T>
     T waitResponse(InputStream input) {
@@ -63,6 +55,9 @@ private:
 
         while(1) {
             int ret = input->read(data);
+            if(ret == 0) {
+                break;
+            }
             data->quickShrink(ret);
             parser->pushData(data);
             auto response = parser->doParse();
