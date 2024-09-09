@@ -4,8 +4,6 @@
 #include "ExecutorBuilder.hpp"
 #include "ForEveryOne.hpp"
 #include "Log.hpp"
-#include "ForEveryOne.hpp"
-#include "OStdInstanceOf.hpp"
 
 using namespace obotcha;
 
@@ -61,6 +59,13 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
             AutoLock l(mMutex);
             mLinkers->put(linkerToken,linker);
             auto info = getIfEmptyCreate(msg);
+            //check apply fence type,if it is a read write lock
+            //send a fail response
+            if(info->fence->getType() == st(Fence)::Type::FenceMutex) {
+                sendResponse(msg->getFenceName(),linker,EINVAL);
+                break;
+            }
+
             auto fence = Cast<ReadWriteFence>(info->fence);
             auto readfence = fence->getReadFence();
             auto writeFence = fence->getWriteFence();
@@ -95,6 +100,13 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
             AutoLock l(mMutex);
             mLinkers->put(linkerToken,linker);
             auto info = getIfEmptyCreate(msg);
+            
+            //check apply fence type,if it is a read write lock
+            //send a fail response
+            if(info->fence->getType() == st(Fence)::Type::FenceMutex) {
+                sendResponse(msg->getFenceName(),linker,EINVAL);
+                break;
+            }
             auto fence = Cast<ReadWriteFence>(info->fence);
             auto readfence = fence->getReadFence();
             auto writeFence = fence->getWriteFence();
@@ -130,6 +142,13 @@ int _FenceCenter::onMessage(DistributeLinker linker,ByteArray data) {
             auto info = getIfEmptyCreate(msg);
             auto fence = info->fence;
             auto owner = fence->getOwner();
+            //check apply fence type,if it is a read write lock
+            //send a fail response
+            if(fence->getType() != st(Fence)::Type::FenceMutex) {
+                sendResponse(msg->getFenceName(),linker,EINVAL);
+                break;
+            }
+
             if(owner != nullptr && !owner->equals(linkerToken)) {
                 //add to wait list
                 info->waiters->putLast(FenceWaiter::New(linkerToken));
@@ -176,13 +195,16 @@ int _FenceCenter::processTimeout(String token,FenceInfo info) {
 
 int _FenceCenter::processReleaseOwner(String fencename,String linkertoken) {
     AutoLock l(mMutex);
-
+    auto info = mFences->get(fencename);
+    if(info == nullptr || info->fence->getType() != _Fence::Type::FenceMutex) {
+        return -EINVAL;
+    }
+    
     auto owner = mFenceOwners->get(fencename);
     if(owner == nullptr || !owner->equals(linkertoken)) {
         return -EINVAL;
     }
-
-    auto info = mFences->get(fencename);
+    
     if(info != nullptr) {
         info->fence->decCount();
         if(info->fence->isFree()) {
@@ -194,14 +216,12 @@ int _FenceCenter::processReleaseOwner(String fencename,String linkertoken) {
                 if(nextWaiter == nullptr || sendResponse(fencename,nextWaiter) < 0) {
                     continue;
                 }
-
                 mFenceOwners->put(fencename,genToken(nextWaiter));
                 info->fence->setOwner(nextWaiterToken);
                 info->fence->incCount();
                 isHit = true;
                 break;
             }
-           
             if(!isHit) {
                 mFences->remove(fencename);
                 mFenceOwners->remove(fencename);
@@ -216,6 +236,10 @@ int _FenceCenter::processReleaseReadOwner(String fencename,DistributeLinker link
     AutoLock l(mMutex);
     auto info = mFences->get(fencename);
     if(info == nullptr) {
+        return -EINVAL;
+    }
+
+    if(info->fence->getType() == _Fence::Type::FenceMutex) {
         return -EINVAL;
     }
 
@@ -253,10 +277,15 @@ int _FenceCenter::processReleaseReadOwner(String fencename,DistributeLinker link
 int _FenceCenter::processReleaseWriteOwner(String fencename,DistributeLinker linker)  {
     AutoLock l(mMutex);
     auto info = mFences->get(fencename);
-
+    
     if(info == nullptr) {
         return -EINVAL;
     }
+
+    if(info->fence->getType() == _Fence::Type::FenceMutex) {
+        return -EINVAL;
+    }
+
     auto fence = Cast<ReadWriteFence>(info->fence);
 
     if(fence == nullptr) {

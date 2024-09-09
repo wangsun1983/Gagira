@@ -4,7 +4,7 @@
 #include "Object.hpp"
 #include "String.hpp"
 #include "SocketMonitor.hpp"
-#include "SpaceOption.hpp"
+#include "MapOption.hpp"
 #include "InetAddress.hpp"
 #include "ServerSocket.hpp"
 #include "DistributeCenter.hpp"

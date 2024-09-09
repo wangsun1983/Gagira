@@ -30,6 +30,7 @@ uint64_t _ArchiveMessage::getQueryFileSize() {
 }
 
 bool _ArchiveMessage::isPermitted() {
+    printf("permitFlag is %d \n",permitFlag);
     return this->permitFlag == 0;
 }
 
@@ -163,6 +164,7 @@ _ConfirmDownloadMessage::_ConfirmDownloadMessage(File file,uint64_t id) {
     this->privateData2 = file->length();
     Md md5sum = Md::New();
     this->verifyData = md5sum->encodeFile(file)->toByteArray();
+    printf("permit flag is %d \n",permitFlag);
 }
 
 _ProcessDownloadMessage::_ProcessDownloadMessage(uint64_t fileno) {

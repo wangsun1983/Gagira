@@ -247,7 +247,7 @@ int _ArchiveConnection::download(String filename,String savepath,std::function<v
             break;
         }
         PROGRESS_CALL(ProcessStatus::FinishSendReq,0)
-        
+
         ConfirmDownloadMessage resp = waitResponse<ConfirmDownloadMessage>(mInput);
         if(resp == nullptr) {
             break;
@@ -331,7 +331,6 @@ int _ArchiveConnection::upload(File file,std::function<void(int,int)> func) {
             mErrno = -ENETUNREACH;
             break;
         }
-
         ConfirmUploadConnectMessage resp = waitResponse<ConfirmUploadConnectMessage>(mInput);
         if(resp == nullptr) {
             break;
@@ -360,20 +359,18 @@ int _ArchiveConnection::upload(File file,std::function<void(int,int)> func) {
         Defer removeBeforeExit([this,uploadSocket] {
             mTemporaryUploadSocks->remove(uploadSocket);
         });
-
         if(uploadSocket->connect() < 0) {
             uploadSocket->close();
             mErrno = -ENETUNREACH;
             break;
         }
-
         auto uploadOutput= uploadSocket->getOutputStream();
         auto uploadInput = uploadSocket->getInputStream();
-
         auto applyInfo = ApplyUploadMessage::New(file);
         int ret = uploadOutput->write(mConverter->generatePacket(applyInfo));
         PROGRESS_CALL(ProcessStatus::FinishSendReq,0)
         ConfirmApplyUploadMessage confirmResp = waitResponse<ConfirmApplyUploadMessage>(uploadInput);
+        
         if(confirmResp == nullptr) {
             uploadSocket->close();
             mErrno = -ENETUNREACH;
@@ -383,7 +380,6 @@ int _ArchiveConnection::upload(File file,std::function<void(int,int)> func) {
             mErrno = -confirmResp->getPermitFlag();
             break;
         }
-
         PROGRESS_CALL(ProcessStatus::StartUploading,0)
         
         FileInputStream inputStream = FileInputStream::New(file);
@@ -392,7 +388,6 @@ int _ArchiveConnection::upload(File file,std::function<void(int,int)> func) {
         ByteArray data = ByteArray::New(32*1024);
         size_t totalsize = file->length();
         size_t sendsize = 0;
-
         while(1) {
             int len = inputStream->read(data);
             if(len <= 0) {

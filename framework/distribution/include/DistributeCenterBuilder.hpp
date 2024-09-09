@@ -4,7 +4,7 @@
 #include "String.hpp"
 #include "DistributeOption.hpp"
 #include "BroadcastCenter.hpp"
-#include "SpaceCenter.hpp"
+#include "MapCenter.hpp"
 #include "QueueCenter.hpp"
 #include "ArchiveCenter.hpp"
 
@@ -19,7 +19,7 @@ public:
     _DistributeCenterBuilder * setUrl(String url);
     _DistributeCenterBuilder * setOption(DistributeOption option);
     
-    SpaceCenter buildSpaceCenter();
+    MapCenter buildSpaceCenter();
     BroadcastCenter buildBroadcastCenter();
     QueueCenter buildQueueCenter();
     ArchiveCenter buildArchiveCenter();

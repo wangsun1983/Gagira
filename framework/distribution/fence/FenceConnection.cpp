@@ -106,6 +106,10 @@ int _FenceConnection::releaseWriteFence(String name) {
 
 int _FenceConnection::releaseFence(int type,String name) {
     AutoLock l(mutex);
+    if(mInput == nullptr || mOutput == nullptr) {
+        return -EINVAL;
+    }
+
     FenceMessage msg = nullptr;
     switch(type) {
         case LocalFence:

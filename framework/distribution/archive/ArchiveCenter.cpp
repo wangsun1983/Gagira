@@ -103,6 +103,8 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                 record->mParser->pushData(array);
                 auto response = record->mParser->doParse();
                 if(response != nullptr && response->size() != 0) {
+                    record->mLinker = DistributeLinker::New(socket);
+
                     ByteArray applyInfoData = response->get(0);
                     auto msg = mConverter->generateMessage<ApplyUploadMessage>(applyInfoData);
                     FetchRet(ret,path) = mCenter->transformFilePath(DistributeLinker::New(socket),msg);
@@ -114,7 +116,6 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
 
                     //update file status
                     File file = File::New(path);
-                    record->mLinker = DistributeLinker::New(socket);
                     if(!file->exists()) {
                         file->createNewFile();
                         record->mPath = file->getAbsolutePath();
@@ -134,6 +135,7 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                             response = ConfirmApplyUploadMessage::New();
                             record->mStatus = WaitClientMessage;
                             record->mVerifyData = msg->getVerifyData();
+                            printf("record mVerifyData is %s \n",record->mVerifyData->toString()->toChars());
                         }
                     } else {
                         //response = ConfirmApplyUploadMessage::New(EEXIST);
@@ -150,11 +152,14 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                     Md md5sum = Md::New();
                     auto mdValue = md5sum->encodeFile(File::New(record->mPath));
                     CompleteUploadMessage response = nullptr;
+                    printf("upload mdvalue is %s,verifydata is %s \n",mdValue->toChars(),record->mVerifyData->toString()->toChars());
                     if(mdValue->sameAs(record->mVerifyData->toString())) {
+                        printf("md5 check ok \n");
                         response = CompleteUploadMessage::New();
                         mFileManager->removeFileStatus(record->mPath,record->mLinker,st(ArchiveFileManager)::Action::Upload);
                         socket->getOutputStream()->write(mConverter->generatePacket(response));
                     } else {
+                        printf("md5 check fail \n");
                         //response = CompleteUploadMessage::New(EBADF);
                         //remove corrupted file
                         File file = File::New(record->mPath);
@@ -410,7 +415,6 @@ int _ArchiveCenter::processApplyDownload(DistributeLinker linker,ArchiveMessage 
         auto result = mFileManager->updateFileStatus(file->getAbsolutePath(),
                                             linker,
                                             st(ArchiveFileManager)::Action::Download);
-
         if(result == 0) {
             path = file->getAbsolutePath();
             auto fileno = mFileManager->addDownloadLink(linker,file);
@@ -432,7 +436,6 @@ int _ArchiveCenter::processDoDownload(DistributeLinker linker,ArchiveMessage msg
         if(file == nullptr) {
             return;
         }
-
         FileInputStream stream = FileInputStream::New(file);
         stream->open();
         OutputStream output = mylinker->getSocket()->getOutputStream();

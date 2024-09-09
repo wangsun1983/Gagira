@@ -7,7 +7,6 @@
 #include "Mutex.hpp"
 #include "DistributeMessageParser.hpp"
 #include "DistributeMessageConverter.hpp"
-#include "System.hpp"
 
 using namespace obotcha;
 

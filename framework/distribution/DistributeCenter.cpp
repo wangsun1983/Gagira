@@ -76,9 +76,7 @@ int _DistributeCenter::close() {
     Inspect(isClosed(),0)
 
     if(mServerSock != nullptr) {
-        printf("disctibute close trace1\n");
         mSocketMonitor->unbind(mServerSock,true);
-        printf("disctibute close trace2\n");
         mServerSock->close();
         mServerSock = nullptr;
     }

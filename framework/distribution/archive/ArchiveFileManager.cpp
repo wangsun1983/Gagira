@@ -172,7 +172,7 @@ void _ArchiveFileManager::removeWriteLink(DistributeLinker link,uint64_t fileno)
         maps->remove(Uint64::New(fileno));
 
         if(maps->size() == 0) {
-            maps->remove(link);
+            mWriteLinks->remove(link);
         }
     }
 }

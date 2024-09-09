@@ -10,10 +10,10 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(ArchiveClient) {
+DECLARE_CLASS(ArchiveFactory) {
 public:
-    _ArchiveClient(String);
-    int connect();
+    _ArchiveFactory(String);
+    //int connect();
     ArchiveInputStream openRead(String filename);
     ArchiveOutputStream openTruncWrite(String filename);
     ArchiveOutputStream openAppendWrite(String filename);

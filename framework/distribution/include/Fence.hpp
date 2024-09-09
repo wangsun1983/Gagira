@@ -12,6 +12,12 @@ namespace gagira {
 
 DECLARE_CLASS(Fence)  {
 public:
+    enum Type {
+        FenceMutex = 1,
+        ReadFence = 2,
+        WriteFence = 4
+    };
+
     _Fence(String);
     String getName();
     String getOwner();
@@ -22,10 +28,15 @@ public:
     int getCount();
     bool isFree();
     void reset();
+    int getType();
+
 private:
     String mOwner; 
     String mName;
     std::atomic_int mCount;
+
+protected:
+    int mFlag;
 };
 
 DECLARE_CLASS(ReadFence) IMPLEMENTS(Fence) {
@@ -50,11 +61,11 @@ public:
 DECLARE_CLASS(ReadWriteFence) IMPLEMENTS(Fence)  {
 public:
     _ReadWriteFence(String);
-    ReadFence getReadFence();
-    WriteFence getWriteFence();
+    sp<_ReadFence> getReadFence();
+    sp<_WriteFence> getWriteFence();
 private:
-    ReadFence mReadFence;
-    WriteFence mWriteFence;
+    sp<_ReadFence> mReadFence;
+    sp<_WriteFence> mWriteFence;
 };
 
 }

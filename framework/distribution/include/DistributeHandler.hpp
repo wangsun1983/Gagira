@@ -11,6 +11,8 @@ namespace gagira {
 
 class _ArchiveMessage;
 class _FenceMessage;
+class _MapMessage;
+class _QueueMessage;
 
 DECLARE_CLASS(DistributeHandler) {
 public:
@@ -19,6 +21,14 @@ public:
     }
 
     virtual int onRequest(DistributeLinker,sp<_FenceMessage>) {
+        return 0;
+    }
+
+    virtual int onRequest(DistributeLinker,sp<_MapMessage>) {
+        return 0;
+    }
+
+    virtual int onRequest(DistributeLinker,sp<_QueueMessage>) {
         return 0;
     }
 };

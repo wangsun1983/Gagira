@@ -8,6 +8,7 @@ namespace gagira {
 _Fence::_Fence(String name) {
     mName = name;
     mCount = 0;
+    mFlag = FenceMutex;
 }
 
 String _Fence::getName() {
@@ -50,9 +51,14 @@ void _Fence::reset() {
     mCount = 0;
 }
 
+int _Fence::getType() {
+    return mFlag;
+}
+
 //ReadFence
 _ReadFence::_ReadFence(String name):_Fence(name) {
     owners = ConcurrentQueue<DistributeLinker>::New();
+    mFlag = ReadFence;
 }
 
 uint64_t _ReadFence::getCount() {
@@ -81,6 +87,7 @@ bool _ReadFence::removeOwner(DistributeLinker linker) {
 _ReadWriteFence::_ReadWriteFence(String name):_Fence(name) {
     mReadFence = ReadFence::New(name);
     mWriteFence = WriteFence::New(name);
+    mFlag = (_Fence::Type::ReadFence | _Fence::Type::WriteFence);
 }
 
 ReadFence _ReadWriteFence::getReadFence() {
@@ -93,7 +100,7 @@ WriteFence _ReadWriteFence::getWriteFence() {
 
 //
 _WriteFence::_WriteFence(String name):_Fence(name) {
-
+    mFlag = WriteFence;
 }
 
 }

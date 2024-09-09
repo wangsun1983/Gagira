@@ -24,8 +24,8 @@ BroadcastCenter _DistributeCenterBuilder::buildBroadcastCenter() {
     return BroadcastCenter::New(mUrl,mOption);
 }
 
-SpaceCenter _DistributeCenterBuilder::buildSpaceCenter() {
-    return SpaceCenter::New(mUrl,mOption);
+MapCenter _DistributeCenterBuilder::buildSpaceCenter() {
+    return MapCenter::New(mUrl,mOption);
 }
 
 QueueCenter _DistributeCenterBuilder::buildQueueCenter() {

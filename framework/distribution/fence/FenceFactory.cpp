@@ -1,6 +1,5 @@
 #include "FenceFactory.hpp"
 
-
 namespace gagira {
 
 _FenceFactory::_FenceFactory(String url) {

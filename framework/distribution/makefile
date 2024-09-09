@@ -1,7 +1,7 @@
 distributionDir = ./framework/distribution
 
 include ./framework/distribution/broadcast/makefile
-include ./framework/distribution/space/makefile
+include ./framework/distribution/map/makefile
 include ./framework/distribution/queue/makefile
 include ./framework/distribution/archive/makefile
 include ./framework/distribution/fence/makefile
