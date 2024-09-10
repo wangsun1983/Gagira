@@ -14,6 +14,7 @@
 #include "QueueMessageBuilder.hpp"
 #include "Mutex.hpp"
 #include "Condition.hpp"
+#include "Process.hpp"
 
 using namespace obotcha;
 
@@ -60,9 +61,8 @@ public:
         QueueData<T> result = QueueData<T>::New();
         result->data = nullptr;
         result->err = 0;
-
-        auto msg = mBuilder->setAsRequire()
-                          ->build();
+        
+        auto msg = mBuilder->setAsRequire()->build();
         auto response = communicate(msg,interval);
         if(response->getResult() == ETIMEDOUT) {
             //send cancel messsage
@@ -79,6 +79,9 @@ public:
                 auto again_response = result_waiter->getResponse();
                 result->data = unpack<T>(again_response);;
                 result->err = -response->getResult();
+                if(result->err == 0) {
+                    sendAck(msg->getReqId());
+                }
                 return result;
             } else {
                 result->err = -ETIMEDOUT;
@@ -90,6 +93,7 @@ public:
             result->data = unpack<T>(response);
         }
         result->err = -response->getResult();
+
         if(result->err == 0) {
             sendAck(msg->getReqId());
         }

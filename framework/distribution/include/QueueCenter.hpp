@@ -13,6 +13,7 @@
 #include "BlockingLinkedList.hpp"
 #include "QueueMessage.hpp"
 #include "DistributeHandler.hpp"
+#include "UnitTestInterface.hpp"
 
 using namespace obotcha;
 
@@ -36,12 +37,20 @@ public:
     
     int start();
     int close();
+
+    DECLARE_UNIT_TEST_INTERFACE(
+        uint64_t getRemainTaskSize();
+        uint64_t getRemainWaiterSize();
+        void setDelayProcessInterval(uint32_t);
+    )
+
 private:
     QueueMessage getNextMessage(DistributeLinker linker,uint32_t req_id);
     QueueMessage getNextClient();
-    void addResponseWaitersLocked(DistributeLinker,QueueMessage);
-    void removeResponseWaiterLocked(DistributeLinker,uint32_t req_id);
-    QueueMessage getResponseWaitersLocked(DistributeLinker,uint32_t req_id);
+    void addProcessingMessageLocked(DistributeLinker,QueueMessage);
+    void removeProcessingMessageLocked(DistributeLinker,uint32_t req_id);
+    QueueMessage getProcessingMessageLocked(DistributeLinker,uint32_t req_id);
+    bool handlePermission(DistributeLinker,QueueMessage);
 
     DistributeHandler mHandler;
 
@@ -49,10 +58,11 @@ private:
     Mutex mMutex;
     LinkedList<QueueWaitReceiver> mWaiters;
     LinkedList<QueueMessage> mTasks;
-    HashMap<DistributeLinker,HashMap<Uint32,QueueMessage>> mResponseWaiters;
+    HashMap<DistributeLinker,HashMap<Uint32,QueueMessage>> mProcessingMessages;
     volatile int32_t isRunning;
 
-    //void run();
+    //For Testing
+    uint32_t TestDelayProcessInterval = 0;
 };
 
 }

@@ -1,5 +1,3 @@
-#include <mutex>
-
 #include "HttpUrl.hpp"
 #include "SocketBuilder.hpp"
 #include "QueueConnection.hpp"
@@ -8,12 +6,13 @@
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
 #include "Inspect.hpp"
+#include "Process.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-//----------
+//---------- QueueWaitResult ----------
 _QueueWaitResult::_QueueWaitResult() {
     mMutex = Mutex::New();
     mCond = Condition::New();
@@ -22,7 +21,6 @@ _QueueWaitResult::_QueueWaitResult() {
 
 void _QueueWaitResult::setResponse(MessageResponse resp) {
     AutoLock l(mMutex);
-    mProcessed = true;
     mResponse = resp;
 }
 
@@ -32,11 +30,7 @@ MessageResponse _QueueWaitResult::getResponse() {
 
 int _QueueWaitResult::wait(int interval) {
     AutoLock l(mMutex);
-    if(!mProcessed) {
-        return mCond->wait(mMutex,interval);
-    }
-
-    return 0;
+    return (!mProcessed) ? mCond->wait(mMutex,interval):0;
 }
 
 void _QueueWaitResult::setProcessed() {
@@ -51,10 +45,11 @@ bool _QueueWaitResult::isProcessed() {
 
 void _QueueWaitResult::notify() {
     AutoLock l(mMutex);
+    mProcessed = true;
     mCond->notify();
 }
 
-//---------- QueueConnection
+//---------- QueueConnection ----------
 _QueueConnection::_QueueConnection(String s) {
     HttpUrl url = HttpUrl::New(s);
     mAddress = url->getInetAddress()->get(0);
@@ -91,6 +86,7 @@ void _QueueConnection::onSocketMessage(st(Net)::Event event,Socket socket,ByteAr
                         AutoLock l(mMutex);
                         waiter = mWaitResults->get(Uint32::New(response->getReqId()));
                     }
+
                     waiter->setResponse(response);
                     waiter->notify();
                 }
@@ -104,9 +100,10 @@ void _QueueConnection::onSocketMessage(st(Net)::Event event,Socket socket,ByteAr
 }
 
 void _QueueConnection::notifyAllWaiters(uint32_t reason) {
-    AutoLock l(mMutex);
     auto response = MessageResponse::New();
     response->setResult(reason);
+
+    AutoLock l(mMutex);
     ForEveryOne(pair,mWaitResults) {
         auto waiter = pair->getValue();
         if(!waiter->isProcessed()) {
@@ -118,7 +115,7 @@ void _QueueConnection::notifyAllWaiters(uint32_t reason) {
 
 int _QueueConnection::close() {
     //send exit info to server
-    notifyAllWaiters(EPIPE);
+    notifyAllWaiters(ESHUTDOWN);
     {
         AutoLock l(mMutex);
         if(mSock != nullptr) {
@@ -150,18 +147,23 @@ MessageResponse _QueueConnection::communicate(QueueMessage msg,int interval) {
     auto id = Uint32::New(msg->getReqId());
     {
         AutoLock l(mMutex);
+        //printf("communicate add id is %d,tid is %ld \n",msg->getReqId(),st(Process)::MyTid());
         mWaitResults->put(id,waitRespResult);
     }
     
     if(mOutput->write(mConverter->generatePacket(msg)) <= 0) {
         AutoLock l(mMutex);
+        //printf("communicate remove1 id is %d,tid is %ld \n",msg->getReqId(),st(Process)::MyTid());
         mWaitResults->remove(id);
         return MessageResponse::New(msg->getReqId(),ENETUNREACH);
     }
+    
     if(waitRespResult->wait(interval) != 0) {
+        //printf("communicate wait timeout \n");
         return MessageResponse::New(msg->getReqId(),ETIMEDOUT);
     } else {
         AutoLock l(mMutex);
+        //printf("communicate remove2 id is %d,tid is %ld \n",msg->getReqId(),st(Process)::MyTid());
         auto waiter = mWaitResults->remove(id);
         return waiter->getResponse();
     }
