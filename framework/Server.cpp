@@ -8,11 +8,11 @@
 #include "GlobalCacheManager.hpp"
 #include "HttpResourceManager.hpp"
 #include "WebSocketRouterManager.hpp"
-#include "NetEvent.hpp"
 #include "Configs.hpp"
 #include "Inet4Address.hpp"
 #include "Inet6Address.hpp"
 #include "ForEveryOne.hpp"
+#include "WsResponseEntity.hpp"
 
 using namespace obotcha;
 
@@ -95,14 +95,14 @@ int _Server::start() {
     int ws_port = st(Configs)::getInstance()->getWebSocketServerPort();
     if(ws_port != -1) {
         auto webSocketBuilder = WebSocketServerBuilder::New();
-        InetAddress address;
+        InetAddress wsAddress;
         if(ws_ip != nullptr && ws_ip->contains(":")) {
-            address = Inet6Address::New(ws_ip,ws_port);
+            wsAddress = Inet6Address::New(ws_ip,ws_port);
         } else {
-            address = Inet4Address::New(ws_ip,ws_port);
+            wsAddress = Inet4Address::New(ws_ip,ws_port);
         }
 
-        webSocketBuilder->setInetAddr(address);
+        webSocketBuilder->setInetAddr(wsAddress);
         mWsServer = webSocketBuilder->build();
         
         ForEveryOne(path,mDelayRegWsPath) {
@@ -145,9 +145,19 @@ void _Server::addGlobalController(st(HttpMethod)::Id method,ControllerRouter r) 
 int _Server::onData(WebSocketFrame frame,sp<_WebSocketLinker> client) {
     st(GlobalCacheManager)::getInstance()->add(WebSocketRequestCache::New(frame->getData(),client));
     auto router = st(WebSocketRouterManager)::getInstance()->getRouter(client->getPath());
-    WsResponseEntity result = router->onInvoke();
+    WsResponseEntity result = Cast<WsResponseEntity>(router->onInvoke());
     if(result != nullptr) {
-        client->sendTextMessage(result->getContent()->get());
+        auto binaryData = result->getBinaryData();
+        if(binaryData != nullptr) {
+            client->sendBinaryMessage(binaryData);
+            return 0;
+        }
+
+        auto textData = result->getTextData();
+        if(textData != nullptr) {
+            client->sendTextMessage(textData);
+            return 0;
+        }
     }
 
     return 0;
@@ -187,10 +197,13 @@ void _Server::onHttpMessage(st(Net)::Event event,HttpLinker client,HttpResponseW
         if(gController != nullptr) {
             st(GlobalCacheManager)::getInstance()->add(HttpPacketCache::New(msg));
             auto entity = gController->onInvoke();
-            if(entity != nullptr && entity->getStatus() != st(HttpStatus)::Ok) {
-                response->getHeader()->setResponseStatus(entity->getStatus());
-                w->write(response);
-                return;
+            if(entity != nullptr) {
+                auto httpEntity = Cast<HttpResponseEntity>(entity);
+                if(httpEntity != nullptr) {
+                    response->getHeader()->setResponseStatus(httpEntity->getStatus());
+                    w->write(response);
+                    return;
+                }
             }
         }
 
@@ -198,28 +211,28 @@ void _Server::onHttpMessage(st(Net)::Event event,HttpLinker client,HttpResponseW
         File file = mResourceManager->findResource(url);
         if(file != nullptr) {
             response->getHeader()->setResponseStatus(st(HttpStatus)::Ok);
-            //response->setFile(file);
             HttpChunk chunk = HttpChunk::New(file);
             response->getEntity()->setChunk(chunk);
             w->write(response);
             return;
         }
-
+        
         FetchRet(router,map) = mRouterManager->getRouter(method,url);
         ServletRequestCache cache = ServletRequestCache::New(req,ControllerParam::New(map));
         st(GlobalCacheManager)::getInstance()->add(cache);
         if(router != nullptr) {
             HttpEntity entity = HttpEntity::New();
-            HttpResponseEntity obj = router->invoke();
+            ResponseEntity obj = router->invoke();
             if(obj != nullptr) {
-                if(obj->getStatus() != st(HttpResponseEntity)::NoResponse) {
-                    auto content = obj->getContent();
+                HttpResponseEntity responseEntity = Cast<HttpResponseEntity>(obj);
+                if(responseEntity->getStatus() != st(HttpResponseEntity)::NoResponse) {
+                    auto content = responseEntity->getContent();
                     if(content != nullptr) {
                         entity->setContent(content->get()->toByteArray());
                     }
-                    entity->setChunk(obj->getChunk());
+                    entity->setChunk(responseEntity->getChunk());
 
-                    response->getHeader()->setResponseStatus(obj->getStatus());
+                    response->getHeader()->setResponseStatus(responseEntity->getStatus());
                     response->setEntity(entity);
                     w->write(response);
                 }

@@ -4,6 +4,7 @@
 #include "HttpUrl.hpp"
 #include "Inspect.hpp"
 #include "ForEveryOne.hpp"
+#include "UnitTestInterface.hpp"
 
 namespace gagira {
 
@@ -12,7 +13,6 @@ _QueueWaitReceiver::_QueueWaitReceiver(uint32_t reqid,DistributeLinker linker) {
     this->req_id = reqid;
     this->linker = linker;
 }
-
 
 //----- QueueCenter -----
 _QueueCenter::_QueueCenter(String url,DistributeOption option):_DistributeCenter(url,option) {
@@ -64,11 +64,8 @@ bool _QueueCenter::handlePermission(DistributeLinker linker,QueueMessage msg) {
 
 int _QueueCenter::onMessage(DistributeLinker linker,ByteArray data) {
     auto msg = mConverter->generateMessage<QueueMessage>(data);
+    Inspect(!handlePermission(linker,msg),0)
     
-    if(!handlePermission(linker,msg)) {
-        return 0;
-    }
-
     switch(msg->getEvent()) {
         case st(QueueMessage)::Acquire: {
             AutoLock l(mMutex);
@@ -96,10 +93,12 @@ int _QueueCenter::onMessage(DistributeLinker linker,ByteArray data) {
                 auto sendToClientData = MessageResponse::New(client->req_id,0);
                 sendToClientData->setData(msg->serialize());
                 //send to waiting client.
-                if(TestDelayProcessInterval != 0) {
-                    mMutex->unlock();
-                    usleep(1000 * TestDelayProcessInterval);
-                }
+                EXECUTE_UNIT_TEST_TACKLE(
+                    if(TestDelayProcessInterval != 0) {
+                        mMutex->unlock();
+                        usleep(1000 * TestDelayProcessInterval);
+                    }
+                )
                 client->linker->getSocket()->getOutputStream()->write(mConverter->generatePacket(sendToClientData));
             } else {
                 mTasks->putLast(msg);

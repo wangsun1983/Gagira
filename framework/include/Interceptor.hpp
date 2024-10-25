@@ -1,10 +1,7 @@
 #ifndef __GAGRIA_INTERCEPTOR_ITEM_HPP__
 #define __GAGRIA_INTERCEPTOR_ITEM_HPP__
 
-#include "String.hpp"
-#include "HtmlTemplateItem.hpp"
-#include "ArrayList.hpp"
-
+#include "Object.hpp"
 using namespace obotcha;
 
 namespace gagira {

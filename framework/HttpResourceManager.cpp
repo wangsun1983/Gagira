@@ -42,12 +42,10 @@ File _HttpResourceManager::findResource(String path) {
     //check wheteher it is a redirect    
     if(path->indexOf(".") == -1) {
         int start = path->lastIndexOf("/");
-        if(start > 1) {
+        if(start >= 0 && path->size() > 1) {
             path = path->subString(start + 1,path->size() - start - 1);
         }
-        
         path = mRedirectMaps->get(path);
-
         if(path == nullptr) {
             return nullptr;
         }

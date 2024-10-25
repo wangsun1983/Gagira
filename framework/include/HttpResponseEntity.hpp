@@ -2,54 +2,46 @@
 #define __GAGIRA_HTTP_RESPONSE_ENTITY_HPP__
 
 #include "Object.hpp"
-#include "StrongPointer.hpp"
 
 #include "TextContent.hpp"
 #include "HttpStatus.hpp"
 #include "HttpCookie.hpp"
 #include "File.hpp"
 #include "HttpChunk.hpp"
+#include "ResponseEntity.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(HttpResponseEntity) {
+DECLARE_CLASS(HttpResponseEntity) IMPLEMENTS(ResponseEntity) {
 
 public:
     static const int NoResponse = -100;
+    
     _HttpResponseEntity(int status = st(HttpStatus)::Ok);
 
-    template<typename U>
-    _HttpResponseEntity(U v,int status = st(HttpStatus)::Ok,ArrayList<HttpCookie> cookies = nullptr) {
-        mContent = TextContent::New(v);
-        mStatus = status;
-        mCookies = cookies;
-        mChunk = nullptr;
+    template<typename U> 
+    static sp<_HttpResponseEntity> Create(U v,int status = st(HttpStatus)::Ok,ArrayList<HttpCookie> cookies = nullptr) {
+        auto entity = sp<_HttpResponseEntity>::New();
+        entity->mContent = TextContent::New(v);
+        entity->mStatus = status;
+        entity->mCookies = cookies;
+        entity->mChunk = nullptr;
+        return entity;
     }
 
-    _HttpResponseEntity(HttpChunk v,int status = st(HttpStatus)::Ok,ArrayList<HttpCookie> cookies = nullptr) {
-        mChunk = v;
-        mStatus = status;
-        mCookies = cookies;
-        mContent = nullptr;
-    }
-
+    static sp<_HttpResponseEntity>Create(HttpChunk v,int status = st(HttpStatus)::Ok,ArrayList<HttpCookie> cookies = nullptr);
 
     int getStatus();
     TextContent getContent();
     ArrayList<HttpCookie> getCookies();
-    
-    //void setChunk(File);
-    //void SetChunk(ByteArray);
-
     HttpChunk getChunk();
 
 private:
     int mStatus;
     TextContent mContent;
     ArrayList<HttpCookie> mCookies;
-
     HttpChunk mChunk;
 };
 

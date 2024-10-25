@@ -23,7 +23,7 @@ _ControllerRouter::_ControllerRouter(ControllerFunction c,Controller ctr) {
     controller = ctr;
 }
 
-HttpResponseEntity _ControllerRouter::onInvoke() {
+ResponseEntity _ControllerRouter::onInvoke() {
     return func();
 }
 

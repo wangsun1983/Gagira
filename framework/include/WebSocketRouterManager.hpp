@@ -19,8 +19,6 @@ using namespace obotcha;
 
 namespace gagira {
 
-using WsResponseEntity = HttpResponseEntity;
-
 DECLARE_CLASS(WebSocketRouterManager) {
   public:
       static sp<_WebSocketRouterManager> getInstance();

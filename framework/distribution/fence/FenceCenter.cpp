@@ -208,7 +208,7 @@ int _FenceCenter::processReleaseOwner(String fencename,String linkertoken) {
     if(info != nullptr) {
         info->fence->decCount();
         if(info->fence->isFree()) {
-            AutoLock l(info->mutex);
+            AutoLock ll(info->mutex);
             bool isHit = false;
             while(info->waiters->size() != 0) {
                 auto nextWaiterToken = info->waiters->takeFirst()->waiterToken;
@@ -313,7 +313,7 @@ int _FenceCenter::processReleaseWriteOwner(String fencename,DistributeLinker lin
             } 
             
             if(waiter->flag == st(FenceWaiter)::ReadFlag) {
-                auto readfence = fence->getReadFence();
+                //auto readfence = fence->getReadFence();
                 readfence->addOwner(waiterLinker);
 
                 auto iterator = waiters->getIterator();

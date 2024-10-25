@@ -1,7 +1,6 @@
 #include "DistributeCenter.hpp"
 #include "HttpUrl.hpp"
 #include "SocketBuilder.hpp"
-#include "NetEvent.hpp"
 #include "ForEveryOne.hpp"
 #include "System.hpp"
 #include "ExecutorBuilder.hpp"

@@ -2,7 +2,6 @@
 #include "SocketBuilder.hpp"
 #include "QueueConnection.hpp"
 #include "QueueMessage.hpp"
-#include "NetEvent.hpp"
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
 #include "Inspect.hpp"
@@ -66,7 +65,7 @@ _QueueConnection::_QueueConnection(String s) {
 
 int _QueueConnection::connect() {
     mSock = SocketBuilder::New()->setAddress(mAddress)->newSocket();
-    Inspect(mSock->connect() < 0,-1);
+    Inspect(mSock->connect() < 0,-ENETUNREACH);
 
     mInput = mSock->getInputStream();
     mOutput = mSock->getOutputStream();

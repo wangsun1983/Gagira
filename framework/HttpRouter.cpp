@@ -26,8 +26,8 @@ RouterListener _HttpRouter::getListener() {
     return mListener; 
 }
 
-HttpResponseEntity _HttpRouter::invoke() {
-    HttpResponseEntity result = nullptr;
+ResponseEntity _HttpRouter::invoke() {
+    ResponseEntity result = nullptr;
     auto beforeExecIterator = beforeExecInterceptors->getIterator();
     while(beforeExecIterator->hasValue()) {
         if(!beforeExecIterator->getValue()->onIntercept()) {

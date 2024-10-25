@@ -9,8 +9,8 @@ _FenceMessage::_FenceMessage() {
     this->privateData = 0;
 }
 
-_FenceMessage::_FenceMessage(st(FenceMessage)::Type event,String name,uint64_t waittime) {
-    this->event = event;
+_FenceMessage::_FenceMessage(st(FenceMessage)::Type param_event,String name,uint64_t waittime) {
+    this->event = param_event;
     this->fencename = name;
     this->privateData = waittime;
 }

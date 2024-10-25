@@ -7,14 +7,14 @@
 #include "HashMap.hpp"
 #include "String.hpp"
 #include "TextContent.hpp"
-#include "HttpResponseEntity.hpp"
+#include "ResponseEntity.hpp"
 #include "Interceptor.hpp"
 
 namespace gagira {
 
 DECLARE_CLASS(RouterListener) {
   public:
-    virtual HttpResponseEntity onInvoke() = 0;
+    virtual ResponseEntity onInvoke() = 0;
 };
 
 DECLARE_CLASS(HttpRouter) {
@@ -27,7 +27,7 @@ DECLARE_CLASS(HttpRouter) {
 
     RouterListener getListener();
 
-    HttpResponseEntity invoke();
+    ResponseEntity invoke();
 
     void addBeforeExecInterceptor(Interceptor);
     void addAfterExecInterceptor(Interceptor);

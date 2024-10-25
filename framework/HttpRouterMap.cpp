@@ -29,7 +29,6 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterSegments::match(ArrayList<S
             params->put(segment->value,items->get(i));
         }
     }
-
     return MakeRet(mRouter,params);
 }
 
@@ -99,15 +98,16 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterMap::findRouter(String path
         lastQuery = nullptr;
     }
 
-    HttpRouter r;
+    HttpRouter router;
     HashMap<String,String> param;
     ForEveryOne(segments,segmentList) {
-        FetchRet(r,param) = segments->match(items);
+        FetchRet(r,p) = segments->match(items);
         if(r != nullptr) {
+            router = r;
+            param = p;
             break;
         }
     }
-
     if(lastQuery != nullptr) {
         if(param == nullptr) {
             param = parseQuery(lastQuery);
@@ -115,7 +115,7 @@ DefRet(HttpRouter,HashMap<String,String>) _HttpRouterMap::findRouter(String path
             param->append(parseQuery(lastQuery));
         }
     }
-    return MakeRet(r,param);
+    return MakeRet(router,param);
 }
 
 HashMap<String, String> _HttpRouterMap::parseQuery(String query) {

@@ -3,6 +3,15 @@
 
 namespace gagira {
 
+sp<_HttpResponseEntity>_HttpResponseEntity::Create(HttpChunk v,int status,ArrayList<HttpCookie> cookies) {
+    auto entity = sp<_HttpResponseEntity>::New();
+    entity->mChunk = v;
+    entity->mStatus = status;
+    entity->mCookies = cookies;
+    entity->mContent = nullptr;
+    return entity;
+}
+
 _HttpResponseEntity::_HttpResponseEntity(int status) {
     mStatus = status;
 }
@@ -18,14 +27,6 @@ ArrayList<HttpCookie> _HttpResponseEntity::getCookies() {
 TextContent _HttpResponseEntity::getContent() { 
     return mContent; 
 }
-
-// void _HttpResponseEntity::setChunk(File file) {
-//     mChunk = createHttpChunk(file);
-// }
-
-// void _HttpResponseEntity::SetChunk(ByteArray data) {
-//     mChunk = createHttpChunk(data);
-// }
 
 HttpChunk _HttpResponseEntity::getChunk() {
     return mChunk;

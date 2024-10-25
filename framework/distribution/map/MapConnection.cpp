@@ -4,7 +4,6 @@
 #include "SocketBuilder.hpp"
 #include "MapConnection.hpp"
 #include "MapMessage.hpp"
-#include "NetEvent.hpp"
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
 #include "Inspect.hpp"

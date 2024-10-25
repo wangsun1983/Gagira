@@ -124,7 +124,7 @@ private:
     DistributeMessageConverter mConverter;
     DistributeMessageParser mParser;
     SocketMonitor mSocketMonitor;
-    //BlockingLinkedList<ByteArray> mTasks;
+
     Mutex mMutex;
     HashMap<Uint32,QueueWaitResult> mWaitResults;
 

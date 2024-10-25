@@ -17,7 +17,7 @@ using namespace obotcha;
 
 namespace gagira {
 
-using ControllerFunction = std::function<HttpResponseEntity()>;
+using ControllerFunction = std::function<ResponseEntity()>;
 
 DECLARE_CLASS(Controller) {
 public:
@@ -30,7 +30,7 @@ DECLARE_CLASS(ControllerRouter) IMPLEMENTS(RouterListener) {
 
 public:
     _ControllerRouter(ControllerFunction c,Controller ctr);
-    HttpResponseEntity onInvoke();
+    ResponseEntity onInvoke();
 
 private:
     ControllerFunction func;

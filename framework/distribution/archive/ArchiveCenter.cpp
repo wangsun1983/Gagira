@@ -108,7 +108,7 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                     ByteArray applyInfoData = response->get(0);
                     auto msg = mConverter->generateMessage<ApplyUploadMessage>(applyInfoData);
                     FetchRet(ret,path) = mCenter->transformFilePath(DistributeLinker::New(socket),msg);
-                    ConfirmApplyUploadMessage response = nullptr;
+                    ConfirmApplyUploadMessage applyUploadResponse = nullptr;
                     if(ret == st(ArchiveHandleResult)::Reject) {
                         responseFail(EPERM,record);
                         break;
@@ -132,7 +132,7 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                                 responseFail(EBADF,record);
                                 break;
                             }
-                            response = ConfirmApplyUploadMessage::New();
+                            applyUploadResponse = ConfirmApplyUploadMessage::New();
                             record->mStatus = WaitClientMessage;
                             record->mVerifyData = msg->getVerifyData();
                             printf("record mVerifyData is %s \n",record->mVerifyData->toString()->toChars());
@@ -142,10 +142,10 @@ void _ArchiveCenterUploadMonitor::onSocketMessage(st(Net)::Event event,Socket so
                         responseFail(EEXIST,record);
                         break;
                     }
-                    socket->getOutputStream()->write(mConverter->generatePacket(response));
+                    socket->getOutputStream()->write(mConverter->generatePacket(applyUploadResponse));
                 }
             } else if(record->mStatus == WaitClientMessage) {
-                int ret = record->mOutputStream->write(array);
+                record->mOutputStream->write(array);
                 record->mFileSize -= array->size();
                 if(record->mFileSize == 0) {
                     //check current file md5sum
@@ -488,7 +488,7 @@ int _ArchiveCenter::processApplyCloseStream(DistributeLinker linker,ArchiveMessa
             response = ConfirmCloseStreamMessage::New(ENOENT);
         }   
     }
-    return out->write(mConverter->generatePacket(msg));
+    return out->write(mConverter->generatePacket(response));
 }
 
 int _ArchiveCenter::onMessage(DistributeLinker linker,ByteArray data) {

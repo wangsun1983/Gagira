@@ -15,7 +15,8 @@ objs += $(outtmp)/controller.o \
 		$(outtmp)/httproutermap.o \
 		$(outtmp)/httpresourcemanager.o \
 		$(outtmp)/httpresponseentity.o \
-		$(outtmp)/httprouter.o 
+		$(outtmp)/httprouter.o \
+		$(outtmp)/wsresponseentity.o 
 
 $(outtmp)/httproutermanager.o :$(frameworkDir)/HttpRouterManager.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/HttpRouterManager.cpp -o $(outtmp)/httproutermanager.o
@@ -43,6 +44,9 @@ $(outtmp)/controllerparam.o :$(frameworkDir)/ControllerParam.cpp
 
 $(outtmp)/server.o :$(frameworkDir)/Server.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/Server.cpp -o $(outtmp)/server.o
+
+$(outtmp)/wsresponseentity.o :$(frameworkDir)/WsResponseEntity.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/WsResponseEntity.cpp -o $(outtmp)/wsresponseentity.o
 
 $(outtmp)/servletrequest.o :$(frameworkDir)/ServletRequest.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(frameworkDir)/ServletRequest.cpp -o $(outtmp)/servletrequest.o

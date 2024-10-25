@@ -1,14 +1,13 @@
 #ifndef __GAGRIA_CONFIGS_HPP__
 #define __GAGRIA_CONFIGS_HPP__
 
-#include "StrongPointer.hpp"
 #include "Object.hpp"
 #include "ArrayList.hpp"
-#include "SqlConfig.hpp"
 #include "Reflect.hpp"
-#include "ServerConfig.hpp"
+#include "SqlConfig.hpp"
+#include "WsConfig.hpp"
+#include "HttpConfig.hpp"
 #include "File.hpp"
-#include "WebSocketServerConfig.hpp"
 
 using namespace obotcha;
 
@@ -18,10 +17,10 @@ DECLARE_CLASS(ConfigItems) {
 public:
     _ConfigItems();
 
-    ServerConfig serverconfig;
-    ArrayList<SqlConfig> sqlconfigs;
-    WebSocketServerConfig wsconfigs;
-    DECLARE_REFLECT_FIELD(ConfigItems,serverconfig,sqlconfigs,wsconfigs);
+    HttpConfig httpConfig;
+    ArrayList<SqlConfig> sqlConfigs;
+    WsConfig wsConfig;
+    DECLARE_REFLECT_FIELD(ConfigItems,httpConfig,sqlConfigs,wsConfig);
 };
 
 DECLARE_CLASS(Configs) {

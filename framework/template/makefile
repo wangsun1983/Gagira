@@ -1,91 +1,60 @@
 templateDir = ./framework/template
 
-objs += $(outtmp)/htmltemplate.o \
-		$(outtmp)/htmltemplatetextitem.o \
-		$(outtmp)/htmltemplateobjectitem.o \
-		$(outtmp)/htmltemplateconditionitem.o \
-		$(outtmp)/htmltemplatereferitem.o \
-		$(outtmp)/htmltemplaterangeitem.o \
-		$(outtmp)/htmltemplateincludeitem.o \
-		$(outtmp)/htmltemplatedefineitem.o \
-		$(outtmp)/htmltemplatelenitem.o \
-		$(outtmp)/htmltemplateindexitem.o \
-		$(outtmp)/htmltemplatewithitem.o \
-		$(outtmp)/htmltemplatefunctionitem.o \
-		$(outtmp)/templatedotcmdparser.o \
-		$(outtmp)/templateconditioncmdparser.o  \
-		$(outtmp)/templaterefercmdparser.o  \
-		$(outtmp)/templaterangecmdparser.o  \
-		$(outtmp)/templateincludecmdparser.o  \
-		$(outtmp)/templatedefinecmdparser.o  \
-		$(outtmp)/templatelencmdparser.o  \
-		$(outtmp)/templateindexcmdparser.o \
-		$(outtmp)/templatewithcmdparser.o \
-		$(outtmp)/templatefunctioncmdparser.o 
+objs += $(outtmp)/template.o \
+		$(outtmp)/templateinstruction.o \
+		$(outtmp)/templateparserdispatcher.o \
+		$(outtmp)/templateitem.o \
+		$(outtmp)/templatecommentitem.o \
+		$(outtmp)/templatetextitem.o  \
+		$(outtmp)/templatefunctionitem.o  \
+		$(outtmp)/templateprintitem.o  \
+		$(outtmp)/templateletitem.o  \
+		$(outtmp)/templatescopedvalue.o  \
+		$(outtmp)/templatecommentparser.o  \
+		$(outtmp)/templateletparser.o  \
+		$(outtmp)/templatefunctionparser.o   \
+		$(outtmp)/templateprintparser.o   
 
+$(outtmp)/template.o :$(templateDir)/Template.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/Template.cpp -o $(outtmp)/template.o
 
-$(outtmp)/htmltemplate.o :$(templateDir)/HtmlTemplate.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplate.cpp -o $(outtmp)/htmltemplate.o
+$(outtmp)/templateinstruction.o :$(templateDir)/TemplateInstruction.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateInstruction.cpp -o $(outtmp)/templateinstruction.o
 
-$(outtmp)/htmltemplatetextitem.o :$(templateDir)/HtmlTemplateTextItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateTextItem.cpp -o $(outtmp)/htmltemplatetextitem.o
+#---------- item -----------
+$(outtmp)/templateitem.o :$(templateDir)/item/TemplateItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateItem.cpp -o $(outtmp)/templateitem.o
 
-$(outtmp)/htmltemplateconditionitem.o :$(templateDir)/HtmlTemplateConditionItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateConditionItem.cpp -o $(outtmp)/htmltemplateconditionitem.o
+$(outtmp)/templatescopedvalue.o :$(templateDir)/item/TemplateScopedValue.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateScopedValue.cpp -o $(outtmp)/templatescopedvalue.o
 
-$(outtmp)/htmltemplatereferitem.o :$(templateDir)/HtmlTemplateReferItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateReferItem.cpp -o $(outtmp)/htmltemplatereferitem.o
+$(outtmp)/templatefunctionitem.o :$(templateDir)/item/TemplateFunctionItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateFunctionItem.cpp -o $(outtmp)/templatefunctionitem.o
 
-$(outtmp)/htmltemplaterangeitem.o :$(templateDir)/HtmlTemplateRangeItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateRangeItem.cpp -o $(outtmp)/htmltemplaterangeitem.o
+$(outtmp)/templatetextitem.o :$(templateDir)/item/TemplateTextItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateTextItem.cpp -o $(outtmp)/templatetextitem.o
 
-$(outtmp)/htmltemplateincludeitem.o :$(templateDir)/HtmlTemplateIncludeItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateIncludeItem.cpp -o $(outtmp)/htmltemplateincludeitem.o
+$(outtmp)/templateletitem.o :$(templateDir)/item/TemplateLetItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateLetItem.cpp -o $(outtmp)/templateletitem.o
 
-$(outtmp)/htmltemplatedefineitem.o :$(templateDir)/HtmlTemplateDefineItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateDefineItem.cpp -o $(outtmp)/htmltemplatedefineitem.o
+$(outtmp)/templateprintitem.o :$(templateDir)/item/TemplatePrintItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplatePrintItem.cpp -o $(outtmp)/templateprintitem.o
 
-$(outtmp)/htmltemplatelenitem.o :$(templateDir)/HtmlTemplateLenItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateLenItem.cpp -o $(outtmp)/htmltemplatelenitem.o
+$(outtmp)/templatecommentitem.o :$(templateDir)/item/TemplateCommentItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateCommentItem.cpp -o $(outtmp)/templatecommentitem.o
 
-$(outtmp)/htmltemplateindexitem.o :$(templateDir)/HtmlTemplateIndexItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateIndexItem.cpp -o $(outtmp)/htmltemplateindexitem.o
+#----------- parser -----------
+$(outtmp)/templatecommentparser.o :$(templateDir)/parser/TemplateCommentParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateCommentParser.cpp -o $(outtmp)/templatecommentparser.o
 
-$(outtmp)/htmltemplatewithitem.o :$(templateDir)/HtmlTemplateWithItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateWithItem.cpp -o $(outtmp)/htmltemplatewithitem.o
+$(outtmp)/templateletparser.o :$(templateDir)/parser/TemplateLetParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateLetParser.cpp -o $(outtmp)/templateletparser.o
 
-$(outtmp)/htmltemplatefunctionitem.o :$(templateDir)/HtmlTemplateFunctionItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateFunctionItem.cpp -o $(outtmp)/htmltemplatefunctionitem.o
+$(outtmp)/templatefunctionparser.o :$(templateDir)/parser/TemplateFunctionParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateFunctionParser.cpp -o $(outtmp)/templatefunctionparser.o
 
-$(outtmp)/htmltemplateobjectitem.o :$(templateDir)/HtmlTemplateObjectItem.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/HtmlTemplateObjectItem.cpp -o $(outtmp)/htmltemplateobjectitem.o
+$(outtmp)/templateprintparser.o :$(templateDir)/parser/TemplatePrintParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplatePrintParser.cpp -o $(outtmp)/templateprintparser.o
 
-$(outtmp)/templatedotcmdparser.o :$(templateDir)/TemplateDotCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateDotCmdParser.cpp -o $(outtmp)/templatedotcmdparser.o
-
-$(outtmp)/templateconditioncmdparser.o :$(templateDir)/TemplateConditionCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateConditionCmdParser.cpp -o $(outtmp)/templateconditioncmdparser.o
-
-$(outtmp)/templaterefercmdparser.o :$(templateDir)/TemplateReferCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateReferCmdParser.cpp -o $(outtmp)/templaterefercmdparser.o
-
-$(outtmp)/templaterangecmdparser.o :$(templateDir)/TemplateRangeCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateRangeCmdParser.cpp -o $(outtmp)/templaterangecmdparser.o
-
-$(outtmp)/templateincludecmdparser.o :$(templateDir)/TemplateIncludeCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateIncludeCmdParser.cpp -o $(outtmp)/templateincludecmdparser.o
-
-$(outtmp)/templatedefinecmdparser.o :$(templateDir)/TemplateDefineCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateDefineCmdParser.cpp -o $(outtmp)/templatedefinecmdparser.o
-
-$(outtmp)/templatelencmdparser.o :$(templateDir)/TemplateLenCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateLenCmdParser.cpp -o $(outtmp)/templatelencmdparser.o
-
-$(outtmp)/templateindexcmdparser.o :$(templateDir)/TemplateIndexCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateIndexCmdParser.cpp -o $(outtmp)/templateindexcmdparser.o
-
-$(outtmp)/templatewithcmdparser.o :$(templateDir)/TemplateWithCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateWithCmdParser.cpp -o $(outtmp)/templatewithcmdparser.o
-
-$(outtmp)/templatefunctioncmdparser.o :$(templateDir)/TemplateFunctionCmdParser.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateFunctionCmdParser.cpp -o $(outtmp)/templatefunctioncmdparser.o
+$(outtmp)/templateparserdispatcher.o :$(templateDir)/parser/TemplateParserDispatcher.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateParserDispatcher.cpp -o $(outtmp)/templateparserdispatcher.o

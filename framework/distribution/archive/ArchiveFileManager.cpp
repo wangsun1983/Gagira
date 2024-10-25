@@ -77,11 +77,11 @@ int _ArchiveFileManager::updateFileStatus(String path,DistributeLinker linker,Ac
         }
         selfList->add(Integer::New(action));
     } else {
-        auto status = HashMap<DistributeLinker,ArrayList<Integer>>::New();
+        auto statusMap = HashMap<DistributeLinker,ArrayList<Integer>>::New();
         auto actions = ArrayList<Integer>::New();
         actions->add(Integer::New(action));
-        status->put(linker,actions);
-        mStatus->put(path,status);
+        statusMap->put(linker,actions);
+        mStatus->put(path,statusMap);
     }
     return 0;
 }
@@ -264,7 +264,6 @@ void _ArchiveFileManager::onLinkerDisconnected(DistributeLinker linker) {
     mDownloadLinks->remove(linker);
     mOpenLinks->remove(linker);
 
-    auto iterator = mStatus->getIterator();
     for(auto iterator = mStatus->getIterator();iterator->hasValue();iterator->next()) {
         auto map = iterator->getValue();
         map->remove(linker);

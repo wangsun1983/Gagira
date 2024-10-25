@@ -21,9 +21,9 @@ namespace gagira {
 sp<_Configs> _Configs::instance = nullptr;
 
 _ConfigItems::_ConfigItems() {
-    sqlconfigs = ArrayList<SqlConfig>::New();
-    serverconfig = ServerConfig::New();
-    wsconfigs = WebSocketServerConfig::New();
+    sqlConfigs = ArrayList<SqlConfig>::New();
+    httpConfig = HttpConfig::New();
+    wsConfig = WsConfig::New();
 }
 
 _Configs::_Configs() {
@@ -136,49 +136,49 @@ void _Configs::save(File file,int type) {
 }
 
 String _Configs::getHttpServerAddress() {
-    return items->serverconfig->ip;
+    return items->httpConfig->ip;
 }
 
 int _Configs::getHttpServerPort() {
-    return items->serverconfig->port;
+    return items->httpConfig->port;
 }
 
 void _Configs::setHttpServerAddress(String ip) {
-    items->serverconfig->ip = ip;
+    items->httpConfig->ip = ip;
 }
 
 void _Configs::setHttpServerPort(int port) {
-    items->serverconfig->port = port;
+    items->httpConfig->port = port;
 }
 
 String _Configs::getWebSocketServerAddress() {
-    if(items->wsconfigs != nullptr) {
-        return items->wsconfigs->ip;
+    if(items->wsConfig != nullptr) {
+        return items->wsConfig->ip;
     }
     return nullptr;
 }
 
 int _Configs::getWebSocketServerPort() {
-    if(items->wsconfigs != nullptr) {
-        return items->wsconfigs->port;
+    if(items->wsConfig != nullptr) {
+        return items->wsConfig->port;
     }
     return -1;
 }
 
 void _Configs::setWebSocketServerAddress(String ip) {
-    items->wsconfigs->ip = ip;
+    items->wsConfig->ip = ip;
 }
 
 void _Configs::setWebSocketServerPort(int port) {
-    items->wsconfigs->port = port;
+    items->wsConfig->port = port;
 }
 
 ArrayList<SqlConfig> _Configs::getSqlConfigs() {
-    return items->sqlconfigs;
+    return items->sqlConfigs;
 }
 
 void _Configs::addSqlConfig(SqlConfig c) {
-    items->sqlconfigs->add(c);
+    items->sqlConfigs->add(c);
 }
 
 } // namespace gagira

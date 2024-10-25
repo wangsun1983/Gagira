@@ -4,7 +4,6 @@
 #include "HttpUrl.hpp"
 #include "SocketBuilder.hpp"
 #include "BroadcastMessage.hpp"
-#include "NetEvent.hpp"
 #include "InitializeException.hpp"
 #include "ForEveryOne.hpp"
 #include "Inspect.hpp"
