@@ -20,7 +20,7 @@ void _TemplateCommentItem::dump() {
     printf("-------------------- \n");
 }
 
-TemplateScopedValue _TemplateCommentItem::execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj) {
+TemplateScopedValue _TemplateCommentItem::execute(TemplateScopedValueContainer,TemplateObjectContainer) {
     return nullptr;
 }
 

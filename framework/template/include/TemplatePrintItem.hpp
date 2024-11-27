@@ -20,7 +20,7 @@ public:
     void setParams(ArrayList<String>);
     ArrayList<String> getParams();
 
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer);
 private:
     bool isWrite;
     String mExpress;

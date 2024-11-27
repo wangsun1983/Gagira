@@ -5,8 +5,11 @@ using namespace obotcha;
 
 namespace gagira {
 
-TemplateScopedValue _TemplateLetItem::execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj) {
-    return mAssignment->execute(scopedValues,obj);
+TemplateScopedValue _TemplateLetItem::execute(TemplateScopedValueContainer scopedvalueContainer,TemplateObjectContainer objContainer) {
+    auto obj = objContainer->getCurrent();
+    auto value = mAssignment->execute(scopedvalueContainer,obj);
+    scopedvalueContainer->addScopedValue(mVariableName,value);
+    return nullptr;
 }
 
 void _TemplateLetItem::setVariableName(String name) {

@@ -6,6 +6,7 @@
 #include "Template.hpp"
 #include "ArrayList.hpp"
 #include "TemplateScopedValue.hpp"
+#include "TemplateScopedValueContainer.hpp"
 
 using namespace obotcha;
 
@@ -25,7 +26,7 @@ public:
     String getOperator();
     int getType();
 
-    virtual TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj) {
+    virtual TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer objContainer) {
         return nullptr;
     }
 
@@ -38,18 +39,19 @@ protected:
     String mOperator;
 };
 
-DECLARE_CLASS(TemplateFuncExpression_Variable) IMPLEMENTS(TemplateFuncExpression) {
+DECLARE_CLASS(TemplateFuncExpression_Variable) IMPLEMENTS(TemplateFuncExpression,TemplateInstruction) {
 public:
     _TemplateFuncExpression_Variable(TemplateScopedValue c);
     void dump();
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    //TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer container,TemplateObjectContainer objContainer);
 };
 
 DECLARE_CLASS(TemplateFuncExpression_Function) IMPLEMENTS(TemplateFuncExpression) {
 public:
     _TemplateFuncExpression_Function(String name,ArrayList<String> params);
     _TemplateFuncExpression_Function(String name);
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer container,TemplateObjectContainer objContainer);
     void dump();
 };
 
@@ -64,13 +66,17 @@ DECLARE_CLASS(TemplateFunctionItem) IMPLEMENTS(TemplateItem) {
 
 public:
     _TemplateFunctionItem(ArrayList<TemplateFuncExpression>);
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer);
 
 private:
-    int execute_for_int(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
-    String execute_for_string(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
-    
     ArrayList<TemplateFuncExpression> mExpressions;
+
+    // int execute_for_int(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    // String execute_for_string(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+
+    //operator:=
+    TemplateScopedValue computeAssignment(TemplateScopedValueContainer c,Object obj,
+                                            String unitName,TemplateScopedValue arg2);
 
     //operator:#-
     TemplateScopedValue computeNegative(TemplateScopedValue arg1);
@@ -134,6 +140,9 @@ private:
 
     //operator:||
     TemplateScopedValue computeOrCondition(TemplateScopedValue arg1,TemplateScopedValue arg2);
+
+    //operator:!
+    TemplateScopedValue computeExclamation(TemplateScopedValue arg1);
 };
 
 }

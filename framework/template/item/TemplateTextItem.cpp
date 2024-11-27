@@ -7,7 +7,7 @@ _TemplateTextItem::_TemplateTextItem(String text) {
     mText = text;
 }
 
-TemplateScopedValue _TemplateTextItem::execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj)  {
+TemplateScopedValue _TemplateTextItem::execute(TemplateScopedValueContainer,TemplateObjectContainer)  {
     return TemplateScopedValue::New(mText);
 }
 

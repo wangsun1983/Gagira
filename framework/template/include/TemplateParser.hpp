@@ -9,8 +9,30 @@ namespace gagira {
 
 DECLARE_CLASS(TemplateParser) {
 public:
-    virtual void inject(String){};
+    enum Type {
+        Comment = 0,
+        Condition,
+        Function,
+        Let,
+        Print,
+        Elif,
+        Else,
+        In,
+        Loop,
+        End
+    };
+
+    virtual void inject(String) {};
     virtual TemplateItem doParse() = 0;
+    virtual bool processText(String) {
+        return false;
+    }
+
+    int getType();
+    void setType(int);
+
+protected:
+    int mType;
 };
 
 }

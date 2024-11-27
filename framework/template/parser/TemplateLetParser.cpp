@@ -5,15 +5,14 @@
 namespace gagira {
 
 _TemplateLetParser::_TemplateLetParser(String cmd) {
-    printf("_TemplateLetParser construct \n");
     mCmd = cmd;
     mStatus = ParseType;
+    mType = Let;
 }
 
 TemplateItem _TemplateLetParser::doParse() {
     TemplateLetItem item = TemplateLetItem::New();
-    printf("templateLetParser,do parse cmd is %s \n",mCmd->toChars());
-
+    
     ArrayList<String> scopedItems = mCmd->split(EqualOperator);
     /**
      * sample:let int v = xxxxxxx
@@ -28,7 +27,6 @@ TemplateItem _TemplateLetParser::doParse() {
     auto assignmentText = scopedItems->get(0);
     ArrayList<String> assignmentItems = assignmentText->split(SpaceTextSymbol);
     ForEveryOne(assignment,assignmentItems) {
-        printf("templateLetParser,assignment is %s \n",assignment->toChars());
         if(assignment->sameAs(SpaceTextSymbol)) {
             continue;
         }
@@ -41,14 +39,14 @@ TemplateItem _TemplateLetParser::doParse() {
                     mParsedType = st(TemplateScopedValue)::Type::Double;
                 } else if(assignment->sameAs(StringVariableType)) {
                     mParsedType = st(TemplateScopedValue)::Type::String;
+                } else if(assignment->sameAs(BoolVariableType)) {
+                    mParsedType = st(TemplateScopedValue)::Type::Bool;
                 }
-                printf("templateLetParser,mParsedType is %d \n",mParsedType);
                 mStatus = ParseScopedName;
             } break;
 
             case ParseScopedName: {
                 mParsedName = assignment;
-                printf("templateLetParser,mParsedName is %s \n",mParsedName->toChars());
                 mStatus = ParseScopdeValue;
             } break;
         }

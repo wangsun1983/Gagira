@@ -11,7 +11,7 @@ namespace gagira {
 
 DECLARE_CLASS(TemplateParserDispatcher) IMPLEMENTS(TemplateInstruction) {
 public:
-    TemplateParser apply(String text);
+    static TemplateParser Apply(String text);
 };
 
 }

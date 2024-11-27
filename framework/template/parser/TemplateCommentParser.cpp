@@ -5,6 +5,7 @@ namespace gagira {
 
 _TemplateCommentParser::_TemplateCommentParser(String cmd) {
     mCmd = cmd->trim();
+    mType = Comment;
 }
 
 TemplateItem _TemplateCommentParser::doParse() {

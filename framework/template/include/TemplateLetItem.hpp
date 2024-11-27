@@ -10,7 +10,7 @@ namespace gagira {
 
 DECLARE_CLASS(TemplateLetItem) IMPLEMENTS(TemplateItem){
 public:
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer);
     void setVariableName(String);
     String getVariableName();
 

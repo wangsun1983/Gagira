@@ -11,7 +11,7 @@ namespace gagira {
 DECLARE_CLASS(TemplateTextItem) IMPLEMENTS(TemplateItem){
 public:
     _TemplateTextItem(String text);
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer objContainer);
     
 private:
     String mText;

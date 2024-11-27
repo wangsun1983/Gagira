@@ -10,75 +10,104 @@ namespace gagira {
 _Template::_Template(String text) {
     mItems = ArrayList<TemplateItem>::New();
     mText = text;
+    mStatus = ParseHtml;
     startAnalyse();
 }
 
 void _Template::startAnalyse() {
-    int start = 0;
-    int next = 0;
-    printf("startAnalyse trace1 \n");
-    while(1) {
-        auto start_index = mText->find(StartTag,start);
-        printf("startAnalyse trace1_1,start_index is %d \n",start_index);
-        if(start_index == -1) {
-            break;
-        }
+    printf("startAnalyse trace1,mText is %s \n",mText->toChars());
+    TextLineReader lineReader = TextLineReader::New(mText);
+    TemplateParser parser = nullptr;
 
-        auto end_index = mText->find(EndTag,start_index + 2);
-        printf("startAnalyse trace1_2,end_index is %d \n",end_index);
-        if(end_index == -1) {
+    while(1) {
+        auto line = lineReader->readLine();
+        if(line == nullptr) {
             break;
         }
         
-        printf("startAnalyse trace start_index is %d, end_index is %d\n",start_index,end_index);
-        //save text before start_tag
-        if(start != start_index) {
-            TemplateTextItem item = TemplateTextItem::New(mText->subString(start,start_index - start));
-            mItems->add(item);
+        if(mStatus == ParseCommand) {
+            line = line->trim();
         }
 
-        start = end_index + 2;
+        if(line->size() == 0) {
+            continue;
+        }
+        int start_index = 0;
+        int end_index = 0;
+        while(start_index < line->size()) {
+            switch(mStatus) {
+                case ParseHtml: {
+                    auto next_index = line->find(StartTag,start_index);
+                    if(next_index != -1) {
+                        if(next_index != start_index) {
+                            auto content = line->subString(start_index,next_index - start_index);
+                            if(parser == nullptr || !parser->processText(content)) {
+                                if(start_index != next_index) {
+                                    mItems->add(TemplateTextItem::New(content));
+                                }
+                            }
+                        }
+                        start_index = next_index + StartTag->size();
+                        mStatus = ParseCommand;
+                    } else {
+                        auto content = line->subString(start_index,line->size() - start_index)->append("\n");
+                        if(parser == nullptr || !parser->processText(content)) {
+                            mItems->add(TemplateTextItem::New(content));
+                        }
+                        start_index = line->size();
+                    }
+                } break;
 
-        //start parse command
-        /**
-         * 
-         *command like:
-         *1.create value
-         *  var t;
-         *  var v = 100;
-        */
-        auto command = mText->subString(start_index + 2,end_index - start_index - 2)->trim();
-        TextLineReader lineReader = TextLineReader::New(command);
-        TemplateParserDispatcher dispatcher = TemplateParserDispatcher::New();
-        printf("startAnalyse trace2 \n");
-        TemplateParser currentParser = nullptr;
+                case ParseCommand: {
+                    int end_index = line->find(EndTag,start_index);
+                    String commands = nullptr;
+                    if(end_index != -1) {
+                        if(end_index != start_index) {
+                            commands = line->subString(start_index,end_index - start_index - 2);
+                        }
+                        start_index = end_index + 2;
+                        mStatus = ParseHtml;
+                    } else {
+                        commands = line->subString(start_index,line->size() - start_index);
+                        // if(commands != nullptr) {
+                        //     printf("startAnalyse trace5 command is %s \n",commands->toChars());
+                        // }
+                        start_index = line->size();
+                    }
 
-        while(1) {
-            auto line = lineReader->readLine();
-            if(line == nullptr) {
-                printf("startAnalyse trace3 \n");
-                break;
-            }
-            printf("startAnalyse trace4,line is %s \n",line->toChars());
-            if(currentParser == nullptr) {
-                currentParser = dispatcher->apply(line);
-            } else {
-                currentParser->inject(line);
-            }
+                    if(commands != nullptr) {
+                        if(parser == nullptr) {
+                            parser = st(TemplateParserDispatcher)::Apply(commands);
+                        } else {
+                            parser->inject(commands);
+                        }
 
-            auto item = currentParser->doParse();
-            printf("startAnalyse trace5_1 \n");
-            if(item == nullptr) {
-                printf("startAnalyse trace5_2,it is null!!!! \n");
-            }
-            if(item != nullptr) {
-                printf("startAnalyse trace6 \n");
-                item->dump();
+                        auto item = parser->doParse();
+                        if(item != nullptr) {
+                            mItems->add(item);
+                            parser = nullptr;
+                        }
+                    }
+                } break;
             }
         }
-
-
     }
+}
+
+String _Template::execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj) {
+    String result = "";
+    mScopedValueContainer = TemplateScopedValueContainer::New(scopedValues);
+    mObjectContainer = TemplateObjectContainer::New(obj);
+    printf("-----Template start execute trace1,mItems size is %d----- \n",mItems->size());
+    ForEveryOne(item,mItems) {
+        printf("-----Template start execute trace2----- \n");
+        auto v = item->execute(mScopedValueContainer,mObjectContainer);
+        if(v != nullptr) {
+            result = result->append(v->toString());
+        }
+    }
+
+    return result;
 }
 
 }

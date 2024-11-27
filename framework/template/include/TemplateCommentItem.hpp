@@ -14,7 +14,7 @@ public:
     String toText();
     void dump();
 
-    TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
+    TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer);
 private:
     ArrayList<String> mComments;
 };

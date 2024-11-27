@@ -11,6 +11,7 @@ char _TemplateFunctionParser::OperatorCharArray[128] = {0};
 
 _TemplateFunctionParser::_TemplateFunctionParser(String cmd) {
     mCmd = cmd;
+    mType = Function;
 
     /**
     * priority          operator                                               Description
@@ -134,7 +135,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
     int param_start = -1;
     for(int index = 0; index < cmdlen;index++) {
         auto c = cmdchars[index];
-        printf("c is %c \n",c);
         if(c == ' ') {
             continue;
         }
@@ -148,7 +148,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
 
                 if(c == '(') {
                     //is it a function????
-                    printf("---------wo qu,it is a function!!!!!---------\n");
                     //find next )
                     auto brace_start = index;
                     for(;index < cmdlen;index++) {
@@ -161,10 +160,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
                     if(index > brace_start + 1) {
                         params_str = mCmd->subString(brace_start + 1,index - brace_start - 1)->trim();
                         auto params_data = params_str->split(",");
-                        printf("params_str is %s \n",params_str->toChars());
-                        ForEveryOne(param,params_data) {
-                            printf("[function param is %s] \n",param->toChars());
-                        }
                         expression = TemplateFuncExpression_Function::New(paramString,params_data); //function with params
                     } else {
                         expression = TemplateFuncExpression_Function::New(paramString); //function without params
@@ -174,7 +169,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
                 } else {
                     expression = createVariableExpression(paramString);
                 }
-                printf("find a param is %s \n",paramString->toChars());
                 expressions->add(expression);
                 param_start = -1;
             }
@@ -189,7 +183,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
             auto next = index + 1;
             if(next <= cmdlen) {
                 auto next_c = cmdchars[next];
-                printf("c is %c,next is %c \n",c,next_c);
                 if((c == '+' && next_c == '+')
                     ||(c == '-' && next_c == '-')
                     ||(c == '<' && next_c == '=')
@@ -208,8 +201,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
                     if(prev_operator != nullptr 
                         &&!prev_operator->sameAs("(") 
                         && prev_priority->toValue() <= current_priority->toValue()) {
-                        printf("2 add to operators,operator is %s \n",prev_operator->toChars());
-                        //params->add(operators->takeLast());
                         expressions->add(TemplateFuncExpression_Operator::New(operators->takeLast()));
                     }
                     operators->putLast(m_operator);
@@ -220,9 +211,7 @@ TemplateItem _TemplateFunctionParser::doParse() {
             }
 
             auto m_operator = String::New(c);
-            printf("c is %c,m_operator is %s \n",c,m_operator->toChars());
             if(operators->size() == 0) {
-                printf("add to operators firstly \n");
                 m_operator = tranUnaryOperator(cmdchars,index);
                 operators->putLast(m_operator);
             } else {
@@ -247,10 +236,7 @@ TemplateItem _TemplateFunctionParser::doParse() {
                 auto prev_priority = PriorityMaps->get(prev_operator);
                 auto current_priority = PriorityMaps->get(m_operator);
 
-                printf("perv_op is %s,current_op is %s \n",prev_operator->toChars(),m_operator->toChars());
                 if(!prev_operator->sameAs("(") && prev_priority->toValue() <= current_priority->toValue()) {
-                    printf("add to operators,operator is %s \n",prev_operator->toChars());
-                    //params->add(operators->takeLast());
                     expressions->add(TemplateFuncExpression_Operator::New(operators->takeLast()));
                 }
                 operators->putLast(m_operator);
@@ -266,8 +252,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
     //push last item
     if(param_start != -1) {
         auto last = mCmd->subString(param_start,cmdlen - param_start);
-        printf("last is %s \n",last->toChars());
-        //params->add(last);
         expressions->add(createVariableExpression(last));
     }
 
@@ -282,7 +266,11 @@ TemplateItem _TemplateFunctionParser::doParse() {
         expr->dump();
     }
 
-    return TemplateFunctionItem::New(expressions);
+    auto item = TemplateFunctionItem::New(expressions);
+#ifdef DEBUG_TEMPLATE_ITEM_COMMAND
+    item->setCmd(mCmd);
+#endif
+    return item;
 }
 
 bool _TemplateFunctionParser::isOperator(char c) {

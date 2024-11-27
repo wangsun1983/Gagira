@@ -6,6 +6,9 @@
 #include "ArrayList.hpp"
 #include "HashMap.hpp"
 #include "TemplateScopedValue.hpp"
+#include "TemplateScopedValueContainer.hpp"
+#include "TemplateObjectContainer.hpp"
+#include "TemplateDebug.hpp"
 
 using namespace obotcha;
 
@@ -19,16 +22,26 @@ public:
 
     _TemplateItem();
     
-    virtual TemplateScopedValue execute(HashMap<String,TemplateScopedValue> scopedValues,Object obj) = 0;
+    virtual TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer) = 0;
     virtual void dump() {};
 
     void setType(int type);
     int getType();
 
+#ifdef DEBUG_TEMPLATE_ITEM_COMMAND
+    void setCmd(String);
+    String getCmd();
+#endif    
+
 protected:
     ArrayList<sp<_TemplateItem>> mNextItems;
     HashMap<String,TemplateScopedValue> mScopeValues;
     int mType;
+
+#ifdef DEBUG_TEMPLATE_ITEM_COMMAND
+    String mCmd;
+#endif
+
 };
 
 }

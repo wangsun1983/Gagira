@@ -18,14 +18,17 @@ public:
     static const String LineComment;
 
     static const String LetCommand;
-    static const String RangeCommand;
+    static const String LoopCommand;
+    //static const String RofCommand;
     static const String IndexCommand;
-    static const String WithCommand;
-    static const String EndCommand;
+    static const String InCommand;
+    //static const String NiCommand;
     static const String DotCommand;
     static const String IfCommand;
     static const String ElseIfCommand;
     static const String ElseCommand;
+    static const String EndCommand;
+    //static const String FiCommand;
     static const String IncludeCommand;
     static const String DefineCommand;
     static const String LenCommand;
@@ -41,6 +44,9 @@ public:
     static const String DoubleVariableType;
     static const String StringVariableType;
     static const String BoolVariableType;
+
+    static const String TrueStatement;
+    static const String FalseStatement;
 
     static const String WithinMark;
     static const String ModularMark;

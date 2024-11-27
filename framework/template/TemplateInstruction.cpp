@@ -14,14 +14,18 @@ const String _TemplateInstruction::LineComment = String::New("//");
 
 
 const String _TemplateInstruction::LetCommand = String::New("let");
-const String _TemplateInstruction::RangeCommand = String::New("range");
+const String _TemplateInstruction::LoopCommand = String::New("loop");
+//const String _TemplateInstruction::RofCommand = String::New("rof");
 const String _TemplateInstruction::IndexCommand = String::New("index");
-const String _TemplateInstruction::WithCommand = String::New("with");
-const String _TemplateInstruction::EndCommand = String::New("end");
+const String _TemplateInstruction::InCommand = String::New("in");
+//const String _TemplateInstruction::NiCommand = String::New("ni");
 const String _TemplateInstruction::DotCommand = String::New(".");
 const String _TemplateInstruction::IfCommand = String::New("if");
-const String _TemplateInstruction::ElseIfCommand = String::New("else if");
+const String _TemplateInstruction::ElseIfCommand = String::New("elif");
 const String _TemplateInstruction::ElseCommand = String::New("else");
+//const String _TemplateInstruction::FiCommand = String::New("fi");
+const String _TemplateInstruction::EndCommand = String::New("end");
+
 const String _TemplateInstruction::IncludeCommand = String::New("template");
 const String _TemplateInstruction::DefineCommand = String::New("define");
 const String _TemplateInstruction::LenCommand = String::New("len");
@@ -37,6 +41,8 @@ const String _TemplateInstruction::IntVariableType = String::New("int");
 const String _TemplateInstruction::DoubleVariableType = String::New("double");
 const String _TemplateInstruction::StringVariableType = String::New("string");
 const String _TemplateInstruction::BoolVariableType = String::New("bool");
+const String _TemplateInstruction::TrueStatement = String::New(Boolean::New(true));
+const String _TemplateInstruction::FalseStatement = String::New(Boolean::New(false));
 
 const String _TemplateInstruction::WithinMark = String::New(".");
 const String _TemplateInstruction::ModularMark = String::New("%");
