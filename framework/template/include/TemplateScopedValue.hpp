@@ -29,6 +29,12 @@ public:
    void updateBoolValue(bool);
    void updateType(int);
 
+   void setDirectReturn(bool);
+   bool isDirectReturn();
+
+   void setDirectBreak(bool);
+   bool isDirectBreak();
+
    int getType();
    int getIntValue();
    double getDoubleValue();
@@ -43,6 +49,9 @@ private:
     obotcha::String mStringValue;
     bool mBoolValue;
     int mType;
+
+    bool isReturn;
+    bool isBreak;
 
 };
 

@@ -27,9 +27,13 @@ TemplateScopedValue _TemplateConditionFactor::execute(TemplateScopedValueContain
     auto result = mCondition->execute(container,obj);
     if(result->getBoolValue()) {
         String result = String::New("");
+        
         ForEveryOne(action,mActions) {
             auto exec_result = action->execute(container,obj);
             if(exec_result != nullptr) {
+                if(exec_result->isDirectReturn()) {
+                    return TemplateScopedValue::New(exec_result->toString());
+                }
                 result = result->append(exec_result->toString());
             }
         }
@@ -53,7 +57,6 @@ TemplateScopedValue _TemplateConditionItem::execute(TemplateScopedValueContainer
 #ifdef DEBUG_TEMPLATE_ITEM_COMMAND
     printf("[Execute Instruction]:[%s]\n",mCmd->toChars());
 #endif
-
     ForEveryOne(factor,mFactors) {
         auto result = factor->execute(scopedValueContainer,obj);
         if(result != nullptr) {
@@ -61,12 +64,14 @@ TemplateScopedValue _TemplateConditionItem::execute(TemplateScopedValueContainer
             return result;
         }
     }
-
     if(mFinalActions->size() != 0) {
         String result = String::New("");
         ForEveryOne(action,mFinalActions) {
             auto exec_result = action->execute(scopedValueContainer,obj);
             if(exec_result != nullptr) {
+                if(exec_result->isDirectReturn()) {
+                    return TemplateScopedValue::New(exec_result->toString());
+                }
                 result = result->append(exec_result->toString());
             }
         }

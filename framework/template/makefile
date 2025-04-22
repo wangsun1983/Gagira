@@ -1,7 +1,8 @@
 templateDir = ./framework/template
 
 objs += $(outtmp)/template.o \
-		$(outtmp)/templatescopedvalueseeker.o \
+		$(outtmp)/templateparserhelper.o \
+		$(outtmp)/templatescopedvaluehelper.o \
 		$(outtmp)/templatescopedvaluecontainer.o \
 		$(outtmp)/templateinstruction.o \
 		$(outtmp)/templateobjectcontainer.o \
@@ -9,6 +10,8 @@ objs += $(outtmp)/template.o \
 		$(outtmp)/templateitem.o \
 		$(outtmp)/templateinitem.o \
 		$(outtmp)/templatecommentitem.o \
+		$(outtmp)/templatereturnitem.o \
+		$(outtmp)/templatebreakitem.o \
 		$(outtmp)/templatetextitem.o  \
 		$(outtmp)/templatefunctionitem.o  \
 		$(outtmp)/templateconditionitem.o  \
@@ -18,6 +21,8 @@ objs += $(outtmp)/template.o \
 		$(outtmp)/templatescopedvalue.o  \
 		$(outtmp)/templateparser.o  \
 		$(outtmp)/templateinparser.o  \
+		$(outtmp)/templatereturnparser.o  \
+		$(outtmp)/templatebreakparser.o  \
 		$(outtmp)/templatecommentparser.o  \
 		$(outtmp)/templatecontionparser.o  \
 		$(outtmp)/templateletparser.o  \
@@ -30,8 +35,11 @@ objs += $(outtmp)/template.o \
 $(outtmp)/template.o :$(templateDir)/Template.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/Template.cpp -o $(outtmp)/template.o
 
-$(outtmp)/templatescopedvalueseeker.o :$(templateDir)/TemplateScopedValueSeeker.cpp
-	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateScopedValueSeeker.cpp -o $(outtmp)/templatescopedvalueseeker.o
+$(outtmp)/templateparserhelper.o :$(templateDir)/TemplateParserHelper.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateParserHelper.cpp -o $(outtmp)/templateparserhelper.o
+
+$(outtmp)/templatescopedvaluehelper.o :$(templateDir)/TemplateScopedValueHelper.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateScopedValueHelper.cpp -o $(outtmp)/templatescopedvaluehelper.o
 
 $(outtmp)/templatescopedvaluecontainer.o :$(templateDir)/TemplateScopedValueContainer.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/TemplateScopedValueContainer.cpp -o $(outtmp)/templatescopedvaluecontainer.o
@@ -75,6 +83,12 @@ $(outtmp)/templateprintitem.o :$(templateDir)/item/TemplatePrintItem.cpp
 $(outtmp)/templatecommentitem.o :$(templateDir)/item/TemplateCommentItem.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateCommentItem.cpp -o $(outtmp)/templatecommentitem.o
 
+$(outtmp)/templatereturnitem.o :$(templateDir)/item/TemplateReturnItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateReturnItem.cpp -o $(outtmp)/templatereturnitem.o
+
+$(outtmp)/templatebreakitem.o :$(templateDir)/item/TemplateBreakItem.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/item/TemplateBreakItem.cpp -o $(outtmp)/templatebreakitem.o
+
 #----------- parser -----------
 $(outtmp)/templateparser.o :$(templateDir)/parser/TemplateParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateParser.cpp -o $(outtmp)/templateparser.o
@@ -105,6 +119,12 @@ $(outtmp)/templateloopparser.o :$(templateDir)/parser/TemplateLoopParser.cpp
 
 $(outtmp)/templateinparser.o :$(templateDir)/parser/TemplateInParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateInParser.cpp -o $(outtmp)/templateinparser.o
+
+$(outtmp)/templatereturnparser.o :$(templateDir)/parser/TemplateReturnParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateReturnParser.cpp -o $(outtmp)/templatereturnparser.o
+
+$(outtmp)/templatebreakparser.o :$(templateDir)/parser/TemplateBreakParser.cpp
+	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateBreakParser.cpp -o $(outtmp)/templatebreakparser.o
 
 $(outtmp)/templateendparser.o :$(templateDir)/parser/TemplateEndParser.cpp
 	$(cppcompiler) $(gagiracppflags) -c $(templateDir)/parser/TemplateEndParser.cpp -o $(outtmp)/templateendparser.o

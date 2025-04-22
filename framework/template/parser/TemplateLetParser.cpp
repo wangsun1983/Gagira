@@ -12,8 +12,13 @@ _TemplateLetParser::_TemplateLetParser(String cmd) {
 
 TemplateItem _TemplateLetParser::doParse() {
     TemplateLetItem item = TemplateLetItem::New();
-    
-    ArrayList<String> scopedItems = mCmd->split(EqualOperator);
+    printf("TemplateLetParser doParse cmd is %s \n",mCmd->toChars());
+    //ArrayList<String> scopedItems = mCmd->split(EqualOperator);
+    auto index = mCmd->indexOf(EqualOperator);
+    if(index == -1) {
+        return nullptr;
+    }
+
     /**
      * sample:let int v = xxxxxxx
      *        ---------   -------
@@ -24,7 +29,7 @@ TemplateItem _TemplateLetParser::doParse() {
      */
 
     //start parse assignmentText
-    auto assignmentText = scopedItems->get(0);
+    auto assignmentText = mCmd->subString(0,index);
     ArrayList<String> assignmentItems = assignmentText->split(SpaceTextSymbol);
     ForEveryOne(assignment,assignmentItems) {
         if(assignment->sameAs(SpaceTextSymbol)) {
@@ -56,7 +61,7 @@ TemplateItem _TemplateLetParser::doParse() {
     item->setType(mParsedType);
 
     //start parse valueText
-    auto valueText = scopedItems->get(1)->trim();
+    auto valueText = mCmd->subString(index + 1,mCmd->size() - index - 1);
     item->setAssignment(valueText);
     return item;
 }

@@ -9,6 +9,13 @@ namespace gagira {
 
 _TemplateLoopItem::_TemplateLoopItem() {
     mItems = ArrayList<TemplateItem>::New();
+    mForVariableName1 = nullptr;
+    mForVariableName2 = nullptr;
+    mRangeName = nullptr;
+    
+    mLoopConditionItem = nullptr;
+    mLoopActionItems = ArrayList<TemplateItem>::New();
+    mInitItems = ArrayList<TemplateItem>::New();
 }
 
 void _TemplateLoopItem::addAction(TemplateItem item) {
@@ -17,44 +24,107 @@ void _TemplateLoopItem::addAction(TemplateItem item) {
 
 TemplateScopedValue _TemplateLoopItem::execute(TemplateScopedValueContainer scopedContainer,TemplateObjectContainer objectContainer) {
     //first get object
-    printf("mRangeName is %s \n",mRangeName->toChars());
-    //TODO
-    auto field = objectContainer->getCurrent()->getField(mRangeName->subString(1,mRangeName->size() - 1));
-    switch(field->getType()) {
-        case st(Field)::Type::ArrayList: {
-            auto size = field->getContainerSize();
-            for(int i = 0;i < size;i++) {
-                scopedContainer->createNew();
-                auto obj = field->getListItemObject(i);
-                if(obj == nullptr) {
-                    printf("i[%d] get a null value!! \n",i);
+    if(mForVariableName1 != nullptr || mForVariableName1 != nullptr) {
+        auto field = objectContainer->getCurrent()->getField(mRangeName->subString(1,mRangeName->size() - 1));
+        switch(field->getType()) {
+            case st(Field)::Type::ArrayList: {
+                auto size = field->getContainerSize();
+                for(int i = 0;i < size;i++) {
+                    scopedContainer->createNew();
+                    auto obj = field->getListItemObject(i);
+                    objectContainer->setObjInLifeCycle(mForVariableName1,obj);
+                    bool isReturn = false;
+                    TemplateScopedValue returnValue = nullptr;
+                    ForEveryOne(item,mItems) {
+                        returnValue = item->execute(scopedContainer,objectContainer);
+                        if(returnValue->isDirectReturn()) {
+                            isReturn = true;
+                            break;
+                        }
+                    }
+                    objectContainer->removeObjInLifeCycle(mForVariableName1);
+                    scopedContainer->removeCurrent();
+                    if(isReturn) {
+                        return returnValue;
+                    }
                 }
-                printf("--- add variableName1 is [%s],mItems size is %d--- \n",mForVariableName1->toChars(),mItems->size());
-                objectContainer->setObjInLifeCycle(mForVariableName1,obj);
-                ForEveryOne(item,mItems) {
-                    item->execute(scopedContainer,objectContainer);
-                }
-                printf("---finish one item --- \n");
-                objectContainer->removeObjInLifeCycle(mForVariableName1);
-            }
-        } break;
+            } break;
 
-        case st(Field)::Type::HashMap: {
-            auto pairs = field->getMapItemObjects();
-            ForEveryOne(p,pairs) {
-                scopedContainer->createNew();
-                auto key_obj = p->getKey();
-                auto value_obj = p->getValue();
-                updateScopedValues(scopedContainer,mForVariableName1,key_obj);
-                updateScopedValues(scopedContainer,mForVariableName2,value_obj);
-                
-                ForEveryOne(item,mItems) {
-                    item->execute(scopedContainer,objectContainer);
+            case st(Field)::Type::HashMap: {
+                auto pairs = field->getMapItemObjects();
+                ForEveryOne(p,pairs) {
+                    scopedContainer->createNew();
+                    auto key_obj = p->getKey();
+                    auto value_obj = p->getValue();
+                    // updateScopedValues(scopedContainer,mForVariableName1,key_obj);
+                    // updateScopedValues(scopedContainer,mForVariableName2,value_obj);
+                    objectContainer->setObjInLifeCycle(mForVariableName1,key_obj);
+                    objectContainer->setObjInLifeCycle(mForVariableName2,value_obj);
+                    bool isReturn = false;
+                    TemplateScopedValue returnValue = nullptr;
+
+                    ForEveryOne(item,mItems) {
+                        returnValue = item->execute(scopedContainer,objectContainer);
+                        if(returnValue->isDirectReturn()) {
+                            isReturn = true;
+                            break;
+                        }
+                    }
+                    objectContainer->removeObjInLifeCycle(mForVariableName1);
+                    objectContainer->removeObjInLifeCycle(mForVariableName2);
+                    scopedContainer->removeCurrent();
+                    if(isReturn) {
+                        return returnValue;
+                    }
                 }
-                scopedContainer->removeCurrent();
+            } break;
+        }
+    } else {
+        scopedContainer->createNew();
+        printf("------- start initItem ----------\n");
+        ForEveryOne(initItem,mInitItems) {
+            initItem->execute(scopedContainer,objectContainer);
+        }
+        printf("------- finish initItem ----------\n");
+
+        bool isReturn = false;
+        bool isBreak = false;
+        TemplateScopedValue returnValue = nullptr;
+        while(1) {
+            auto scopedValue = mLoopConditionItem->execute(scopedContainer,objectContainer);
+            if(!scopedValue->getBoolValue()) {
+                break;
             }
-        } break;
+            
+            ForEveryOne(item,mItems) {
+                returnValue = item->execute(scopedContainer,objectContainer);
+                if(returnValue != nullptr) {
+                    if(returnValue->isDirectReturn()) {
+                        isReturn = true;
+                        break;
+                    } else if(returnValue->isDirectBreak()) {
+                        isBreak = true;
+                        break;
+                    }
+                }
+            }
+
+            if(!isReturn && !isBreak) {
+                ForEveryOne(action,mLoopActionItems) {
+                    action->execute(scopedContainer,objectContainer);
+                }
+                continue;
+            }
+
+            break;
+        }
+
+        scopedContainer->removeCurrent();
+        if(isReturn) {
+            return returnValue;
+        }
     }
+    
     return nullptr;
 }
 
@@ -80,6 +150,30 @@ String _TemplateLoopItem::getVariableName2() {
 
 String _TemplateLoopItem::getRangeName() {
     return mRangeName;
+}
+
+void _TemplateLoopItem::setLoopConditionItem(TemplateItem item) {
+    mLoopConditionItem = item;
+}
+
+void _TemplateLoopItem::setLoopActionItems(ArrayList<TemplateItem> items) {
+    mLoopActionItems = items;
+}
+
+void _TemplateLoopItem::setLoopInitItems(ArrayList<TemplateItem> items) {
+    mInitItems = items;
+}
+
+TemplateItem _TemplateLoopItem::getLoopConditionItem() {
+    return mLoopConditionItem;
+}
+
+ArrayList<TemplateItem> _TemplateLoopItem::getLoopActionItems() {
+    return mLoopActionItems;
+}
+
+ArrayList<TemplateItem> _TemplateLoopItem::getLoopInitItems() {
+    return mInitItems;
 }
 
 void _TemplateLoopItem::updateScopedValues(TemplateScopedValueContainer container,

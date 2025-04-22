@@ -25,6 +25,7 @@ public:
     virtual TemplateScopedValue execute(TemplateScopedValueContainer,TemplateObjectContainer) = 0;
     virtual void dump() {};
 
+    //virtual bool isDirectReturn();
     void setType(int type);
     int getType();
 

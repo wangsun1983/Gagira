@@ -7,21 +7,45 @@ namespace gagira {
 _TemplateScopedValue::_TemplateScopedValue(obotcha::String value) {
     mStringValue = value;
     mType = Type::String;
+    isReturn = false;
+    isBreak = false;
 }
 
 _TemplateScopedValue::_TemplateScopedValue(obotcha::Integer value) {
     mIntValue = value->toValue();
     mType = Type::Integer;
+    isReturn = false;
+    isBreak = false;
 }
 
 _TemplateScopedValue::_TemplateScopedValue(obotcha::Double value) {
     mDoubleValue = value->toValue();
     mType = Type::Double;
+    isReturn = false;
+    isBreak = false;
 }
 
 _TemplateScopedValue::_TemplateScopedValue(obotcha::Boolean value) {
     mBoolValue = value->toValue();
     mType = Type::Bool;
+    isReturn = false;
+    isBreak = false;
+}
+
+void _TemplateScopedValue::setDirectReturn(bool v) {
+    isReturn = v;
+}
+
+bool _TemplateScopedValue::isDirectReturn() {
+    return isReturn;
+}
+
+void _TemplateScopedValue::setDirectBreak(bool v) {
+    isBreak = v;
+}
+
+bool _TemplateScopedValue::isDirectBreak() {
+    return isBreak;
 }
 
 void _TemplateScopedValue::updateType(int v) {

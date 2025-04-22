@@ -18,7 +18,7 @@ public:
     int getType();
 
     void setAssignment(String);
-    TemplateItem getAssignment();
+    //TemplateItem getAssignment();
 
 private:
     String mVariableName;

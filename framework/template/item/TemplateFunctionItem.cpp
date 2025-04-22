@@ -1,10 +1,12 @@
+#include <initializer_list>
+
 #include "TemplateFunctionItem.hpp"
 #include "ForEveryOne.hpp"
 #include "Field.hpp"
 #include "Log.hpp"
 #include "IllegalArgumentException.hpp"
 #include "MethodNotSupportException.hpp"
-#include "TemplateScopedValueSeeker.hpp"
+#include "TemplateScopedValueHelper.hpp"
 
 using namespace obotcha;
 
@@ -35,7 +37,6 @@ _TemplateFuncExpression_Variable::_TemplateFuncExpression_Variable(TemplateScope
 
 TemplateScopedValue _TemplateFuncExpression_Variable::execute(TemplateScopedValueContainer container,TemplateObjectContainer objContainer) {
     if(mContent->getType() == st(TemplateScopedValue)::Type::String) {
-        printf("TemplateFuncExpression_Variable execute trace1,unit name is %s,type is %d \n",mContent->getStringValue()->toChars(),mContent->getType());
         String mUnitName = mContent->getStringValue();
         if(mUnitName->sameAs(TrueStatement) || mUnitName->sameAs(FalseStatement)) {
             auto bool_value = st(Boolean)::Parse(mUnitName);
@@ -44,19 +45,16 @@ TemplateScopedValue _TemplateFuncExpression_Variable::execute(TemplateScopedValu
             return TemplateScopedValue::New(mUnitName->subString(1,mUnitName->size() - 2));
         } else if(mUnitName->contains(".")) {
             //find object
-            printf("TemplateFuncExpression_Variable execute trace1_2 \n");
-            auto scopedValue = st(TemplateScopedValueSeeker)::Get(mUnitName,container,objContainer);
+            auto scopedValue = st(TemplateScopedValueHelper)::Get(mUnitName,container,objContainer);
             if(scopedValue != nullptr) {
                 return scopedValue;
             }
         }
-        printf("TemplateFuncExpression_Variable execute trace1_3 \n");
         auto value = container->getScopedValue(mUnitName);
         if(value != nullptr) {
             return value;
         }
     }
-    printf("TemplateFuncExpression_Variable execute trace2 \n");
     return mContent;
 }
 
@@ -72,14 +70,70 @@ void _TemplateFuncExpression_Variable::dump() {
 
 //----- TemplateFuncExpression_Function ----- 
 _TemplateFuncExpression_Function::_TemplateFuncExpression_Function(String name,ArrayList<String> params) {
-    //mUnitName = name;
+    mContent = TemplateScopedValue::New(name);
     mParams = params;
     mType = Type::Function;
 }
 
 _TemplateFuncExpression_Function::_TemplateFuncExpression_Function(String name) {
-    //mUnitName = name;
+    mContent = TemplateScopedValue::New(name);
     mType = Type::Function;
+}
+
+TemplateScopedValue _TemplateFuncExpression_Function::execute(TemplateScopedValueContainer container,TemplateObjectContainer objContainer) {
+    String mUnitName = mContent->getStringValue();
+    auto method = st(TemplateScopedValueHelper)::GetMethod(mUnitName,objContainer);
+    if(method != nullptr) {
+        switch(mParams->size()) {
+            case 0:
+                return TemplateScopedValue::New(method->execute()->get<String>());
+            break;
+
+            case 1:
+                return TemplateScopedValue::New(method->execute(mParams->get(0))->get<String>());
+            break;
+
+            case 2:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1))->get<String>());
+            break;
+
+            case 3:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1),mParams->get(2))->get<String>());
+            break;
+
+            case 4:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1),
+                                         mParams->get(2),mParams->get(3))->get<String>());
+            break;
+
+            case 5:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1),
+                                         mParams->get(2),mParams->get(3),
+                                         mParams->get(4))->get<String>());
+            break;
+
+            case 6:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1),
+                                         mParams->get(2),mParams->get(3),
+                                         mParams->get(4),mParams->get(5))->get<String>());
+            break;
+
+            case 7:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1),
+                                         mParams->get(2),mParams->get(3),
+                                         mParams->get(4),mParams->get(5),
+                                         mParams->get(6))->get<String>());
+            break;
+
+            case 8:
+                return TemplateScopedValue::New(method->execute(mParams->get(0),mParams->get(1),
+                                         mParams->get(2),mParams->get(3),
+                                         mParams->get(4),mParams->get(5),
+                                         mParams->get(6),mParams->get(7))->get<String>());
+            break;
+        }
+    }
+    return nullptr;
 }
 
 void _TemplateFuncExpression_Function::dump() {
@@ -92,12 +146,6 @@ void _TemplateFuncExpression_Function::dump() {
     //     }
     //     printf("\n");
     //}
-}
-
-TemplateScopedValue _TemplateFuncExpression_Function::execute(TemplateScopedValueContainer,TemplateObjectContainer obj) {
-    //TODO
-    //find function 
-    return nullptr;
 }
 
 //----- TemplateFuncExpression_Operator ----- 
@@ -163,10 +211,10 @@ TemplateScopedValue _TemplateFunctionItem::execute(TemplateScopedValueContainer 
                 compute_result = computeMultiple(current_value,v->execute(scopedvalueContainer,objContainer));
             } else if(m_operator->sameAs("/")) {
                 auto v = exprStack->takeLast();
-                compute_result = computeDivide(current_value,v->execute(scopedvalueContainer,objContainer));
+                compute_result = computeDivide(v->execute(scopedvalueContainer,objContainer),current_value);
             } else if(m_operator->sameAs("%")) {
                 auto v = exprStack->takeLast();
-                compute_result = computeModular(current_value,v->execute(scopedvalueContainer,objContainer));
+                compute_result = computeModular(v->execute(scopedvalueContainer,objContainer),current_value);
             } else if(m_operator->sameAs("<<")) {
                 auto v = exprStack->takeLast();
                 compute_result = computeLeftShift(v->execute(scopedvalueContainer,objContainer),current_value);
@@ -205,7 +253,9 @@ TemplateScopedValue _TemplateFunctionItem::execute(TemplateScopedValueContainer 
                 compute_result = computeAndCondition(v->execute(scopedvalueContainer,objContainer),current_value);
             } else if(m_operator->sameAs("=")) {
                 auto v = exprStack->takeLast();
-                compute_result = computeAssignment(scopedvalueContainer,obj,v->getContent()->getStringValue()->trim(),current_value);
+                printf("compute assign!!! \n");
+                //compute_result = computeAssignment(scopedvalueContainer,obj,v->getContent()->getStringValue()->trim(),current_value);
+                compute_result = computeAssignment(v->getContent()->getStringValue()->trim(),current_value,scopedvalueContainer,objContainer);
             }
 
             if(compute_result != nullptr) {
@@ -288,6 +338,7 @@ TemplateScopedValue _TemplateFunctionItem::computeReverse(TemplateScopedValue ar
 TemplateScopedValue _TemplateFunctionItem::computeMinusMinus(TemplateScopedValue arg1) {
     Panic(arg1->getType() != st(TemplateScopedValue)::Type::Integer,IllegalArgumentException);
     auto value = arg1->getIntValue() - 1;
+    arg1->updateIntValue(value);
     return TemplateScopedValue::New(Integer::New(value));
 }
 
@@ -295,6 +346,7 @@ TemplateScopedValue _TemplateFunctionItem::computeMinusMinus(TemplateScopedValue
 TemplateScopedValue _TemplateFunctionItem::computePlusPlus(TemplateScopedValue arg1) {
     Panic(arg1->getType() != st(TemplateScopedValue)::Type::Integer,IllegalArgumentException);
     auto value = arg1->getIntValue() + 1;
+    arg1->updateIntValue(value);
     return TemplateScopedValue::New(Integer::New(value));
 }
 
@@ -607,81 +659,27 @@ TemplateScopedValue _TemplateFunctionItem::computeExclamation(TemplateScopedValu
     return TemplateScopedValue::New(Boolean::New(!arg1->getBoolValue()));
 }
 
-TemplateScopedValue _TemplateFunctionItem::computeAssignment(TemplateScopedValueContainer container,Object obj,
-                                            String unitName,TemplateScopedValue arg2) {
-    if(unitName != nullptr) {
-        printf("computeAssignment unitName is [%s] \n",unitName->toChars());
-        if(unitName->startsWith(".")) {
-            auto field = obj->getField(unitName->subString(1,unitName->size() - 1));
-            if(field != nullptr) {
-                switch(field->getType()) {
-                    case st(Field)::Type::Long: {
-                        field->setValue(arg2->getIntValue());
-                    } break;
+TemplateScopedValue _TemplateFunctionItem::computeAssignment(String tag,TemplateScopedValue value,TemplateScopedValueContainer container,TemplateObjectContainer objContainer) {
+    String setValue = nullptr;
+    switch(value->getType()) {
+        case st(TemplateScopedValue)::Integer:
+            setValue = String::New(value->getIntValue());
+        break;
 
-                    case st(Field)::Type::Int: {
-                        field->setValue(arg2->getIntValue());
-                    } break;
+        case st(TemplateScopedValue)::Double:
+            setValue = String::New(value->getDoubleValue());
+        break;
 
-                    case st(Field)::Type::Byte: {
-                        field->setValue((byte)(arg2->getIntValue()));
-                    }
+        case st(TemplateScopedValue)::String:
+            setValue = value->getStringValue();
+        break;
 
-                    case st(Field)::Type::Bool: {
-                        field->setValue(arg2->getBoolValue());
-                    } break;
-
-                    case st(Field)::Type::Double: {
-                        field->setValue(arg2->getDoubleValue());
-                    } break;
-
-                    case st(Field)::Type::Float: {
-                        field->setValue(arg2->getDoubleValue());
-                    } break;
-
-                    case st(Field)::Type::String: {
-                        field->setValue(arg2->getStringValue());
-                    } break;
-
-                    case st(Field)::Type::Uint16: {
-                        field->setValue(arg2->getIntValue());
-                    } break;
-
-                    case st(Field)::Type::Uint32: {
-                        field->setValue(arg2->getIntValue());
-                    } break;
-
-                    case st(Field)::Type::Uint64: {
-                        field->setValue(arg2->getIntValue());
-                    } break;
-                }
-                return nullptr;
-            }
-        } 
-        
-        auto scoped_value = container->getScopedValue(unitName);
-        Panic(arg2->getType() != scoped_value->getType(),IllegalArgumentException);
-
-        switch(arg2->getType()) {
-            case st(TemplateScopedValue)::Type::Bool: {
-                scoped_value->updateBoolValue(arg2->getBoolValue());
-            } break;
-
-            case st(TemplateScopedValue)::Type::Integer: {
-                scoped_value->updateIntValue(arg2->getIntValue());
-            } break;
-
-            case st(TemplateScopedValue)::Type::Double: {
-                scoped_value->updateDoubleValue(arg2->getDoubleValue());
-            } break;
-
-            case st(TemplateScopedValue)::Type::String: {
-                scoped_value->updateStringValue(arg2->getStringValue());
-            } break;
-        }
-        
+        case st(TemplateScopedValue)::Bool:
+            setValue = String::New(value->getBoolValue());
+        break;
     }
-
+    printf("compute Assignment tag is %s,value is %s \n",tag->toChars(),setValue->toChars());
+    st(TemplateScopedValueHelper)::Set(tag,setValue,container,objContainer);
     return nullptr;
 }
 

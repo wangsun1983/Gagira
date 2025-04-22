@@ -75,8 +75,8 @@ private:
     // String execute_for_string(HashMap<String,TemplateScopedValue> scopedValues,Object obj);
 
     //operator:=
-    TemplateScopedValue computeAssignment(TemplateScopedValueContainer c,Object obj,
-                                            String unitName,TemplateScopedValue arg2);
+    TemplateScopedValue computeAssignment(String tag,TemplateScopedValue value,
+                                        TemplateScopedValueContainer container,TemplateObjectContainer objContainer);
 
     //operator:#-
     TemplateScopedValue computeNegative(TemplateScopedValue arg1);

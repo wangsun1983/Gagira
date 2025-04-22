@@ -15,7 +15,6 @@ _Template::_Template(String text) {
 }
 
 void _Template::startAnalyse() {
-    printf("startAnalyse trace1,mText is %s \n",mText->toChars());
     TextLineReader lineReader = TextLineReader::New(mText);
     TemplateParser parser = nullptr;
 
@@ -26,7 +25,8 @@ void _Template::startAnalyse() {
         }
         
         if(mStatus == ParseCommand) {
-            line = line->trim();
+            //line = line->trim();
+            line = filter(line);
         }
 
         if(line->size() == 0) {
@@ -69,9 +69,6 @@ void _Template::startAnalyse() {
                         mStatus = ParseHtml;
                     } else {
                         commands = line->subString(start_index,line->size() - start_index);
-                        // if(commands != nullptr) {
-                        //     printf("startAnalyse trace5 command is %s \n",commands->toChars());
-                        // }
                         start_index = line->size();
                     }
 
@@ -98,16 +95,22 @@ String _Template::execute(HashMap<String,TemplateScopedValue> scopedValues,Objec
     String result = "";
     mScopedValueContainer = TemplateScopedValueContainer::New(scopedValues);
     mObjectContainer = TemplateObjectContainer::New(obj);
-    printf("-----Template start execute trace1,mItems size is %d----- \n",mItems->size());
     ForEveryOne(item,mItems) {
-        printf("-----Template start execute trace2----- \n");
         auto v = item->execute(mScopedValueContainer,mObjectContainer);
         if(v != nullptr) {
+            if(v->isDirectReturn()) {
+                return v->toString();
+            }
             result = result->append(v->toString());
         }
     }
 
     return result;
+}
+
+String _Template::filter(String in) {
+    //remove tab
+    return in->replaceAll(String::New("\t"),String::New(" "))->trim();
 }
 
 }

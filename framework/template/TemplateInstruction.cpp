@@ -32,6 +32,9 @@ const String _TemplateInstruction::LenCommand = String::New("len");
 const String _TemplateInstruction::PrintCommand = String::New("print");
 const String _TemplateInstruction::WriteCommand = String::New("write");
 
+const String _TemplateInstruction::ReturnCommand = String::New("return");
+const String _TemplateInstruction::BreakCommand = String::New("break");
+
 const String _TemplateInstruction::EqualOperator = String::New("=");
 
 const String _TemplateInstruction::SpaceTextSymbol = String::New(" ");

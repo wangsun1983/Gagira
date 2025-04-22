@@ -6,9 +6,27 @@ using namespace obotcha;
 namespace gagira {
 
 TemplateScopedValue _TemplateLetItem::execute(TemplateScopedValueContainer scopedvalueContainer,TemplateObjectContainer objContainer) {
-    auto obj = objContainer->getCurrent();
-    auto value = mAssignment->execute(scopedvalueContainer,obj);
-    scopedvalueContainer->addScopedValue(mVariableName,value);
+    printf("TemplateLetItem execute\n");
+    auto value = mAssignment->execute(scopedvalueContainer,objContainer)->toString();
+
+    switch(mType) {
+        case st(TemplateScopedValue)::Type::Integer:
+            scopedvalueContainer->addScopedValue(mVariableName,TemplateScopedValue::New(value->toInteger()));
+        break;
+
+        case st(TemplateScopedValue)::Type::Double:
+            scopedvalueContainer->addScopedValue(mVariableName,TemplateScopedValue::New(value->toDouble()));
+        break;
+
+        case st(TemplateScopedValue)::Type::String:
+            scopedvalueContainer->addScopedValue(mVariableName,TemplateScopedValue::New(value));
+        break;
+
+        case st(TemplateScopedValue)::Type::Bool:
+            scopedvalueContainer->addScopedValue(mVariableName,TemplateScopedValue::New(value->toBoolean()));
+        break;
+    }
+
     return nullptr;
 }
 
@@ -33,9 +51,9 @@ void _TemplateLetItem::setAssignment(String cmds) {
     mAssignment = parser->doParse();
 }
 
-TemplateItem _TemplateLetItem::getAssignment() {
-    return mAssignment;
-}
+// TemplateItem _TemplateLetItem::getAssignment() {
+//     return mAssignment;
+// }
 
 }
 

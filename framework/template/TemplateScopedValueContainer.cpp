@@ -37,7 +37,6 @@ TemplateScopedValue _TemplateScopedValueContainer::getScopedValue(String name) {
             return scoped_value;
         }
     }
-
     return nullptr;
 }
 

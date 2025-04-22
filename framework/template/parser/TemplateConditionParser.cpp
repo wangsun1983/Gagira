@@ -4,12 +4,13 @@
 #include "TemplateFunctionParser.hpp"
 #include "TemplateParserDispatcher.hpp"
 #include "TemplateTextItem.hpp"
+#include "TemplateLoopParser.hpp"
 
 using namespace obotcha;
 
 namespace gagira {
 
-_TemplateConditionParser::_TemplateConditionParser(String cmd) {
+_TemplateConditionInnerParser::_TemplateConditionInnerParser(String cmd) {
     mAnalyseFactors = LinkedList<TemplateConditionFactor>::New();
     mConditionFactors = ArrayList<TemplateConditionFactor>::New();
     mFinalActors = ArrayList<TemplateItem>::New();
@@ -22,7 +23,7 @@ _TemplateConditionParser::_TemplateConditionParser(String cmd) {
     mType = Condition;
 }
 
-bool _TemplateConditionParser::processText(String text) {
+bool _TemplateConditionInnerParser::processText(String text) {
     switch(mStatus) {
         case ParseFinalAction:
             mFinalActors->add(TemplateTextItem::New(text));
@@ -35,7 +36,7 @@ bool _TemplateConditionParser::processText(String text) {
     return true;
 }
 
-TemplateItem _TemplateConditionParser::doParse() {
+TemplateItem _TemplateConditionInnerParser::doParse() {
     bool is_complete = false;
     bool is_loop = true;
 
@@ -56,12 +57,13 @@ TemplateItem _TemplateConditionParser::doParse() {
             case ParseFinalAction:
             case ParseAction: {
                 auto parser = st(TemplateParserDispatcher)::Apply(mCmd);
-                if(parser->getType() == Type::Condition) {
-                    auto firstFactor = TemplateConditionFactor::New();
-                    mAnalyseFactors->putLast(firstFactor);
-                    mStatus = ParseCondition;
-                    continue;
-                } else if(parser->getType() == Type::End) {
+                // if(parser->getType() == Type::Condition) {
+                //     auto firstFactor = TemplateConditionFactor::New();
+                //     mAnalyseFactors->putLast(firstFactor);
+                //     mStatus = ParseCondition;
+                //     continue;
+                // } else 
+                if(parser->getType() == Type::End) {
                     auto item = mAnalyseFactors->takeLast();
                     if(item != nullptr) {
                         mConditionFactors->add(item);
@@ -72,18 +74,12 @@ TemplateItem _TemplateConditionParser::doParse() {
                 } else if(parser->getType() == Type::Else) {
                     mStatus = ParseFinalAction;
                     auto item = mAnalyseFactors->takeLast();
-                    if(item == nullptr) {
-                        printf("---------- trace1 item is null!!!!! \n");
-                    }
                     mConditionFactors->add(item);
                     is_loop = false;
                     break;
                 } else if(parser->getType() == Type::Elif) {
                     auto nextFactor = TemplateConditionFactor::New();
                     auto item = mAnalyseFactors->takeLast();
-                    if(item == nullptr) {
-                        printf("---------- trace2 item is null!!!!! \n");
-                    }
                     mConditionFactors->add(item);
                     mAnalyseFactors->putLast(nextFactor);
                     mStatus = ParseCondition;
@@ -115,9 +111,60 @@ TemplateItem _TemplateConditionParser::doParse() {
     return item;
 }
 
-void _TemplateConditionParser::inject(String cmd) {
+void _TemplateConditionInnerParser::inject(String cmd) {
     mCmd = cmd->trim();
 }
+
+//TemplateConditionParser
+_TemplateConditionParser::_TemplateConditionParser(String cmd) {
+    mParsers = LinkedList<TemplateParser>::New();
+    TemplateConditionInnerParser innerParser = TemplateConditionInnerParser::New(cmd);
+    mParsers->putLast(innerParser);
+    mCmd = cmd;
+    mType = Condition;
+}
     
+void _TemplateConditionParser::inject(String v) {
+    v = v->trim();
+    if (v->startsWith(IfCommand)) {
+        auto innerParser = TemplateConditionInnerParser::New(v->subString(IfCommand->size(),v->size() - IfCommand->size()));
+        mParsers->putLast(innerParser);
+    } else if(v->startsWith(LoopCommand)) {
+        auto innerParser = TemplateLoopInnerParser::New(v->subString(LoopCommand->size(),v->size() - LoopCommand->size()));
+        mParsers->putLast(innerParser);
+    } else {
+        mParsers->peekLast()->inject(v);
+    }
+}
+
+TemplateItem _TemplateConditionParser::doParse() {
+    auto result = mParsers->peekLast()->doParse();
+    if(result != nullptr) {
+        auto current = mParsers->takeLast();
+        if(mParsers->size() != 0) {
+            auto prev = mParsers->peekLast();
+            switch(prev->getType()) {
+                case st(TemplateParser)::Type::Condition: {
+                    auto prev_parser = Cast<TemplateConditionInnerParser>(prev);
+                    prev_parser->mAnalyseFactors->peekLast()->addAction(result);
+                } break;
+
+                case st(TemplateParser)::Type::Loop: {
+                    printf("add action to prev_parser \n");
+                    auto prev_parser = Cast<TemplateLoopInnerParser>(prev);
+                    prev_parser->mForItem->addAction(result);
+                } break;
+            }
+        } else {
+            return result;
+        }
+    }
+
+    return nullptr;
+}
+
+bool _TemplateConditionParser::processText(String text) {
+    return mParsers->peekLast()->processText(text);
+}
 
 }

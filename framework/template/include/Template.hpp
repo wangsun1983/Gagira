@@ -31,6 +31,7 @@ private:
     TemplateObjectContainer mObjectContainer;
     
     void startAnalyse();
+    String filter(String);
 };
 
 }

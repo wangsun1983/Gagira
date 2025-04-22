@@ -8,12 +8,14 @@
 #include "TemplateInParser.hpp"
 #include "TemplateLoopParser.hpp"
 #include "TemplateEndParser.hpp"
+#include "TemplateReturnParser.hpp"
+#include "TemplateBreakParser.hpp"
 
 namespace gagira {
 
 TemplateParser _TemplateParserDispatcher::Apply(String text) {
     text = text->trim();
-    printf("apply text is %s \n",text->toChars());
+    printf("ParserDispatcher,text is %s \n",text->toChars());
     if(text->startsWith(LineComment)) {
         return nullptr;
     } else if(text->startsWith(StartComment)) {
@@ -52,6 +54,10 @@ TemplateParser _TemplateParserDispatcher::Apply(String text) {
         return TemplateInParser::New(text->subString(InCommand->size(),text->size() - InCommand->size()));
     } else if (text->startsWith(LoopCommand)) {
         return TemplateLoopParser::New(text->subString(LoopCommand->size(),text->size() - LoopCommand->size()));
+    } else if (text->startsWith(ReturnCommand)) {
+        return TemplateReturnParser::New(text->subString(ReturnCommand->size(),text->size() - ReturnCommand->size()));
+    } else if (text->startsWith(BreakCommand)) {
+        return TemplateBreakParser::New();
     }
 
     return TemplateFunctionParser::New(text);

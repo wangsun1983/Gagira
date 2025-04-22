@@ -17,14 +17,34 @@ public:
     String getVariableName1();
     String getVariableName2();
     String getRangeName();
+
+    void setLoopConditionItem(TemplateItem);
+    void setLoopActionItems(ArrayList<TemplateItem>);
+    void setLoopInitItems(ArrayList<TemplateItem>);
+
+    TemplateItem getLoopConditionItem();
+    ArrayList<TemplateItem> getLoopActionItems();
+    ArrayList<TemplateItem> getLoopInitItems();
     
     void addAction(TemplateItem);
     TemplateScopedValue execute(TemplateScopedValueContainer ,TemplateObjectContainer);
 
 private:
+
+    /*------------- loop params -------------*/
+    //the following three params is used for
+    //loop x in .list
     String mForVariableName1;
     String mForVariableName2;
     String mRangeName;
+
+    //the follow
+    //loop int i = 1,j = 2;i + j < 100;i++,j++
+    TemplateItem mLoopConditionItem;
+    ArrayList<TemplateItem> mLoopActionItems;
+    ArrayList<TemplateItem> mInitItems;
+    /*------------- loop params -------------*/
+
     ArrayList<TemplateItem> mItems;
     bool isEnd;
     void updateScopedValues(TemplateScopedValueContainer,String variableName,Object);

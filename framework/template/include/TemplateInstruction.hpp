@@ -35,6 +35,9 @@ public:
     static const String PrintCommand;
     static const String WriteCommand;
 
+    static const String ReturnCommand;
+    static const String BreakCommand;
+
     static const String EqualOperator;
 
     static const String SpaceTextSymbol;

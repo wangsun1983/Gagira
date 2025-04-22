@@ -1,6 +1,7 @@
 #include <mutex>
 
 #include "TemplateFunctionParser.hpp"
+#include "TemplateParserHelper.hpp"
 #include "LinkedList.hpp"
 #include "ForEveryOne.hpp"
 
@@ -133,6 +134,7 @@ TemplateItem _TemplateFunctionParser::doParse() {
     auto cmdchars = mCmd->toChars();
     int operator_start = -1;
     int param_start = -1;
+
     for(int index = 0; index < cmdlen;index++) {
         auto c = cmdchars[index];
         if(c == ' ') {
@@ -159,13 +161,12 @@ TemplateItem _TemplateFunctionParser::doParse() {
                     String params_str = nullptr;
                     if(index > brace_start + 1) {
                         params_str = mCmd->subString(brace_start + 1,index - brace_start - 1)->trim();
-                        auto params_data = params_str->split(",");
+                        ArrayList<String> params_data = st(TemplateParserHelper)::ParseStatement(params_str,','); 
                         expression = TemplateFuncExpression_Function::New(paramString,params_data); //function with params
                     } else {
                         expression = TemplateFuncExpression_Function::New(paramString); //function without params
                     }
                     index++;
-                    
                 } else {
                     expression = createVariableExpression(paramString);
                 }
@@ -178,7 +179,6 @@ TemplateItem _TemplateFunctionParser::doParse() {
             if(index >= cmdlen) {
                 break;
             }
-
             //detect the end of the operator
             auto next = index + 1;
             if(next <= cmdlen) {

@@ -11,10 +11,15 @@ using namespace obotcha;
 
 namespace gagira {
 
-DECLARE_CLASS(TemplateConditionParser) IMPLEMENTS(TemplateParser,TemplateInstruction){
+class _TemplateLoopParser;
+class _TemplateConditionParser;
+
+DECLARE_CLASS(TemplateConditionInnerParser) IMPLEMENTS(TemplateParser,TemplateInstruction) {
 public:
-    _TemplateConditionParser(String cmd);
-    
+    friend class _TemplateConditionParser;
+    friend class _TemplateLoopParser;
+
+    _TemplateConditionInnerParser(String cmd);
     void inject(String);
     TemplateItem doParse();
     bool processText(String);
@@ -35,6 +40,20 @@ private:
     ArrayList<TemplateConditionFactor> mConditionFactors;
     ArrayList<TemplateItem> mFinalActors;
 };
+
+DECLARE_CLASS(TemplateConditionParser) IMPLEMENTS(TemplateParser,TemplateInstruction){
+public:
+    _TemplateConditionParser(String cmd);
+    
+    void inject(String);
+    TemplateItem doParse();
+    bool processText(String);
+    
+private:
+    String mCmd;
+    LinkedList<TemplateParser> mParsers;
+};
+
 
 }
 
